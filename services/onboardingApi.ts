@@ -1,45 +1,36 @@
 /**
  * Onboarding API service
+ * Updated for Phase 2 Backend + Opik
  */
 
 import { api } from '@/lib/api';
+import { trackEvent } from '@/lib/opik'; // Opik integration
 
-export interface NameStepData {
-  first_name: string;
-  last_name: string;
-  middle_name?: string;
+// --- Request types matching Backend Schemas ---
+
+export interface OnboardingStepSubmission {
+  step_number: number;
+  data: Record<string, any>;
 }
 
-export interface UsernameStepData {
-  username: string;
+export interface OnboardingAnalysisRequest {
+  session_id?: string;
 }
 
-export interface PreferencesStepData {
-  communication_style: 'direct' | 'gentle' | 'conversational';
-  time_commitment: 'low' | 'medium' | 'high';
-  growth_areas: string[];
-  additional_responses?: Record<string, any>;
-}
-
-export interface UsernameCheckResponse {
-  available: boolean;
-  message: string;
-}
-
-export interface OnboardingStatusResponse {
-  current_step: number;
-  completed_steps: number[];
-  is_completed: boolean;
-  step_data: Record<string, any>;
+export interface BaselineAnalysisResult {
+  user_id: string;
+  summary: string;
+  top_patterns: string[];
+  suggested_focus: string;
+  readiness_score: number;
 }
 
 export interface StepResponse {
-  success: boolean;
-  message: string;
-  next_step?: number;
-  onboarding_completed?: boolean;
+  status: string;
+  next_step: number;
 }
 
+// Complete definition matching page.tsx usage
 export interface ProfileUpdateRequest {
   full_name?: string;
   first_name?: string;
@@ -48,48 +39,54 @@ export interface ProfileUpdateRequest {
   pronouns?: string;
   username?: string;
   primary_goal?: string;
+  goal_timeline?: string;
+  availability_mins?: number;
+  availability_days?: string[];
+  interaction_mode?: string;
   motivation?: string;
+  notification_preference?: string;
   baseline_responses?: Record<string, any>;
 }
 
-export interface ProfileUpdateResponse {
-  success: boolean;
+export interface UsernameCheckResponse {
+  available: boolean;
   message: string;
 }
 
 export const onboardingApi = {
+  // Start Session
+  startSession: async (): Promise<{ session_id: string; current_step: number }> => {
+    trackEvent('onboarding_start_attempt', {});
+    const res = await api.post<{ session_id: string; current_step: number }>('/api/onboarding/start', {});
+    trackEvent('onboarding_start_success', { session_id: res.session_id });
+    return res;
+  },
+
+  // Submit Step (Generic)
+  submitStep: async (stepNumber: number, data: Record<string, any>): Promise<StepResponse> => {
+    trackEvent(`onboarding_step_${stepNumber}_submit`, { step: stepNumber });
+
+    return api.post<StepResponse>('/api/onboarding/step', {
+      step_number: stepNumber,
+      data: data
+    });
+  },
+
+  // Trigger Backend Analysis
+  analyzeBaseline: async (): Promise<BaselineAnalysisResult> => {
+    trackEvent('onboarding_analyze_start', {});
+    const res = await api.post<BaselineAnalysisResult>('/api/onboarding/analyze', {});
+    trackEvent('onboarding_analyze_complete', { readiness: res.readiness_score });
+    return res;
+  },
+
+  // Legacy/Profile Update wrapper (Full type support now)
+  updateProfile: async (data: ProfileUpdateRequest): Promise<any> => {
+    return api.put('/api/onboarding/profile', data);
+  },
+
+  // Check Username
   checkUsername: async (username: string): Promise<UsernameCheckResponse> => {
-    return api.get<UsernameCheckResponse>(
-      `/api/onboarding/username/check?username=${encodeURIComponent(username)}`
-    );
-  },
-
-  getStatus: async (): Promise<OnboardingStatusResponse> => {
-    return api.get<OnboardingStatusResponse>(`/api/onboarding/status`);
-  },
-
-  updateProfile: async (
-    data: ProfileUpdateRequest
-  ): Promise<ProfileUpdateResponse> => {
-    return api.put<ProfileUpdateResponse>(`/api/onboarding/profile`, data);
-  },
-
-  completeStep1: async (
-    data: NameStepData
-  ): Promise<StepResponse> => {
-    return api.post<StepResponse>(`/api/onboarding/step-1`, data);
-  },
-
-  completeStep2: async (
-    data: UsernameStepData
-  ): Promise<StepResponse> => {
-    return api.post<StepResponse>(`/api/onboarding/step-2`, data);
-  },
-
-  completeStep3: async (
-    data: PreferencesStepData
-  ): Promise<StepResponse> => {
-    return api.post<StepResponse>(`/api/onboarding/step-3`, data);
-  },
+    return api.get(`/api/onboarding/username/check?username=${encodeURIComponent(username)}`);
+  }
 };
-

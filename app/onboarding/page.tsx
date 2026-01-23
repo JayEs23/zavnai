@@ -26,7 +26,7 @@ function parseStoredName(): { first: string; middle: string; last: string } {
   if (typeof window === 'undefined') {
     return { first: '', middle: '', last: '' };
   }
-  
+
   const stored = localStorage.getItem('full_name');
   if (!stored) {
     return { first: '', middle: '', last: '' };
@@ -99,16 +99,19 @@ export default function OnboardingPage() {
         }
       } else if (step === 4) {
         const structuredResponse = responseBuilders.patterns(profile.patterns);
+        await onboardingApi.submitStep(4, { patterns: profile.patterns, structured: structuredResponse });
         await onboardingApi.updateProfile({
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
       } else if (step === 5) {
         const structuredResponse = responseBuilders.capacity(profile.capacity);
+        await onboardingApi.submitStep(5, { capacity: profile.capacity, structured: structuredResponse });
         await onboardingApi.updateProfile({
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
       } else if (step === 6) {
         const structuredResponse = responseBuilders.tribe(profile.tribe);
+        await onboardingApi.submitStep(6, { tribe: profile.tribe, structured: structuredResponse });
         await onboardingApi.updateProfile({
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
@@ -118,20 +121,26 @@ export default function OnboardingPage() {
           profile.successCriteria,
           profile.targetDate
         );
+        await onboardingApi.submitStep(9, {
+          goal: profile.goal,
+          success_criteria: profile.successCriteria,
+          target_date: profile.targetDate
+        });
         await onboardingApi.updateProfile({
           primary_goal: profile.goal,
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
       } else if (step === 8) {
         const structuredResponse = responseBuilders.verification(profile.verification);
+        await onboardingApi.submitStep(8, { verification: profile.verification, structured: structuredResponse });
         await onboardingApi.updateProfile({
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
       } else if (step === 10 && !SHOW_SUBSCRIPTION_STEP) {
-        // Step 10 without subscription goes to success - verification already saved at step 8
-        // No additional save needed
+        // Step 10 without subscription goes to success
       } else if (step === 11 && SHOW_SUBSCRIPTION_STEP) {
         const structuredResponse = responseBuilders.subscription(profile.subscriptionSelected);
+        await onboardingApi.submitStep(11, { subscription_selected: profile.subscriptionSelected });
         await onboardingApi.updateProfile({
           baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
         });
@@ -139,7 +148,7 @@ export default function OnboardingPage() {
     } catch (error) {
       console.error(`Failed to save step ${step} data:`, error);
     }
-    
+
     setStep(s => s + 1);
   };
 
@@ -150,26 +159,26 @@ export default function OnboardingPage() {
     try {
       // Build all structured responses for final save
       const allResponses: Record<string, StructuredOnboardingResponse> = {};
-      
+
       const patternsResponse = responseBuilders.patterns(profile.patterns);
       if (patternsResponse) allResponses[patternsResponse.stepName] = patternsResponse;
-      
+
       const capacityResponse = responseBuilders.capacity(profile.capacity);
       if (capacityResponse) allResponses[capacityResponse.stepName] = capacityResponse;
-      
+
       const tribeResponse = responseBuilders.tribe(profile.tribe);
       if (tribeResponse) allResponses[tribeResponse.stepName] = tribeResponse;
-      
+
       const verificationResponse = responseBuilders.verification(profile.verification);
       if (verificationResponse) allResponses[verificationResponse.stepName] = verificationResponse;
-      
+
       const goalResponse = responseBuilders.goalRefinement(
         profile.goal,
         profile.successCriteria,
         profile.targetDate
       );
       if (goalResponse) allResponses[goalResponse.stepName] = goalResponse;
-      
+
       if (SHOW_SUBSCRIPTION_STEP) {
         const subscriptionResponse = responseBuilders.subscription(profile.subscriptionSelected);
         if (subscriptionResponse) allResponses[subscriptionResponse.stepName] = subscriptionResponse;
@@ -178,6 +187,10 @@ export default function OnboardingPage() {
       await onboardingApi.updateProfile({
         baseline_responses: allResponses,
       });
+
+      // Phase 2: Trigger Backend Analysis to generate User Baseline
+      await onboardingApi.analyzeBaseline();
+
       router.push('/dashboard');
     } catch (error) {
       console.error('Failed to complete onboarding:', error);
