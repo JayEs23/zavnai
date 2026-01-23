@@ -4,7 +4,6 @@
  */
 
 import { api } from '@/lib/api';
-import { trackEvent } from '@/lib/opik'; // Opik integration
 
 // --- Request types matching Backend Schemas ---
 
