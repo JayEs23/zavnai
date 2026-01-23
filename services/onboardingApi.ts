@@ -74,16 +74,12 @@ export interface UsernameCheckResponse {
 export const onboardingApi = {
   // Start Session
   startSession: async (): Promise<{ session_id: string; current_step: number }> => {
-    trackEvent('onboarding_start_attempt', {});
     const res = await api.post<{ session_id: string; current_step: number }>('/api/onboarding/start', {});
-    trackEvent('onboarding_start_success', { session_id: res.session_id });
     return res;
   },
 
   // Submit Step (Generic)
   submitStep: async (stepNumber: number, data: Record<string, any>): Promise<StepResponse> => {
-    trackEvent(`onboarding_step_${stepNumber}_submit`, { step: stepNumber });
-
     return api.post<StepResponse>('/api/onboarding/step', {
       step_number: stepNumber,
       data: data
@@ -92,9 +88,7 @@ export const onboardingApi = {
 
   // Trigger Backend Analysis
   analyzeBaseline: async (): Promise<BaselineAnalysisResult> => {
-    trackEvent('onboarding_analyze_start', {});
     const res = await api.post<BaselineAnalysisResult>('/api/onboarding/analyze', {});
-    trackEvent('onboarding_analyze_complete', { readiness: res.readiness_score });
     return res;
   },
 
