@@ -100,5 +100,10 @@ export const onboardingApi = {
   // Check Username
   checkUsername: async (username: string): Promise<UsernameCheckResponse> => {
     return api.get(`/api/onboarding/username/check?username=${encodeURIComponent(username)}`);
+  },
+
+  // Legacy Status Check (Restored for store compatibility)
+  getStatus: async (): Promise<any> => {
+    return api.get('/api/onboarding/status');
   }
 };
