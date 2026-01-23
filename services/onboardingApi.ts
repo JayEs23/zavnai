@@ -29,6 +29,25 @@ export interface StepResponse {
   next_step: number;
 }
 
+// --- Legacy Step Interfaces (Restored for Component Compatibility) ---
+
+export interface NameStepData {
+  first_name: string;
+  last_name: string;
+  middle_name?: string;
+}
+
+export interface UsernameStepData {
+  username: string;
+}
+
+export interface PreferencesStepData {
+  communication_style: 'direct' | 'gentle' | 'conversational';
+  time_commitment: 'low' | 'medium' | 'high';
+  growth_areas: string[];
+  additional_responses?: Record<string, any>;
+}
+
 // Complete definition matching page.tsx usage
 export interface ProfileUpdateRequest {
   full_name?: string;
