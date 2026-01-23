@@ -43,7 +43,7 @@ export interface StructuredOnboardingResponse {
   responseMetadata?: {
     options?: string[];
     labels?: Record<string, string>;
-    units?: string;
+    units?: string | Record<string, string>;
     format?: string;
   };
   timestamp: string;
