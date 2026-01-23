@@ -1,170 +1,296 @@
-/**
- * Main onboarding wizard page
- */
-
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import StepIndicator from '@/components/onboarding/StepIndicator';
-import NameStep from '@/components/onboarding/NameStep';
-import UsernameStep from '@/components/onboarding/UsernameStep';
-import PreferencesStep from '@/components/onboarding/PreferencesStep';
-import { useOnboardingStore } from '@/stores/onboardingStore';
+import { motion, AnimatePresence } from 'framer-motion';
+import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
+import { OnboardingProfile, StructuredOnboardingResponse } from '@/components/onboarding/types';
 import { onboardingApi } from '@/services/onboardingApi';
-import { NameStepData, UsernameStepData, PreferencesStepData } from '@/services/onboardingApi';
+import { responseBuilders } from '@/components/onboarding/utils/responseBuilder';
+
+// Step Components
+import { Step1Basics } from '@/components/onboarding/steps/Step1Basics';
+import { Step2VoiceIntro } from '@/components/onboarding/steps/Step2VoiceIntro';
+import { Step3SmartGoal } from '@/components/onboarding/steps/Step3SmartGoal';
+import { Step4Patterns } from '@/components/onboarding/steps/Step4Patterns';
+import { Step5Capacity } from '@/components/onboarding/steps/Step5Capacity';
+import { Step6Tribe } from '@/components/onboarding/steps/Step6Tribe';
+import { Step7VoiceCalibration } from '@/components/onboarding/steps/Step7VoiceCalibration';
+import { Step8Verification } from '@/components/onboarding/steps/Step8Verification';
+import { Step9GoalDefinition } from '@/components/onboarding/steps/Step9GoalDefinition';
+import { Step11Subscription } from '@/components/onboarding/steps/Step11Subscription';
+import { Step12Success } from '@/components/onboarding/steps/Step12Success';
+
+// Helper function to parse full name from localStorage
+function parseStoredName(): { first: string; middle: string; last: string } {
+  if (typeof window === 'undefined') {
+    return { first: '', middle: '', last: '' };
+  }
+  
+  const stored = localStorage.getItem('full_name');
+  if (!stored) {
+    return { first: '', middle: '', last: '' };
+  }
+
+  const parts = stored.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return {
+      first: parts[0],
+      middle: parts.length > 2 ? parts.slice(1, -1).join(' ') : '',
+      last: parts[parts.length - 1],
+    };
+  } else if (parts.length === 1) {
+    return { first: parts[0], middle: '', last: '' };
+  }
+  return { first: '', middle: '', last: '' };
+}
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const {
-    currentStep,
-    completedSteps,
-    isCompleted,
-    stepData,
-    isLoading,
-    error,
-    setStep,
-    markStepComplete,
-    loadStatus,
-  } = useOnboardingStore();
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
 
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  // Initialize name from localStorage if available
+  const initialName = parseStoredName();
 
-  // Get user ID from localStorage (should come from auth context in production)
-  const userId = typeof window !== 'undefined' ? localStorage.getItem('user_id') : null;
+  // --- Configuration & Feature Flags ---
+  const SHOW_SUBSCRIPTION_STEP = true;
+  const TOTAL_STEPS = SHOW_SUBSCRIPTION_STEP ? 12 : 11;
 
-  useEffect(() => {
-    if (userId) {
-      // Status is fetched from JWT on the backend; userId is only used here
-      // to decide whether the user has logged in locally.
-      loadStatus();
-    }
-  }, [userId, loadStatus]);
+  // --- State for all steps ---
+  const [profile, setProfile] = useState<OnboardingProfile>({
+    firstName: initialName.first,
+    middleName: initialName.middle,
+    lastName: initialName.last,
+    pronouns: '',
+    username: '',
+    goal: '',
+    successCriteria: '',
+    targetDate: '2024-12-31',
+    patterns: [],
+    tribe: [{ name: '', relationship: 'Friend', contact: '' }],
+    capacity: {},
+    verification: ['echo', 'data'],
+    subscriptionSelected: false,
+  });
 
-  const handleStep1 = async (data: NameStepData) => {
-    if (!userId) {
-      setSubmitError('User not authenticated');
-      return;
-    }
+  // Computed full name
+  const fullName = [profile.firstName, profile.middleName, profile.lastName]
+    .filter(Boolean)
+    .join(' ');
 
-    setIsSubmitting(true);
-    setSubmitError(null);
-
+  const nextStep = async () => {
+    // Save data to backend before moving to next step
     try {
-      await onboardingApi.completeStep1(data);
-      markStepComplete(1);
-      setStep(2);
-    } catch (error: any) {
-      setSubmitError(error.message || 'Failed to save name');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleStep2 = async (data: UsernameStepData) => {
-    if (!userId) {
-      setSubmitError('User not authenticated');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      await onboardingApi.completeStep2(data);
-      markStepComplete(2);
-      setStep(3);
-    } catch (error: any) {
-      setSubmitError(error.message || 'Failed to save username');
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleStep3 = async (data: PreferencesStepData) => {
-    if (!userId) {
-      setSubmitError('User not authenticated');
-      return;
-    }
-
-    setIsSubmitting(true);
-    setSubmitError(null);
-
-    try {
-      const response = await onboardingApi.completeStep3(data);
-      if (response.onboarding_completed) {
-        // Redirect to dashboard or next page
-        router.push('/dashboard');
+      if (step === 1) {
+        await onboardingApi.updateProfile({
+          full_name: fullName,
+          first_name: profile.firstName,
+          middle_name: profile.middleName || undefined,
+          last_name: profile.lastName,
+          pronouns: profile.pronouns || undefined,
+          username: profile.username.trim() || undefined,
+        });
+      } else if (step === 3) {
+        if (profile.goal.trim()) {
+          await onboardingApi.updateProfile({
+            primary_goal: profile.goal,
+          });
+        }
+      } else if (step === 4) {
+        const structuredResponse = responseBuilders.patterns(profile.patterns);
+        await onboardingApi.updateProfile({
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
+      } else if (step === 5) {
+        const structuredResponse = responseBuilders.capacity(profile.capacity);
+        await onboardingApi.updateProfile({
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
+      } else if (step === 6) {
+        const structuredResponse = responseBuilders.tribe(profile.tribe);
+        await onboardingApi.updateProfile({
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
+      } else if (step === 9) {
+        const structuredResponse = responseBuilders.goalRefinement(
+          profile.goal,
+          profile.successCriteria,
+          profile.targetDate
+        );
+        await onboardingApi.updateProfile({
+          primary_goal: profile.goal,
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
+      } else if (step === 8) {
+        const structuredResponse = responseBuilders.verification(profile.verification);
+        await onboardingApi.updateProfile({
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
+      } else if (step === 10 && !SHOW_SUBSCRIPTION_STEP) {
+        // Step 10 without subscription goes to success - verification already saved at step 8
+        // No additional save needed
+      } else if (step === 11 && SHOW_SUBSCRIPTION_STEP) {
+        const structuredResponse = responseBuilders.subscription(profile.subscriptionSelected);
+        await onboardingApi.updateProfile({
+          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
+        });
       }
-    } catch (error: any) {
-      setSubmitError(error.message || 'Failed to complete onboarding');
+    } catch (error) {
+      console.error(`Failed to save step ${step} data:`, error);
+    }
+    
+    setStep(s => s + 1);
+  };
+
+  const prevStep = () => setStep(s => s - 1);
+
+  const handleComplete = async () => {
+    setLoading(true);
+    try {
+      // Build all structured responses for final save
+      const allResponses: Record<string, StructuredOnboardingResponse> = {};
+      
+      const patternsResponse = responseBuilders.patterns(profile.patterns);
+      if (patternsResponse) allResponses[patternsResponse.stepName] = patternsResponse;
+      
+      const capacityResponse = responseBuilders.capacity(profile.capacity);
+      if (capacityResponse) allResponses[capacityResponse.stepName] = capacityResponse;
+      
+      const tribeResponse = responseBuilders.tribe(profile.tribe);
+      if (tribeResponse) allResponses[tribeResponse.stepName] = tribeResponse;
+      
+      const verificationResponse = responseBuilders.verification(profile.verification);
+      if (verificationResponse) allResponses[verificationResponse.stepName] = verificationResponse;
+      
+      const goalResponse = responseBuilders.goalRefinement(
+        profile.goal,
+        profile.successCriteria,
+        profile.targetDate
+      );
+      if (goalResponse) allResponses[goalResponse.stepName] = goalResponse;
+      
+      if (SHOW_SUBSCRIPTION_STEP) {
+        const subscriptionResponse = responseBuilders.subscription(profile.subscriptionSelected);
+        if (subscriptionResponse) allResponses[subscriptionResponse.stepName] = subscriptionResponse;
+      }
+
+      await onboardingApi.updateProfile({
+        baseline_responses: allResponses,
+      });
+      router.push('/dashboard');
+    } catch (error) {
+      console.error('Failed to complete onboarding:', error);
+      router.push('/dashboard');
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
-  if (!userId) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4">Authentication Required</h1>
-          <p className="text-gray-600">Please log in to continue onboarding</p>
-        </div>
-      </div>
-    );
-  }
+  // Step configuration
+  const stepConfig = {
+    stepLabel: {
+      1: "Let's get started",
+      2: "Welcome to your journey",
+      3: "Setting your goal",
+      4: "Identifying patterns",
+      5: "Reality check",
+      6: "Assemble your tribe",
+      7: "Voice calibration",
+      8: "Verification",
+      9: "Goal refinement",
+      10: SHOW_SUBSCRIPTION_STEP ? "Subscription" : "Alignment achieved",
+      11: SHOW_SUBSCRIPTION_STEP ? "Subscription" : "Alignment achieved",
+      12: "Alignment achieved",
+    },
+    title: {
+      1: "Let's start with you",
+      2: `Welcome to ZAVN, ${fullName || 'there'}`,
+      3: "Let's make it official",
+      4: "What looks familiar?",
+      5: "Reality Check",
+      6: "Assemble Your Tribe",
+      7: "Sync Your Voice",
+      8: "Choose Your Verification",
+      9: "Let's make it official",
+      10: SHOW_SUBSCRIPTION_STEP ? "Your 18-Month Journey Starts Here" : "Alignment Achieved",
+      11: SHOW_SUBSCRIPTION_STEP ? "Your 18-Month Journey Starts Here" : "Alignment Achieved",
+      12: "Alignment Achieved",
+    },
+    subtitle: {
+      1: "How should Echo and Doyn address you?",
+      2: "Let's start with a quick introduction to how Echo and Doyn will work with you.",
+      3: "Define your goal with clarity",
+      4: "Select patterns that have shaped your work life.",
+      5: "Paint your weekly rhythm of energy and focus.",
+      6: "Nominate your 'Social Mirrors' for an honest look at your journey.",
+      7: "Read the text below so Echo can learn your unique tone.",
+      8: "Combine internal reflection with objective data.",
+      9: "Turn your vague intention into a concrete, measurable goal.",
+      10: SHOW_SUBSCRIPTION_STEP ? "Experience full access to ZAVN free for 7 days." : "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
+      11: SHOW_SUBSCRIPTION_STEP ? "Experience full access to ZAVN free for 7 days." : "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
+      12: "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
+    },
+  };
 
-  if (isCompleted) {
-    router.push('/dashboard');
-    return null;
-  }
+  const stepProps = {
+    profile,
+    setProfile,
+    onNext: nextStep,
+    onPrev: prevStep,
+  };
+
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return <Step1Basics {...stepProps} />;
+      case 2:
+        return <Step2VoiceIntro {...stepProps} />;
+      case 3:
+        return <Step3SmartGoal {...stepProps} />;
+      case 4:
+        return <Step4Patterns {...stepProps} />;
+      case 5:
+        return <Step5Capacity {...stepProps} />;
+      case 6:
+        return <Step6Tribe {...stepProps} />;
+      case 7:
+        return <Step7VoiceCalibration {...stepProps} />;
+      case 8:
+        return <Step8Verification {...stepProps} />;
+      case 9:
+        return <Step9GoalDefinition {...stepProps} />;
+      case 10:
+        // Step 10 was duplicate verification - now maps to subscription or success
+        return SHOW_SUBSCRIPTION_STEP ? <Step11Subscription {...stepProps} /> : <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
+      case 11:
+        return SHOW_SUBSCRIPTION_STEP ? <Step11Subscription {...stepProps} /> : <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
+      case 12:
+        return <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
+      default:
+        return null;
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-3xl mx-auto">
-        {/* Step Indicator */}
-        <StepIndicator
-          currentStep={currentStep}
-          totalSteps={3}
-          completedSteps={completedSteps}
-        />
-
-        {/* Error Display */}
-        {(error || submitError) && (
-          <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-800">{error || submitError}</p>
-          </div>
-        )}
-
-        {/* Step Content */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-8">
-          {currentStep === 1 && (
-            <NameStep
-              onNext={handleStep1}
-              initialData={stepData.step_1}
-              isLoading={isSubmitting}
-            />
-          )}
-
-          {currentStep === 2 && (
-            <UsernameStep
-              onNext={handleStep2}
-              initialData={stepData.step_2}
-              isLoading={isSubmitting}
-            />
-          )}
-
-          {currentStep === 3 && (
-            <PreferencesStep
-              onNext={handleStep3}
-              initialData={stepData.step_3}
-              isLoading={isSubmitting}
-            />
-          )}
-        </div>
-      </div>
-    </div>
+    <OnboardingShell
+      step={step}
+      totalSteps={TOTAL_STEPS}
+      stepLabel={stepConfig.stepLabel[step as keyof typeof stepConfig.stepLabel] || ''}
+      title={stepConfig.title[step as keyof typeof stepConfig.title] || ''}
+      subtitle={stepConfig.subtitle[step as keyof typeof stepConfig.subtitle] || ''}
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={step}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          className="mx-auto w-full max-w-5xl pb-10"
+        >
+          {renderStep()}
+        </motion.div>
+      </AnimatePresence>
+    </OnboardingShell>
   );
 }
-

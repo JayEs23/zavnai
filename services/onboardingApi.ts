@@ -40,6 +40,23 @@ export interface StepResponse {
   onboarding_completed?: boolean;
 }
 
+export interface ProfileUpdateRequest {
+  full_name?: string;
+  first_name?: string;
+  middle_name?: string;
+  last_name?: string;
+  pronouns?: string;
+  username?: string;
+  primary_goal?: string;
+  motivation?: string;
+  baseline_responses?: Record<string, any>;
+}
+
+export interface ProfileUpdateResponse {
+  success: boolean;
+  message: string;
+}
+
 export const onboardingApi = {
   checkUsername: async (username: string): Promise<UsernameCheckResponse> => {
     return api.get<UsernameCheckResponse>(
@@ -49,6 +66,12 @@ export const onboardingApi = {
 
   getStatus: async (): Promise<OnboardingStatusResponse> => {
     return api.get<OnboardingStatusResponse>(`/api/onboarding/status`);
+  },
+
+  updateProfile: async (
+    data: ProfileUpdateRequest
+  ): Promise<ProfileUpdateResponse> => {
+    return api.put<ProfileUpdateResponse>(`/api/onboarding/profile`, data);
   },
 
   completeStep1: async (
