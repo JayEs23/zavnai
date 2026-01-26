@@ -2,28 +2,34 @@ import Link from "next/link";
 
 export const CtaSection = () => {
   return (
-    <section className="px-6 py-32">
-      <div className="mx-auto max-w-4xl text-center">
-        <h2 className="mb-8 text-4xl font-extrabold tracking-tight leading-tight md:text-6xl">
-          Start your alignment <br /> journey today.
-        </h2>
-        <p className="mx-auto mb-12 max-w-2xl text-xl text-slate-600 dark:text-slate-400">
-          Join 50,000+ individuals using behavioral science to close the gap
-          between who they are and who they want to be.
-        </p>
-        <div className="flex flex-col justify-center gap-4 sm:flex-row">
-          <Link
-            href="/signup"
-            className="rounded-2xl bg-primary px-10 py-5 text-xl font-bold text-white shadow-2xl shadow-primary/40 transition-transform hover:scale-105"
-          >
-            Get Started for Free
-          </Link>
-          <Link
-            href="/contact"
-            className="rounded-2xl border border-slate-200 bg-white px-10 py-5 text-xl font-bold transition-all hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700"
-          >
-            Speak to Sales
-          </Link>
+    <section className="px-6 py-32 sm:py-48">
+      <div className="mx-auto max-w-5xl rounded-[3.5rem] bg-slate-900 px-8 py-20 text-center shadow-2xl dark:bg-white/5 md:px-16 md:py-32 relative overflow-hidden">
+        {/* Subtle decorative elements */}
+        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-[100px]" />
+        <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-[100px]" />
+
+        <div className="relative z-10">
+          <h2 className="mb-8 text-4xl font-extrabold tracking-tight leading-tight text-white md:text-7xl">
+            Start your alignment <br /> journey today.
+          </h2>
+          <p className="mx-auto mb-16 max-w-2xl text-xl text-slate-300 dark:text-slate-400">
+            Join 50,000+ individuals using behavioral science to close the gap
+            between who they are and who they want to be.
+          </p>
+          <div className="flex flex-col justify-center items-center gap-6 sm:flex-row">
+            <Link
+              href="/signup"
+              className="group relative inline-flex items-center justify-center rounded-full bg-primary px-12 py-5 text-xl font-bold text-white shadow-xl shadow-primary/40 transition-all hover:scale-105 hover:bg-primary/90 active:scale-95"
+            >
+              Get Started for Free
+            </Link>
+            <Link
+              href="/contact"
+              className="text-lg font-bold text-white/80 hover:text-white transition-colors"
+            >
+              Book a Demo &rarr;
+            </Link>
+          </div>
         </div>
       </div>
     </section>

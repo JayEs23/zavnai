@@ -14,6 +14,7 @@ export interface OnboardingProfile {
   capacity: Record<string, CapacityLevel>;
   verification: string[];
   subscriptionSelected: boolean;
+  interactionMode: 'voice' | 'text';
 }
 
 export interface TribeMember {

@@ -30,17 +30,14 @@ export default function SignupPage() {
     setIsLoading(true);
 
     try {
-      // 1) Register user in backend
       await authApi.register({
         email,
         password,
         auth_provider: "email",
       });
 
-      // 2) Log in (store JWT + user_id in localStorage)
       await authApi.login({ email, password });
 
-      // 3) Establish NextAuth session
       const result = await signIn("credentials", {
         redirect: false,
         email,
@@ -65,49 +62,47 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-background-light text-white dark:bg-background-dark">
+    <div className="min-h-screen bg-white text-slate-900 transition-colors duration-300 dark:bg-background-dark dark:text-white">
       <div className="flex min-h-screen w-full flex-col md:flex-row font-sans">
         {/* Brand & Testimonial Side Panel (Left) */}
-        <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-white/5 bg-primary/10 p-12 lg:flex lg:w-5/12">
-          <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-primary/20 blur-[120px]" />
+        <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-slate-100 bg-slate-50 p-12 lg:flex lg:w-5/12 dark:border-white/5 dark:bg-primary/5">
+          <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-primary/10 blur-[120px] dark:bg-primary/20" />
           <div className="relative z-10">
-            <div className="mb-16 flex items-center gap-3">
-              <div className="relative h-8 w-8">
+            <Link href="/" className="mb-16 flex items-center gap-3 group">
+              <div className="relative h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center transition-transform group-hover:scale-110">
                 <Image
                   src="/zavn-icon.png"
                   alt="ZAVN logo"
                   fill
-                  className="object-contain"
+                  className="object-contain p-1.5"
                 />
               </div>
-              <h2 className="text-2xl font-bold tracking-tight text-white">
+              <h2 className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-white/70">
                 ZAVN
               </h2>
-            </div>
-            <div className="space-y-6">
-              <h1 className="text-5xl font-black leading-[1.1] tracking-tight text-white">
-                Build safer teams with ZAVN.
+            </Link>
+            <div className="space-y-8 mt-12">
+              <h1 className="text-5xl lg:text-7xl font-black leading-[1.05] tracking-tighter text-slate-900 dark:text-white">
+                Build high-performance <br /> habits with ZAVN.
               </h1>
-              <p className="max-w-md text-lg leading-relaxed text-white/70">
-                Join over 2,000+ teams improving their culture today. Start your
-                7-day full access trial. No credit card required.
+              <p className="max-w-md text-xl leading-relaxed text-slate-500 dark:text-white/60">
+                Join thousands of individuals closing the gap between intention and action. Start your 7-day trial.
               </p>
             </div>
           </div>
           <div className="relative z-10">
-            <div className="space-y-4 rounded-xl border border-white/10 bg-white/5 p-8 backdrop-blur-md">
-              <div className="flex gap-1 text-yellow-400">
+            <div className="space-y-5 rounded-[2.5rem] border border-slate-200/60 bg-white p-10 shadow-sm dark:border-white/10 dark:bg-white/5 backdrop-blur-md">
+              <div className="flex gap-1.5 text-amber-400">
                 {Array.from({ length: 5 }).map((_, idx) => (
                   <MdStar key={idx} className="text-xl" />
                 ))}
               </div>
-              <p className="text-lg italic leading-relaxed text-white">
-                &quot;ZAVN transformed how our team communicates; the
-                psychological safety features are an absolute game-changer for
-                our remote workflow.&quot;
+              <p className="text-lg font-medium italic leading-relaxed text-slate-700 dark:text-white/90">
+                &quot;ZAVN transformed how I approach my daily energy management; the
+                cognitive agents are like having a performance coach in my pocket.&quot;
               </p>
-              <div className="flex items-center gap-4 pt-2">
-                <div className="relative size-10 overflow-hidden rounded-full bg-slate-500">
+              <div className="flex items-center gap-4 pt-4 border-t border-slate-100 dark:border-white/5">
+                <div className="relative size-12 overflow-hidden rounded-2xl bg-primary/10">
                   <Image
                     src="/placeholder.svg"
                     alt="Testimonial avatar"
@@ -116,10 +111,8 @@ export default function SignupPage() {
                   />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-white">Sarah Jenkins</p>
-                  <p className="text-xs text-white/50">
-                    Director of Ops, CloudScale
-                  </p>
+                  <p className="text-base font-bold text-slate-900 dark:text-white">Marcus Thorne</p>
+                  <p className="text-xs font-black uppercase tracking-widest text-primary">Founder, Flux Systems</p>
                 </div>
               </div>
             </div>
@@ -127,114 +120,90 @@ export default function SignupPage() {
         </aside>
 
         {/* Registration Form Side (Right) */}
-        <main className="flex flex-1 flex-col items-center justify-center bg-background-light p-6 text-white dark:bg-background-dark md:p-12 lg:p-24">
-          <div className="w-full max-w-[440px] space-y-8">
+        <main className="flex flex-1 flex-col items-center justify-center bg-white p-6 dark:bg-background-dark md:p-12 lg:p-24 transition-colors duration-300">
+          <div className="w-full max-w-[460px] space-y-10">
             {/* Mobile Logo */}
-            <div className="mb-8 flex items-center justify-center gap-2 text-primary lg:hidden">
-              <div className="relative h-6 w-6">
-                <Image
-                  src="/zavn-icon.png"
-                  alt="ZAVN logo"
-                  fill
-                  className="object-contain"
-                />
+            <div className="mb-12 flex items-center justify-center gap-3 lg:hidden">
+              <div className="relative h-10 w-10 bg-primary/10 rounded-xl flex items-center justify-center">
+                <Image src="/zavn-icon.png" alt="ZAVN" fill className="object-contain p-1.5" />
               </div>
-              <h2 className="text-xl font-bold text-white">ZAVN</h2>
+              <h2 className="text-2xl font-black tracking-tight text-slate-900 dark:text-white">ZAVN</h2>
             </div>
 
-            <div className="text-center lg:text-left">
-              <h2 className="text-3xl font-bold tracking-tight text-white">
+            <div className="text-center lg:text-left space-y-2">
+              <h2 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
                 Create your account
               </h2>
-              <p className="mt-2 text-white/60">
-                Join the movement for better workplace culture.
+              <p className="text-lg font-medium text-slate-500 dark:text-white/50">
+                The journey to alignment starts here.
               </p>
-            </div>
-
-            {/* Social Sign Up */}
-            <button className="flex h-12 w-full items-center justify-center gap-3 rounded-lg bg-white font-bold text-gray-900 transition-colors hover:bg-white/90">
-              <span className="flex size-5 items-center justify-center rounded-full bg-white text-xs font-bold text-gray-900 shadow">
-                G
-              </span>
-              <span>Sign up with Google</span>
-            </button>
-
-            <div className="relative flex items-center py-2">
-              <div className="flex-grow border-t border-white/10" />
-              <span className="mx-4 flex-shrink text-sm font-medium uppercase tracking-widest text-white/30">
-                Or email
-              </span>
-              <div className="flex-grow border-t border-white/10" />
             </div>
 
             {/* Registration Form */}
-            <form className="space-y-5" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="ml-1 block text-sm font-semibold text-white">
-                Full Name
-              </label>
-              <div className="relative">
-                <MdPerson className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-white/40" />
-                <input
-                  type="text"
-                  required
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  placeholder="Enter your full name"
-                  className="h-14 w-full rounded-lg border border-white/10 bg-white/5 pl-12 pr-4 text-white placeholder:text-white/20 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/50"
-                />
+            <form className="space-y-6" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label className="ml-1 block text-sm font-bold tracking-tight text-slate-700 dark:text-slate-300">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <MdPerson className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400" />
+                  <input
+                    type="text"
+                    required
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Enter your name"
+                    className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-12 pr-4 text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/20 dark:focus:ring-primary/20"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="ml-1 block text-sm font-semibold text-white">
-                Work Email
-              </label>
-              <div className="relative">
-                <MdMail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-white/40" />
-                <input
-                  type="email"
-                  required
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com"
-                  className="h-14 w-full rounded-lg border border-white/10 bg-white/5 pl-12 pr-4 text-white placeholder:text-white/20 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/50"
-                />
+              <div className="space-y-2">
+                <label className="ml-1 block text-sm font-bold tracking-tight text-slate-700 dark:text-slate-300">
+                  Email address
+                </label>
+                <div className="relative">
+                  <MdMail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400" />
+                  <input
+                    type="email"
+                    required
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="name@example.com"
+                    className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-12 pr-4 text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/20 dark:focus:ring-primary/20"
+                  />
+                </div>
               </div>
-            </div>
 
-            <div className="space-y-2">
-              <label className="ml-1 block text-sm font-semibold text-white">
-                Password
-              </label>
-              <div className="relative">
-                <MdLock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-white/40" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={8}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create a strong password"
-                  className="h-14 w-full rounded-lg border border-white/10 bg-white/5 pl-12 pr-12 text-white placeholder:text-white/20 outline-none transition-all focus:border-primary focus:ring-2 focus:ring-primary/50"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((p) => !p)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-white/40 transition-colors hover:text-white"
-                >
-                  <MdVisibility className="text-xl" />
-                </button>
+              <div className="space-y-2">
+                <label className="ml-1 block text-sm font-bold tracking-tight text-slate-700 dark:text-slate-300">
+                  Password
+                </label>
+                <div className="relative">
+                  <MdLock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-slate-400" />
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    required
+                    minLength={8}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Create a strong password"
+                    className="h-14 w-full rounded-2xl border border-slate-200 bg-slate-50/50 pl-12 pr-12 text-slate-900 placeholder:text-slate-400 outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/20 dark:focus:ring-primary/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((p) => !p)}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 transition-colors hover:text-slate-900 dark:hover:text-white"
+                  >
+                    <MdVisibility className="text-xl" />
+                  </button>
+                </div>
               </div>
-              <p className="mt-1 px-1 text-xs text-white/40">
-                Must be at least 8 characters long.
-              </p>
-            </div>
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex h-14 w-full items-center justify-center gap-2 rounded-lg bg-primary text-lg font-bold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-70"
+                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 text-lg font-bold text-white shadow-xl transition-all hover:bg-slate-800 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 dark:bg-primary dark:hover:bg-primary/90 shadow-slate-200 dark:shadow-primary/20"
               >
                 <span>{isLoading ? "Creating account..." : "Create Account"}</span>
                 <MdArrowForward className="text-xl" />
@@ -242,35 +211,23 @@ export default function SignupPage() {
             </form>
 
             {error && (
-              <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
                 {error}
               </div>
             )}
 
-            <div className="space-y-6 pt-4 text-center">
-              <p className="text-sm text-white/60">
+            <div className="space-y-8 pt-4 text-center">
+              <p className="text-sm font-medium text-slate-500 dark:text-white/40 leading-relaxed">
                 By creating an account, you agree to our{" "}
-                <Link
-                  href="/terms"
-                  className="text-primary underline-offset-2 hover:underline"
-                >
-                  Terms of Service
-                </Link>{" "}
-                and{" "}
-                <Link
-                  href="/privacy"
-                  className="text-primary underline-offset-2 hover:underline"
-                >
-                  Privacy Policy
-                </Link>
-                .
+                <Link href="/terms" className="text-primary font-bold hover:underline underline-offset-4">Terms</Link> and{" "}
+                <Link href="/privacy" className="text-primary font-bold hover:underline underline-offset-4">Privacy Policy</Link>.
               </p>
-              <div className="border-t border-white/10 pt-6">
-                <p className="text-white/80">
+              <div className="border-t border-slate-100 dark:border-white/5 pt-8">
+                <p className="text-slate-600 dark:text-white/80 font-medium">
                   Already have an account?
                   <Link
                     href="/login"
-                    className="ml-1 font-bold text-primary underline-offset-2 hover:underline"
+                    className="ml-2 font-black text-primary hover:underline underline-offset-4"
                   >
                     Log In
                   </Link>
@@ -283,5 +240,3 @@ export default function SignupPage() {
     </div>
   );
 }
-
-

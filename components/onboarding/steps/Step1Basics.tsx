@@ -4,7 +4,7 @@ import { FormInput } from '../shared/FormInput';
 import { NavigationButtons } from '../shared/NavigationButtons';
 
 export function Step1Basics({ profile, setProfile, onNext, onPrev }: OnboardingStepProps) {
-  const isValid = 
+  const isValid =
     profile.firstName.trim() !== '' &&
     profile.lastName.trim() !== '' &&
     profile.username.trim() !== '' &&
@@ -16,23 +16,23 @@ export function Step1Basics({ profile, setProfile, onNext, onPrev }: OnboardingS
         <FormInput
           placeholder="First Name"
           value={profile.firstName}
-          onChange={e => setProfile({...profile, firstName: e.target.value})}
+          onChange={e => setProfile({ ...profile, firstName: e.target.value })}
         />
         <FormInput
           placeholder="Last Name"
           value={profile.lastName}
-          onChange={e => setProfile({...profile, lastName: e.target.value})}
+          onChange={e => setProfile({ ...profile, lastName: e.target.value })}
         />
       </div>
       <FormInput
         placeholder="Middle Name (optional)"
         value={profile.middleName}
-        onChange={e => setProfile({...profile, middleName: e.target.value})}
+        onChange={e => setProfile({ ...profile, middleName: e.target.value })}
       />
       <FormInput
         placeholder="Pronouns (optional)"
         value={profile.pronouns}
-        onChange={e => setProfile({...profile, pronouns: e.target.value})}
+        onChange={e => setProfile({ ...profile, pronouns: e.target.value })}
       />
       <FormInput
         placeholder="Username"
@@ -42,13 +42,11 @@ export function Step1Basics({ profile, setProfile, onNext, onPrev }: OnboardingS
           username: e.target.value.toLowerCase().replace(/[^a-z0-9_-]/g, '')
         })}
       />
-      <button
-        onClick={onNext}
-        disabled={!isValid}
-        className="w-full bg-primary py-4 rounded-xl font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        Continue
-      </button>
+      <NavigationButtons
+        onNext={onNext}
+        onPrev={onPrev}
+        nextDisabled={!isValid}
+      />
     </div>
   );
 }

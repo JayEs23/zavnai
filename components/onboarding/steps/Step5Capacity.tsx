@@ -19,40 +19,39 @@ export function Step5Capacity({ profile, setProfile, onNext, onPrev }: Onboardin
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-10">
         <div className="space-y-4">
           {(['high', 'moderate', 'restricted'] as const).map(level => (
             <button
               key={level}
               onClick={() => setActiveBrush(level)}
-              className={`w-full p-4 rounded-xl border-2 text-left transition-all ${
-                activeBrush === level
-                  ? 'border-primary bg-primary/10'
-                  : 'border-transparent bg-slate-800'
-              }`}
+              className={`w-full p-6 rounded-[1.5rem] border-2 text-left transition-all duration-300 shadow-sm ${activeBrush === level
+                  ? 'border-primary bg-primary/10 scale-[1.02]'
+                  : 'border-slate-100 bg-slate-50 hover:bg-white dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10'
+                }`}
             >
-              <div className="font-bold capitalize">{level} Capacity</div>
-              <div className="text-xs text-slate-500">
-                {level === 'high' ? 'Peak focus' : level === 'moderate' ? 'Medium tasks' : 'Small tasks'}
+              <div className="font-extrabold capitalize text-lg tracking-tight mb-1">{level} Capacity</div>
+              <div className="text-sm font-medium text-slate-500 dark:text-white/40 leading-tight">
+                {level === 'high' ? 'Peak focus & flow' : level === 'moderate' ? 'Balanced energy' : 'Minimal tasks'}
               </div>
             </button>
           ))}
         </div>
 
-        <div className="lg:col-span-3 bg-slate-900 rounded-2xl border border-slate-800 overflow-hidden">
-          <div className="grid grid-cols-8 bg-slate-800/50">
-            <div className="p-2" />
+        <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-100 dark:border-white/5 dark:bg-white/5 overflow-hidden shadow-sm">
+          <div className="grid grid-cols-8 bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10">
+            <div className="p-3" />
             {DAYS.map(d => (
-              <div key={d} className="p-2 text-center text-[10px] font-bold text-slate-500">
+              <div key={d} className="p-3 text-center text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">
                 {d}
               </div>
             ))}
           </div>
           {TIME_SLOTS.map(slot => (
-            <div key={slot.id} className="grid grid-cols-8 border-t border-slate-800">
-              <div className="p-2 text-[10px] font-bold text-slate-500 flex flex-col justify-center">
+            <div key={slot.id} className="grid grid-cols-8 border-b border-slate-100 dark:border-white/5 last:border-0">
+              <div className="p-3 text-[10px] font-black text-slate-400 dark:text-white/30 flex flex-col justify-center border-r border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-transparent">
                 {slot.id}
-                <span className="opacity-50">{slot.label}</span>
+                <span className="opacity-50 text-[8px]">{slot.label}</span>
               </div>
               {DAYS.map(day => {
                 const val = profile.capacity[`${day}-${slot.id}`];
@@ -60,11 +59,10 @@ export function Step5Capacity({ profile, setProfile, onNext, onPrev }: Onboardin
                   <div
                     key={day}
                     onClick={() => paintCell(day, slot.id)}
-                    className={`h-12 border-l border-slate-800 cursor-pointer transition-colors ${
-                      val === 'high' ? 'bg-primary' :
-                      val === 'moderate' ? 'bg-primary/50' :
-                      val === 'restricted' ? 'bg-slate-700' : 'bg-transparent'
-                    }`}
+                    className={`h-14 border-r border-slate-100 dark:border-white/5 cursor-pointer transition-all last:border-0 hover:bg-primary/5 active:scale-95 ${val === 'high' ? 'bg-primary' :
+                        val === 'moderate' ? 'bg-primary/50' :
+                          val === 'restricted' ? 'bg-slate-200 dark:bg-white/10' : 'bg-transparent'
+                      }`}
                   />
                 );
               })}

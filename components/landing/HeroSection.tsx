@@ -14,7 +14,7 @@ export const HeroSection = () => {
             <MdGraphicEq className="text-5xl text-primary" />
           </div>
         </div>
-        <h1 className="mb-8 bg-gradient-to-b from-white to-white/60 bg-clip-text text-center text-5xl font-extrabold tracking-tight text-transparent dark:from-white dark:to-slate-500 md:text-7xl">
+        <h1 className="mb-8 bg-gradient-to-b from-slate-900 to-slate-700 bg-clip-text text-center text-5xl font-extrabold tracking-tight text-transparent dark:from-white dark:to-slate-400 md:text-7xl">
           Close the Gap Between{" "}
           <br className="hidden md:block" />
           Intention and Action

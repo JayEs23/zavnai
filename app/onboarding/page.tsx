@@ -72,6 +72,7 @@ export default function OnboardingPage() {
     capacity: {},
     verification: ['echo', 'data'],
     subscriptionSelected: false,
+    interactionMode: 'voice',
   });
 
   // Computed full name
