@@ -155,7 +155,7 @@ export default function EchoPage() {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
 
                 const sessionPromise = ai.live.connect({
-                    model: 'gemini-2.0-flash-exp',
+                    model: 'gemini-1.5-flash-8b',
                     callbacks: {
                         onopen: () => {
                             const source = audioContextInputRef.current!.createMediaStreamSource(stream);

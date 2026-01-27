@@ -22,8 +22,10 @@ export async function POST(req: NextRequest) {
             3. Validating: Acknowledge feelings but keep focus on the gap between intent and action.
         `;
 
+        console.log("Echo Agent Call:", { messageCount: messages.length });
+
         const model = trackedGenAI.getGenerativeModel({
-            model: "gemini-2.0-flash-001",
+            model: "gemini-1.5-flash",
             systemInstruction: systemPrompt,
         });
 
@@ -33,8 +35,12 @@ export async function POST(req: NextRequest) {
             parts: [{ text: m.content || m.text }],
         }));
 
+        console.log("Gemini Request Contents:", JSON.stringify(contents, null, 2));
+
         const result = await model.generateContent({ contents });
         const text = result.response.text();
+
+        console.log("Gemini Response Success");
 
         return NextResponse.json({
             role: "model",
