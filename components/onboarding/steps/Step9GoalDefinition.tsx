@@ -4,20 +4,51 @@ import { OnboardingStepProps } from '../types';
 import { FormTextarea } from '../shared/FormTextarea';
 import { FormInput } from '../shared/FormInput';
 import { NavigationButtons } from '../shared/NavigationButtons';
+import { agentApi } from '@/services/agentApi';
 
 export function Step9GoalDefinition({ profile, setProfile, onNext, onPrev }: OnboardingStepProps) {
   const [isRefining, setIsRefining] = useState(false);
 
+  // ... inside component
   const refineGoalWithAI = async () => {
+    if (!profile.goal.trim()) return;
+
     setIsRefining(true);
-    // Mocking AI response - in production, this would call a backend API
-    setTimeout(() => {
+    try {
+      // Call Echo Agent (backend)
+      const response = await agentApi.reflect({
+        content: profile.goal,
+        mood: "neutral", // defaulting for now
+      });
+
+      // The AI returns a reflection. 
+      // For this specific 'Goal Refinement' step, we might want to instruct the AI 
+      // to return a "Refined Goal" specifically. 
+      // But currently Echo returns a "Reflection". 
+      // Let's use the reflection as the refined goal for now, 
+      // or implies we need a specific 'refine' endpoint later.
+      // For now, let's treat the AI's "reflection" as the suggestions.
+
+      // NOTE: The current Echo prompt is "Mirroring". 
+      // We might need a "Goal Architect" mode for Doyn/Echo. 
+      // But to prove the connection, let's use the reflection text.
+
+      // In a real flow, we'd probably parse the response better.
+      // Let's assume the "reflection" contains the refined suggestion.
+
+      const refinedText = response.ai_reflection.reflection;
+
       setProfile(p => ({
         ...p,
-        goal: "I will establish a high-performance cognitive routine by completing 15 minutes of deep reflection every morning before 9 AM for the next 90 days."
+        goal: refinedText // Or append it / show it in a modal? Overwriting for demo "Magic".
       }));
+
+    } catch (error) {
+      console.error("Failed to refine goal:", error);
+      // Fallback/Error state handling could be added here
+    } finally {
       setIsRefining(false);
-    }, 1500);
+    }
   };
 
   return (
