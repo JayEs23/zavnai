@@ -1,27 +1,45 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #0f172a;
-}
+@layer theme {
+  :root {
+    --background: #ffffff;
+    --foreground: #0f172a;
+    --primary: #2d333d;
+    --primary-foreground: #ffffff;
+    --muted: rgba(0, 0, 0, 0.05);
+    --muted-foreground: #64748b;
+    --border-subtle: rgba(0, 0, 0, 0.1);
+    --card-bg: #ffffff;
+    --card-border: rgba(0, 0, 0, 0.05);
+  }
 
-.dark {
-  --background: #101922;
-  --foreground: #f9fafb;
+  .dark {
+    --background: #0f1115;
+    --foreground: #f9fafb;
+    --primary: #e5e7eb;
+    --primary-foreground: #0f172a;
+    --muted: rgba(255, 255, 255, 0.05);
+    --muted-foreground: #9ca3af;
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --card-bg: #0f1115;
+    /* Or slightly lighter if needed, but using main bg for now */
+    --card-border: rgba(255, 255, 255, 0.05);
+  }
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border-subtle: var(--border-subtle);
+  --color-card-bg: var(--card-bg);
+  --color-card-border: var(--card-border);
+
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
-
-  --color-primary: #137fec;
-  --color-primary-foreground: #ffffff;
-  --color-background-light: #ffffff;
-  --color-background-dark: #101922;
-  --color-slate-custom: #2d333d;
-  --color-charcoal-custom: #0f1115;
 }
 
 body {
@@ -31,26 +49,76 @@ body {
     "Segoe UI", sans-serif;
 }
 
-.glass-nav {
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
+@layer components {
+  /* Centralized Component Styling */
+
+  .section-padding {
+    @apply py-24 px-6 lg:px-10;
+  }
+
+  .max-w-container {
+    @apply mx-auto max-w-7xl;
+  }
+
+  .text-heading {
+    @apply font-bold tracking-tight text-[var(--foreground)];
+  }
+
+  .text-body {
+    @apply leading-relaxed text-[var(--muted-foreground)];
+  }
+
+  .btn-primary {
+    @apply inline-flex items-center justify-center rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] font-bold transition-all hover:scale-105 active:scale-95 shadow-lg shadow-black/20 dark:shadow-white/10;
+    /* Consolidated shadow for simplicity, or use variable if needed */
+  }
+
+  .nav-link {
+    @apply text-sm font-semibold text-[var(--muted-foreground)] hover:text-[var(--foreground)] transition-colors;
+  }
+
+  .icon-container {
+    @apply flex items-center justify-center bg-[var(--muted)];
+  }
+
+  .card {
+    @apply relative overflow-hidden rounded-3xl border border-[var(--card-border)] bg-[var(--card-bg)] p-8 transition-all duration-500 hover:-translate-y-2 hover:border-[var(--border-subtle)] hover:shadow-lg;
+  }
+
+  .glass-nav {
+    @apply border-b border-[var(--border-subtle)] bg-[var(--background)]/80 backdrop-blur-md transition-colors duration-300;
+  }
+
+  .input-field {
+    @apply h-14 w-full rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] px-4 text-sm text-[var(--foreground)] outline-none transition-all placeholder:text-[var(--muted-foreground)] focus:border-[var(--primary)] focus:ring-4 focus:ring-[var(--primary)]/10;
+  }
+
+  .label {
+    @apply block text-sm font-bold tracking-tight text-[var(--foreground)] ml-1 mb-2;
+  }
 }
 
 .hero-gradient {
-  background: radial-gradient(
-    circle at center,
-    rgba(19, 127, 236, 0.08) 0%,
-    rgba(16, 25, 34, 0) 70%
-  );
+  background: radial-gradient(circle at center,
+      rgba(0, 0, 0, 0.03) 0%,
+      rgba(0, 0, 0, 0) 70%);
+}
+
+.dark .hero-gradient {
+  background: radial-gradient(circle at center,
+      rgba(255, 255, 255, 0.03) 0%,
+      rgba(255, 255, 255, 0) 70%);
 }
 
 @keyframes float-slow {
   0% {
     transform: translateY(0);
   }
+
   50% {
     transform: translateY(-8px);
   }
+
   100% {
     transform: translateY(0);
   }
@@ -61,10 +129,12 @@ body {
 }
 
 @keyframes pulse-slow {
+
   0%,
   100% {
     opacity: 0.5;
   }
+
   50% {
     opacity: 1;
   }
@@ -73,4 +143,3 @@ body {
 .animate-pulse-slow {
   animation: pulse-slow 3s ease-in-out infinite;
 }
-

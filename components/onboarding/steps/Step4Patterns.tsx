@@ -18,8 +18,8 @@ export function Step4Patterns({ profile, setProfile, onNext, onPrev }: Onboardin
                 : [...prev.patterns, p.id]
             }))}
             className={`flex items-center gap-3 px-8 py-4 rounded-full border-2 font-bold transition-all duration-300 ${profile.patterns.includes(p.id)
-                ? 'bg-primary border-primary text-white shadow-lg shadow-primary/20 scale-105'
-                : 'border-slate-100 bg-slate-50 text-slate-600 hover:border-primary/30 hover:bg-white dark:border-white/5 dark:bg-white/5 dark:text-slate-300 dark:hover:bg-white/10'
+              ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/20 scale-105'
+              : 'border-[var(--border-subtle)] bg-[var(--card-bg)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/30 hover:bg-[var(--muted)]'
               }`}
           >
             {profile.patterns.includes(p.id) ? <MdCheck className="text-xl" /> : <div className="w-5" />}

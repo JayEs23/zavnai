@@ -43,33 +43,32 @@ export default function AgentPage({ params }: AgentPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-background-light px-6 py-16 text-slate-900 dark:bg-background-dark dark:text-white">
+    <div className="min-h-screen bg-[var(--background)] px-6 py-16 text-[var(--foreground)] transition-colors duration-300">
       <div className="mx-auto max-w-3xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--primary)]">
           ZAVN Agent
         </p>
         <h1 className="mt-3 text-4xl font-bold tracking-tight">{data.name}</h1>
-        <p className="mt-4 text-lg text-slate-600 dark:text-slate-400">
+        <p className="mt-4 text-lg text-[var(--muted-foreground)]">
           {data.description}
         </p>
-        <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 text-sm dark:border-slate-800 dark:bg-charcoal-custom">
-          <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
-            Primary focus
+        <div className="mt-6 rounded-2xl border border-[var(--border-subtle)] bg-[var(--card-bg)] p-6 text-sm">
+          <h2 className="text-sm font-semibold text-[var(--foreground)]">
           </h2>
-          <p className="mt-1 text-slate-600 dark:text-slate-400">
+          <p className="mt-1 text-[var(--muted-foreground)]">
             {data.focus}
           </p>
         </div>
         <div className="mt-8 flex flex-wrap gap-3">
           <Link
             href="/signup"
-            className="rounded-full bg-primary px-6 py-2 text-sm font-semibold text-white hover:bg-primary/90"
+            className="rounded-full btn-primary px-6 py-2 text-sm font-semibold text-white/90"
           >
             Get started with {data.name}
           </Link>
           <Link
             href="/agents"
-            className="rounded-full border border-slate-300 px-6 py-2 text-sm font-semibold hover:bg-slate-100 dark:border-slate-700 dark:hover:bg-slate-800"
+            className="rounded-full border border-[var(--border-subtle)] px-6 py-2 text-sm font-semibold hover:bg-[var(--muted)] text-[var(--foreground)]"
           >
             Back to agents
           </Link>

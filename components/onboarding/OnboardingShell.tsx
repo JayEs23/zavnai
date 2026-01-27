@@ -25,13 +25,13 @@ export function OnboardingShell({
   const progress = Math.round((step / totalSteps) * 100);
 
   return (
-    <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-background-dark text-slate-900 dark:text-white">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 text-[var(--foreground)]">
       <div className="flex min-h-screen flex-col">
         {/* Top Nav */}
-        <header className="sticky top-0 z-40 border-b border-black/5 bg-white/80 dark:border-white/5 dark:bg-background-dark/80 backdrop-blur-md transition-colors duration-300">
+        <header className="sticky top-0 z-40 border-b border-[var(--border-subtle)] bg-[var(--background)]/80 backdrop-blur-md transition-colors duration-300">
           <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
             <div className="flex items-center gap-3">
-              <div className="relative flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+              <div className="relative h-10 w-10 icon-container rounded-xl">
                 <Image
                   src="/zavn-icon.png"
                   alt="ZAVN logo"
@@ -54,20 +54,20 @@ export function OnboardingShell({
             <div className="flex flex-col gap-4">
               <div className="flex items-end justify-between">
                 <div className="space-y-1">
-                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-primary">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-[var(--primary)]">
                     Step {step} of {totalSteps}
                   </p>
-                  <p className="text-sm font-medium text-slate-500 dark:text-white/40">
+                  <p className="text-sm font-medium text-[var(--muted-foreground)]">
                     {stepLabel}
                   </p>
                 </div>
-                <p className="text-sm font-bold text-slate-900 dark:text-white">
-                  {progress}% <span className="text-slate-400 font-medium">Complete</span>
+                <p className="text-sm font-bold text-[var(--foreground)]">
+                  {progress}% <span className="text-[var(--muted-foreground)] font-medium">Complete</span>
                 </p>
               </div>
-              <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-white/5">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-[var(--muted)]">
                 <div
-                  className="h-full rounded-full bg-primary transition-all duration-700 ease-out"
+                  className="h-full rounded-full bg-[var(--primary)] transition-all duration-700 ease-out"
                   style={{ width: `${progress}%` }}
                 />
               </div>
@@ -78,7 +78,7 @@ export function OnboardingShell({
               <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">
                 {title}
               </h1>
-              <p className="text-lg leading-relaxed text-slate-600 dark:text-slate-400">
+              <p className="text-lg text-body">
                 {subtitle}
               </p>
             </div>

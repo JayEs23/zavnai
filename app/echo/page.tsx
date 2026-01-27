@@ -261,27 +261,27 @@ export default function EchoPage() {
     };
 
     return (
-        <div className="flex h-screen w-full flex-col overflow-hidden bg-[#0a0a0a] text-white font-sans transition-all duration-1000">
+        <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)] font-sans transition-all duration-1000">
             {/* Header Mirroring Claire */}
-            <header className="flex items-center justify-between border-b border-white/5 bg-black/80 backdrop-blur-md px-8 py-3 sticky top-0 z-50">
+            <header className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background)]/80 backdrop-blur-md px-8 py-3 sticky top-0 z-50">
                 <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="p-2 hover:bg-white/5 rounded-full transition-colors shrink-0">
+                    <Link href="/dashboard" className="p-2 hover:bg-[var(--muted)] rounded-full transition-colors shrink-0 text-[var(--foreground)]">
                         <MdArrowBack size={20} />
                     </Link>
                     <h2 className="text-lg font-bold tracking-tight">ZAVN <span className="text-primary/80 uppercase tracking-widest text-[10px] ml-1">ECHO MIRROR</span></h2>
                 </div>
 
                 <div className="flex flex-1 justify-center max-w-xl">
-                    <div className="flex items-center gap-1 bg-white/5 rounded-full p-1 border border-white/10">
+                    <div className="flex items-center gap-1 bg-[var(--muted)] rounded-full p-1 border border-[var(--border-subtle)]">
                         <button
                             onClick={() => setInteractionMode('voice')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'voice' ? 'bg-primary text-black' : 'text-white/40 hover:text-white'}`}
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'voice' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                         >
                             Voice
                         </button>
                         <button
                             onClick={() => setInteractionMode('text')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'text' ? 'bg-primary text-black' : 'text-white/40 hover:text-white'}`}
+                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'text' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
                         >
                             Text
                         </button>
@@ -289,8 +289,8 @@ export default function EchoPage() {
                 </div>
 
                 <div className="flex items-center gap-6">
-                    <p className="text-[10px] font-mono text-white/30 uppercase">T: {duration}</p>
-                    <button onClick={() => setIsProcessing(true)} className="bg-primary text-black hover:scale-105 px-6 py-2 rounded-lg text-xs font-bold transition-all shadow-lg shadow-primary/20">
+                    <p className="text-[10px] font-mono text-[var(--muted-foreground)] uppercase">T: {duration}</p>
+                    <button onClick={() => setIsProcessing(true)} className="btn-primary px-6 py-2 rounded-lg text-xs">
                         Finalize
                     </button>
                 </div>
@@ -298,33 +298,33 @@ export default function EchoPage() {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Calibration Sidebar */}
-                <aside className="w-72 border-r border-white/5 bg-[#0a0a0a] flex flex-col p-6 shrink-0 gap-8">
+                <aside className="w-72 border-r border-[var(--border-subtle)] bg-[var(--background)] flex flex-col p-6 shrink-0 gap-8">
                     <div>
-                        <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <MdAnalytics className="text-primary" />
+                        <h3 className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                            <MdAnalytics className="text-[var(--primary)]" />
                             Mirror Calibration
                         </h3>
-                        <div className="bg-white/5 rounded-xl p-6 border border-white/10 flex flex-col items-center gap-4 relative overflow-hidden group">
+                        <div className="bg-[var(--card-bg)] rounded-xl p-6 border border-[var(--border-subtle)] flex flex-col items-center gap-4 relative overflow-hidden group">
                             <div className="relative size-32 flex items-center justify-center">
                                 <svg className="size-full -rotate-90" viewBox="0 0 100 100">
-                                    <circle className="text-white/5" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="8"></circle>
-                                    <circle className="text-primary transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * accuracy) / 100} strokeLinecap="round" strokeWidth="8"></circle>
+                                    <circle className="text-[var(--muted)]" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="8"></circle>
+                                    <circle className="text-[var(--primary)] transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * accuracy) / 100} strokeLinecap="round" strokeWidth="8"></circle>
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-3xl font-black text-white">{accuracy}%</span>
-                                    <span className="text-[9px] uppercase tracking-widest text-primary font-bold">Accuracy</span>
+                                    <span className="text-3xl font-black text-[var(--foreground)]">{accuracy}%</span>
+                                    <span className="text-[9px] uppercase tracking-widest text-[var(--primary)] font-bold">Accuracy</span>
                                 </div>
                             </div>
-                            <p className="text-center text-[10px] text-white/60 px-2 leading-relaxed uppercase font-bold">Linguistic pattern alignment level.</p>
+                            <p className="text-center text-[10px] text-[var(--muted-foreground)] px-2 leading-relaxed uppercase font-bold">Linguistic pattern alignment level.</p>
                         </div>
                     </div>
 
                     <div className="space-y-4">
-                        <h3 className="text-[10px] font-bold text-white/40 uppercase tracking-[0.2em] px-2 text-center">Truth Markers</h3>
+                        <h3 className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] px-2 text-center">Truth Markers</h3>
                         <div className="space-y-4 text-center">
-                            <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                                <p className="text-[10px] font-bold text-primary mb-1 uppercase tracking-widest font-mono">Truth Score</p>
-                                <p className="text-2xl font-black text-white">{truthScore}/100</p>
+                            <div className="p-4 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-lg">
+                                <p className="text-[10px] font-bold text-[var(--primary)] mb-1 uppercase tracking-widest font-mono">Truth Score</p>
+                                <p className="text-2xl font-black text-[var(--foreground)]">{truthScore}/100</p>
                             </div>
                         </div>
                     </div>
@@ -335,8 +335,8 @@ export default function EchoPage() {
                     <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #21ed7d 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
 
                     <div className="p-8 relative z-10 text-center">
-                        <h2 className="text-3xl font-black tracking-tight mb-1 text-white">Linguistic Mirroring</h2>
-                        <p className="text-primary/60 text-[10px] font-bold uppercase tracking-widest">{interactionMode === 'voice' ? 'Identifying behavioral loops through audio frames...' : 'Mapping behavioral intent via text analysis...'}</p>
+                        <h2 className="text-3xl font-black tracking-tight mb-1 text-[var(--foreground)]">Linguistic Mirroring</h2>
+                        <p className="text-[var(--primary)]/80 text-[10px] font-bold uppercase tracking-widest">{interactionMode === 'voice' ? 'Identifying behavioral loops through audio frames...' : 'Mapping behavioral intent via text analysis...'}</p>
                     </div>
 
                     <div className="flex-1 relative flex items-center justify-center">
@@ -351,10 +351,10 @@ export default function EchoPage() {
                                 >
                                     <canvas ref={canvasRef} width={600} height={600} className="absolute z-0" />
                                     <div className="relative z-20 flex flex-col items-center">
-                                        <div className={`bg-primary text-black font-black px-8 py-4 rounded-xl text-2xl uppercase tracking-tighter shadow-[0_0_40px_rgba(33,237,125,0.3)] border-4 border-white/20 transition-all duration-500 ${hasContradiction ? 'bg-red-500 scale-110 rotate-2' : 'rotate-[-2deg]'}`}>
+                                        <div className={`bg-[var(--primary)] text-white font-black px-8 py-4 rounded-xl text-2xl uppercase tracking-tighter shadow-2xl border-4 border-white/20 transition-all duration-500 ${hasContradiction ? 'bg-red-500 scale-110 rotate-2' : 'rotate-[-2deg]'}`}>
                                             {hasContradiction ? 'CONTRADICTION' : 'Echo Core'}
                                         </div>
-                                        <div className="h-12 w-px bg-gradient-to-b from-primary to-transparent mt-2"></div>
+                                        <div className="h-12 w-px bg-gradient-to-b from-[var(--primary)] to-transparent mt-2"></div>
                                     </div>
                                 </motion.div>
                             ) : (
@@ -369,24 +369,24 @@ export default function EchoPage() {
                                         {entries.map((e, i) => (
                                             <div key={i} className={`flex gap-3 ${e.role === 'user' ? 'justify-end' : ''}`}>
                                                 {e.role === 'model' && (
-                                                    <div className="size-8 rounded-full bg-primary flex items-center justify-center text-black shrink-0 shadow-lg shadow-primary/20">
+                                                    <div className="size-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white shrink-0 shadow-lg">
                                                         <MdPsychology size={18} />
                                                     </div>
                                                 )}
                                                 <div className={`max-w-[85%] flex flex-col gap-1 ${e.role === 'user' ? 'items-end' : ''}`}>
-                                                    <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-white/5 border-white/10 text-white/90 rounded-tl-none italic' : 'bg-primary/10 border-primary/20 text-primary rounded-tr-none'}`}>
+                                                    <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-[var(--card-bg)] border-[var(--border-subtle)] text-[var(--foreground)] rounded-tl-none italic' : 'bg-[var(--primary)]/10 border-[var(--primary)]/20 text-[var(--foreground)] rounded-tr-none'}`}>
                                                         {e.text}
                                                     </div>
-                                                    <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
+                                                    <span className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
                                                 </div>
                                             </div>
                                         ))}
                                         {isTextLoading && (
                                             <div className="flex justify-start">
-                                                <div className="bg-white/5 p-4 rounded-xl rounded-tl-none border border-white/10 flex gap-1">
-                                                    <span className="w-1 h-1 bg-primary rounded-full animate-bounce" />
-                                                    <span className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.1s]" />
-                                                    <span className="w-1 h-1 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                                                <div className="bg-[var(--card-bg)] p-4 rounded-xl rounded-tl-none border border-[var(--border-subtle)] flex gap-1">
+                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce" />
+                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce [animation-delay:0.1s]" />
+                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce [animation-delay:0.2s]" />
                                                 </div>
                                             </div>
                                         )}
@@ -397,7 +397,7 @@ export default function EchoPage() {
 
                         {interactionMode === 'voice' && floatingChips.map((chip, i) => (
                             <div key={i} className="absolute z-10" style={{ top: chip.top, left: chip.left, right: chip.right, bottom: chip.bottom }}>
-                                <div className="flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 p-3 rounded-lg text-[10px] font-bold uppercase tracking-widest text-white/90 shadow-xl">
+                                <div className="flex items-center gap-2 bg-[var(--background)]/80 backdrop-blur-md border border-[var(--border-subtle)] p-3 rounded-lg text-[10px] font-bold uppercase tracking-widest text-[var(--foreground)] shadow-xl">
                                     {chip.text}
                                 </div>
                             </div>
@@ -405,27 +405,27 @@ export default function EchoPage() {
                     </div>
 
                     {/* Logic Terminal */}
-                    <div className="h-48 border-t border-white/5 bg-white/[0.02] p-6 flex gap-8 shrink-0">
+                    <div className="h-48 border-t border-[var(--border-subtle)] bg-[var(--muted)]/20 p-6 flex gap-8 shrink-0">
                         <div className="flex flex-col gap-3 min-w-[280px]">
-                            <div className="flex items-center gap-2 text-primary">
+                            <div className="flex items-center gap-2 text-[var(--primary)]">
                                 <MdTerminal size={16} />
                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Logic Snippets</span>
                             </div>
-                            <div className="flex-1 bg-black/80 rounded-lg p-4 font-mono text-[9px] text-primary/50 border border-white/5 shadow-inner overflow-hidden uppercase">
+                            <div className="flex-1 bg-black rounded-lg p-4 font-mono text-[9px] text-[#21ed7d] border border-white/10 shadow-inner overflow-hidden uppercase">
                                 <p className="mb-1">{`> detect_drift("Motivation") = ${truthScore < 85 ? 'TRUE' : 'FALSE'}`}</p>
                                 <p className="mb-1">{`> variance_score: ${(accuracy / 100).toFixed(4)}`}</p>
                                 <p className="animate-pulse">{`> ${interactionMode === 'voice' ? 'analyzing stress patterns...' : 'searching for linguistic hedging...'}`}</p>
                             </div>
                         </div>
                         <div className="flex-1 flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-white/40">
+                            <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
                                 <MdAnalytics size={16} />
                                 <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Goal Alignment Summary</span>
                             </div>
-                            <div className="p-4 bg-white/[0.02] border border-white/5 rounded-lg flex-1 overflow-y-auto">
-                                <p className="text-[11px] text-white/60 leading-relaxed font-medium uppercase tracking-tighter">
-                                    Current session focusing on <span className="text-primary font-bold">{userContext.primary_goal}</span>.
-                                    Correlation between <span className="text-primary font-bold">{userContext.top_patterns[0]}</span> and current markers.
+                            <div className="p-4 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-lg flex-1 overflow-y-auto">
+                                <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed font-medium uppercase tracking-tighter">
+                                    Current session focusing on <span className="text-[var(--primary)] font-bold">{userContext.primary_goal}</span>.
+                                    Correlation between <span className="text-[var(--primary)] font-bold">{userContext.top_patterns[0]}</span> and current markers.
                                     Mirror calibration suggesting logic adjustment for mid-week capacity.
                                 </p>
                             </div>
@@ -440,37 +440,37 @@ export default function EchoPage() {
                             initial={{ width: 0, opacity: 0 }}
                             animate={{ width: 384, opacity: 1 }}
                             exit={{ width: 0, opacity: 0 }}
-                            className="border-l border-white/5 bg-black/40 flex flex-col shrink-0 overflow-hidden"
+                            className="border-l border-[var(--border-subtle)] bg-[var(--background)] flex flex-col shrink-0 overflow-hidden"
                         >
-                            <div className="p-6 border-b border-white/5 flex justify-between items-center whitespace-nowrap">
-                                <h3 className="text-[10px] font-bold text-white uppercase tracking-widest">Reflection History</h3>
-                                <span className="text-[9px] font-mono text-primary bg-primary/10 px-2 py-0.5 rounded tracking-tighter">VOICE_LIVE</span>
+                            <div className="p-6 border-b border-[var(--border-subtle)] flex justify-between items-center whitespace-nowrap">
+                                <h3 className="text-[10px] font-bold text-[var(--foreground)] uppercase tracking-widest">Reflection History</h3>
+                                <span className="text-[9px] font-mono text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded tracking-tighter">VOICE_LIVE</span>
                             </div>
 
                             <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
                                 {entries.map((e, i) => (
                                     <div key={i} className={`flex gap-3 ${e.role === 'user' ? 'justify-end' : ''}`}>
                                         {e.role === 'model' && (
-                                            <div className="size-8 rounded-full bg-primary flex items-center justify-center text-black shrink-0 shadow-lg shadow-primary/20">
+                                            <div className="size-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white shrink-0 shadow-lg">
                                                 <MdPsychology size={18} />
                                             </div>
                                         )}
                                         <div className={`max-w-[85%] flex flex-col gap-1 ${e.role === 'user' ? 'items-end' : ''}`}>
-                                            <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-white/5 border-white/10 text-white/90 rounded-tl-none' : 'bg-primary/10 border-primary/20 text-primary rounded-tr-none'}`}>
+                                            <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-[var(--card-bg)] border-[var(--border-subtle)] text-[var(--foreground)] rounded-tl-none' : 'bg-[var(--primary)]/10 border-[var(--primary)]/20 text-[var(--foreground)] rounded-tr-none'}`}>
                                                 {e.text}
                                             </div>
-                                            <span className="text-[9px] font-bold text-white/20 uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
+                                            <span className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
-                            <div className="p-6 bg-black border-t border-white/5">
+                            <div className="p-6 bg-[var(--background)] border-t border-[var(--border-subtle)]">
                                 <div className="relative group">
-                                    <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-8 text-white text-[10px] text-center italic text-white/40 uppercase tracking-[0.2em] font-bold border-dashed animate-pulse">
+                                    <div className="w-full bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-xl px-4 py-8 text-[var(--foreground)] text-[10px] text-center italic uppercase tracking-[0.2em] font-bold border-dashed animate-pulse">
                                         Echo is listening...
                                     </div>
-                                    <button onClick={() => setIsMuted(!isMuted)} className={`absolute top-1/2 -translate-y-1/2 right-4 p-3 rounded-xl transition-all flex items-center justify-center ${isMuted ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-primary text-black shadow-lg shadow-primary/20 hover:scale-110'}`}>
+                                    <button onClick={() => setIsMuted(!isMuted)} className={`absolute top-1/2 -translate-y-1/2 right-4 p-3 rounded-xl transition-all flex items-center justify-center ${isMuted ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-[var(--primary)] text-white shadow-lg hover:scale-110'}`}>
                                         {isMuted ? <MdMicOff size={24} /> : <MdMic size={24} />}
                                     </button>
                                 </div>
@@ -487,7 +487,7 @@ export default function EchoPage() {
                         initial={{ y: 100 }}
                         animate={{ y: 0 }}
                         exit={{ y: 100 }}
-                        className="p-6 bg-black border-t border-white/5 relative z-50"
+                        className="p-6 bg-[var(--background)] border-t border-[var(--border-subtle)] relative z-50"
                     >
                         <div className="max-w-3xl mx-auto w-full relative">
                             <textarea
@@ -500,13 +500,13 @@ export default function EchoPage() {
                                     }
                                 }}
                                 placeholder="Type your reflection to mirror..."
-                                className="w-full bg-white/5 border border-white/10 rounded-2xl p-5 pr-16 focus:outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none min-h-[80px] text-xs uppercase font-bold tracking-wider placeholder:text-white/20"
+                                className="w-full bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-2xl p-5 pr-16 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 transition-all resize-none min-h-[80px] text-xs uppercase font-bold tracking-wider placeholder:text-[var(--muted-foreground)]"
                                 rows={1}
                             />
                             <button
                                 onClick={handleSendText}
                                 disabled={!textInput.trim() || isTextLoading}
-                                className="absolute right-4 bottom-4 p-3 bg-primary text-black rounded-xl hover:scale-105 transition-transform disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-primary/20"
+                                className="absolute right-4 bottom-4 p-3 btn-primary text-white rounded-xl disabled:opacity-50 disabled:hover:scale-100"
                             >
                                 <MdSend size={20} />
                             </button>

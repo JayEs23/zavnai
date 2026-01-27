@@ -9,9 +9,9 @@ export function Step3SmartGoal({ profile, setProfile, onNext, onPrev }: Onboardi
   return (
     <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
       <div className="lg:col-span-2 space-y-8">
-        <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200/60 dark:bg-white/5 dark:border-white/5 space-y-4">
-          <label className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-white/40 flex items-center gap-2">
-            <MdEvent className="text-primary text-lg" /> <span>Specific Goal</span>
+        <div className="bg-[var(--card-bg)] p-8 rounded-[2rem] border border-[var(--border-subtle)] space-y-4">
+          <label className="text-sm font-bold uppercase tracking-widest text-[var(--muted-foreground)] flex items-center gap-2">
+            <MdEvent className="text-[var(--primary)] text-lg" /> <span>Specific Goal</span>
           </label>
           <FormTextarea
             className="h-40 text-lg"
@@ -20,8 +20,8 @@ export function Step3SmartGoal({ profile, setProfile, onNext, onPrev }: Onboardi
             onChange={e => setProfile({ ...profile, goal: e.target.value })}
           />
         </div>
-        <div className="bg-slate-50 p-8 rounded-[2rem] border border-slate-200/60 dark:bg-white/5 dark:border-white/5 space-y-4">
-          <label className="text-sm font-bold uppercase tracking-widest text-slate-500 dark:text-white/40">Success Criteria</label>
+        <div className="bg-[var(--card-bg)] p-8 rounded-[2rem] border border-[var(--border-subtle)] space-y-4">
+          <label className="text-sm font-bold uppercase tracking-widest text-[var(--muted-foreground)]">Success Criteria</label>
           <FormInput
             className="text-lg"
             placeholder="How will we measure this?"
@@ -36,17 +36,17 @@ export function Step3SmartGoal({ profile, setProfile, onNext, onPrev }: Onboardi
           nextDisabled={!profile.goal.trim()}
         />
       </div>
-      <aside className="bg-primary/5 p-8 rounded-[2rem] border border-primary/10 h-fit space-y-6">
+      <aside className="bg-[var(--primary)]/5 p-8 rounded-[2rem] border border-[var(--primary)]/10 h-fit space-y-6">
         <div className="flex items-center gap-4">
-          <div className="h-12 w-12 rounded-2xl bg-primary flex items-center justify-center shadow-lg shadow-primary/20">
+          <div className="h-12 w-12 rounded-2xl bg-[var(--primary)] flex items-center justify-center shadow-lg shadow-[var(--primary)]/20">
             <MdBolt className="text-white text-2xl" />
           </div>
           <div>
-            <h3 className="font-bold text-slate-900 dark:text-white">Doyn&apos;s Advice</h3>
-            <p className="text-xs font-medium text-primary uppercase tracking-wider">Coach</p>
+            <h3 className="font-bold text-[var(--foreground)]">Doyn&apos;s Advice</h3>
+            <p className="text-xs font-medium text-[var(--primary)] uppercase tracking-wider">Coach</p>
           </div>
         </div>
-        <p className="text-[15px] leading-relaxed text-slate-600 dark:text-slate-400 italic">
+        <p className="text-[15px] leading-relaxed text-[var(--muted-foreground)] italic">
           &quot;Instead of &apos;be healthier&apos;, try: &apos;Reduce sugar intake to 25g/day for 30 days.&apos;&quot;
         </p>
       </aside>

@@ -73,19 +73,19 @@ export default function DashboardPage() {
   const greeting = `Welcome back, ${displayName}`;
 
   return (
-    <div className="min-h-screen bg-white transition-colors duration-300 dark:bg-background-dark text-slate-900 dark:text-white">
+    <div className="min-h-screen bg-[var(--background)] transition-colors duration-300 text-[var(--foreground)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 py-12">
         {/* Header */}
         <div className="mb-12 flex flex-col sm:flex-row items-baseline justify-between gap-4">
           <div className="space-y-1">
             <h1 className="text-4xl lg:text-5xl font-extrabold tracking-tight">{greeting}</h1>
-            <p className="text-lg text-slate-500 dark:text-slate-400 font-medium">
+            <p className="text-lg text-[var(--muted-foreground)] font-medium">
               {dashboardData.pronouns && `(${dashboardData.pronouns}) `}
               Here&apos;s your daily alignment pulse.
             </p>
           </div>
           <div className="flex items-center gap-3">
-            <button onClick={loadDashboard} className="p-3 rounded-full hover:bg-slate-100 dark:hover:bg-white/5 transition-colors text-slate-400">
+            <button onClick={loadDashboard} className="p-3 rounded-full hover:bg-[var(--muted)] transition-colors text-[var(--muted-foreground)]">
               <MdRefresh size={24} className={loading ? 'animate-spin' : ''} />
             </button>
           </div>
@@ -94,35 +94,35 @@ export default function DashboardPage() {
         {/* Main Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           {/* Thrive Score */}
-          <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm transition-all hover:bg-white dark:hover:bg-white/10 group">
+          <div className="card group">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-4">
-                <div className="p-3 bg-primary/10 rounded-2xl group-hover:bg-primary transition-colors">
-                  <MdAnalytics className="text-primary text-3xl group-hover:text-white" />
+                <div className="p-3 rounded-2xl bg-[var(--primary)]/10 group-hover:bg-[var(--primary)] transition-colors">
+                  <MdAnalytics className="text-[var(--primary)] text-3xl group-hover:text-white" />
                 </div>
                 <div>
-                  <p className="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Thrive Potential</p>
-                  <p className="text-4xl font-black text-primary">{dashboardData.thrive_score}</p>
+                  <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Thrive Potential</p>
+                  <p className="text-4xl font-black text-[var(--primary)]">{dashboardData.thrive_score}</p>
                 </div>
               </div>
             </div>
-            <div className="h-2 bg-slate-200 dark:bg-white/5 rounded-full overflow-hidden">
+            <div className="h-2 bg-[var(--muted)] rounded-full overflow-hidden">
               <div
-                className="h-full bg-primary transition-all duration-1000 ease-out"
+                className="h-full bg-[var(--primary)] transition-all duration-1000 ease-out"
                 style={{ width: `${dashboardData.thrive_score}%` }}
               />
             </div>
-            <p className="text-xs font-bold text-slate-400 mt-4 uppercase tracking-widest">Alignment Readiness</p>
+            <p className="text-xs font-bold text-[var(--muted-foreground)] mt-4 uppercase tracking-widest">Alignment Readiness</p>
           </div>
 
           {/* Primary Goal */}
-          <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm transition-all hover:bg-white dark:hover:bg-white/10 group">
+          <div className="card group">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-primary/10 rounded-2xl group-hover:bg-primary transition-colors">
-                <MdGpsFixed className="text-primary text-3xl group-hover:text-white" />
+              <div className="p-3 rounded-2xl bg-[var(--primary)]/10 group-hover:bg-[var(--primary)] transition-colors">
+                <MdGpsFixed className="text-[var(--primary)] text-3xl group-hover:text-white" />
               </div>
               <div className="flex-1 space-y-2">
-                <p className="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Active Goal</p>
+                <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Active Goal</p>
                 <p className="text-xl font-extrabold leading-tight line-clamp-2">
                   {dashboardData.primary_goal || dashboardData.goal_progress?.goal || 'No goal set'}
                 </p>
@@ -138,19 +138,19 @@ export default function DashboardPage() {
           </div>
 
           {/* Next Session */}
-          <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm transition-all hover:bg-white dark:hover:bg-white/10 group">
+          <div className="card group">
             <div className="flex items-start gap-4">
-              <div className="p-3 bg-primary/10 rounded-2xl group-hover:bg-primary transition-colors">
-                <MdUpcoming className="text-primary text-3xl group-hover:text-white" />
+              <div className="p-3 rounded-2xl bg-[var(--primary)]/10 group-hover:bg-[var(--primary)] transition-colors">
+                <MdUpcoming className="text-[var(--primary)] text-3xl group-hover:text-white" />
               </div>
               <div className="flex-1 space-y-2">
-                <p className="text-[10px] font-black text-slate-400 dark:text-white/30 uppercase tracking-[0.2em]">Upcoming Sync</p>
+                <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-[0.2em]">Upcoming Sync</p>
                 {dashboardData.next_session ? (
                   <>
                     <p className="text-xl font-extrabold">
                       {dashboardData.next_session.date}
                     </p>
-                    <p className="text-lg font-bold text-primary">{dashboardData.next_session.time}</p>
+                    <p className="text-lg font-bold text-[var(--primary)]">{dashboardData.next_session.time}</p>
                   </>
                 ) : (
                   <p className="text-slate-400">No session scheduled</p>
@@ -164,9 +164,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Capacity Insights */}
           {dashboardData.capacity_insights && (
-            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+            <div className="card">
               <div className="flex items-center gap-4 mb-8">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="size-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
                   <MdSchedule size={24} />
                 </div>
                 <h2 className="text-2xl font-extrabold tracking-tight">Capacity Insights</h2>
@@ -174,25 +174,25 @@ export default function DashboardPage() {
               <div className="space-y-8">
                 <div className="grid grid-cols-3 gap-6">
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Peak</p>
-                    <p className="text-3xl font-black text-primary">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Peak</p>
+                    <p className="text-3xl font-black text-[var(--primary)]">
                       {dashboardData.capacity_insights.high_capacity_slots}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mid</p>
-                    <p className="text-3xl font-black text-slate-400 dark:text-white/40">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Mid</p>
+                    <p className="text-3xl font-black text-[var(--muted-foreground)]">
                       {dashboardData.capacity_insights.moderate_capacity_slots}
                     </p>
                   </div>
                   <div className="space-y-1">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rest</p>
-                    <p className="text-3xl font-black text-slate-300 dark:text-white/20">
+                    <p className="text-[10px] font-black text-[var(--muted-foreground)] uppercase tracking-widest">Rest</p>
+                    <p className="text-3xl font-black text-[var(--muted-foreground)]/70">
                       {dashboardData.capacity_insights.restricted_capacity_slots}
                     </p>
                   </div>
                 </div>
-                <div className="pt-6 border-t border-slate-100 dark:border-white/5 grid grid-cols-2 gap-6">
+                <div className="pt-6 border-t border-[var(--border-subtle)] grid grid-cols-2 gap-6">
                   {dashboardData.capacity_insights.peak_days.length > 0 && (
                     <div className="space-y-3">
                       <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Peak Days</p>
@@ -200,7 +200,7 @@ export default function DashboardPage() {
                         {dashboardData.capacity_insights.peak_days.slice(0, 3).map((day) => (
                           <span
                             key={day}
-                            className="px-3 py-1 bg-white dark:bg-white/10 border border-slate-100 dark:border-white/10 rounded-lg text-xs font-bold"
+                            className="px-3 py-1 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-lg text-xs font-bold"
                           >
                             {day}
                           </span>
@@ -215,7 +215,7 @@ export default function DashboardPage() {
                         {dashboardData.capacity_insights.peak_times.slice(0, 2).map((time) => (
                           <span
                             key={time}
-                            className="px-3 py-1 bg-primary text-white rounded-lg text-xs font-bold"
+                            className="px-3 py-1 bg-[var(--primary)] text-white rounded-lg text-xs font-bold"
                           >
                             {time}
                           </span>
@@ -230,15 +230,15 @@ export default function DashboardPage() {
 
           {/* Pattern Insights */}
           {dashboardData.pattern_insights && (
-            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+            <div className="card">
               <div className="flex items-center gap-4 mb-8">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="size-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
                   <MdTrendingUp size={24} />
                 </div>
                 <h2 className="text-2xl font-extrabold tracking-tight">Pattern Awareness</h2>
               </div>
               <div className="space-y-6">
-                <p className="text-base text-slate-500 dark:text-slate-400 font-medium">
+                <p className="text-base text-[var(--muted-foreground)] font-medium">
                   {dashboardData.pattern_insights.selected_patterns.length} Active behavioral patterns identified:
                 </p>
                 <div className="flex flex-wrap gap-3">
@@ -248,14 +248,14 @@ export default function DashboardPage() {
                     return (
                       <span
                         key={patternId}
-                        className="px-5 py-2.5 bg-white dark:bg-white/10 border border-slate-100 dark:border-white/10 text-slate-700 dark:text-slate-300 rounded-2xl text-sm font-bold shadow-sm"
+                        className="px-5 py-2.5 bg-[var(--background)] border border-[var(--border-subtle)] text-[var(--foreground)] rounded-2xl text-sm font-bold shadow-sm"
                       >
                         {label}
                       </span>
                     );
                   })}
                 </div>
-                <div className="mt-6 p-6 bg-primary/5 rounded-[2rem] border border-primary/10 italic text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+                <div className="mt-6 p-6 bg-[var(--primary)]/5 rounded-[2rem] border border-[var(--primary)]/10 italic text-sm text-[var(--muted-foreground)] leading-relaxed">
                   &quot;Awareness is the only bridge between a habit and a choice.&quot;
                 </div>
               </div>
@@ -266,9 +266,9 @@ export default function DashboardPage() {
         {/* Bottom Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
           {/* Tribe Members */}
-          <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+          <div className="card">
             <div className="flex items-center gap-4 mb-8">
-              <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+              <div className="size-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
                 <MdGroups size={24} />
               </div>
               <h2 className="text-2xl font-extrabold tracking-tight">Your Tribe</h2>
@@ -278,31 +278,31 @@ export default function DashboardPage() {
                 {dashboardData.tribe_members.map((member, index) => (
                   <div
                     key={index}
-                    className="flex items-center justify-between p-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl shadow-sm"
+                    className="flex items-center justify-between p-5 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-2xl shadow-sm"
                   >
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-slate-100 dark:bg-white/5 rounded-xl flex items-center justify-center">
-                        <MdPerson size={24} className="text-slate-400" />
+                      <div className="w-12 h-12 bg-[var(--muted)] rounded-xl flex items-center justify-center">
+                        <MdPerson size={24} className="text-[var(--muted-foreground)]" />
                       </div>
                       <div>
-                        <p className="font-bold dark:text-white">{member.name}</p>
-                        <p className="text-xs font-black uppercase tracking-widest text-primary">{member.relationship}</p>
+                        <p className="font-bold text-[var(--foreground)]">{member.name}</p>
+                        <p className="text-xs font-black uppercase tracking-widest text-[var(--primary)]">{member.relationship}</p>
                       </div>
                     </div>
-                    <MdCheckCircle className="text-primary text-xl opacity-20" />
+                    <MdCheckCircle className="text-[var(--primary)] text-xl opacity-20" />
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-slate-400 text-sm">No tribe members added yet</p>
+              <p className="text-[var(--muted-foreground)] text-sm">No tribe members added yet</p>
             )}
           </div>
 
           {/* Verification Methods */}
           {dashboardData.verification_status && (
-            <div className="bg-slate-50 dark:bg-white/5 border border-slate-200/60 dark:border-white/5 rounded-[2.5rem] p-10 shadow-sm">
+            <div className="card">
               <div className="flex items-center gap-4 mb-8">
-                <div className="size-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary">
+                <div className="size-10 rounded-xl bg-[var(--primary)]/10 flex items-center justify-center text-[var(--primary)]">
                   <MdCheckCircle size={24} />
                 </div>
                 <h2 className="text-2xl font-extrabold tracking-tight">Verification</h2>
@@ -313,18 +313,18 @@ export default function DashboardPage() {
                     dashboardData.verification_status?.method_labels[methodId] || methodId;
                   const icon =
                     methodId === 'echo' ? (
-                      <MdPsychology className="text-primary text-2xl" />
+                      <MdPsychology className="text-[var(--primary)] text-2xl" />
                     ) : methodId === 'data' ? (
-                      <MdDataset className="text-primary text-2xl" />
+                      <MdDataset className="text-[var(--primary)] text-2xl" />
                     ) : (
-                      <MdGroups className="text-primary text-2xl" />
+                      <MdGroups className="text-[var(--primary)] text-2xl" />
                     );
                   return (
                     <div
                       key={methodId}
-                      className="flex items-center gap-4 p-5 bg-white dark:bg-white/5 border border-slate-100 dark:border-white/10 rounded-2xl shadow-sm"
+                      className="flex items-center gap-4 p-5 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-2xl shadow-sm"
                     >
-                      <div className="size-12 rounded-xl bg-primary/5 flex items-center justify-center">{icon}</div>
+                      <div className="size-12 rounded-xl bg-[var(--primary)]/5 flex items-center justify-center">{icon}</div>
                       <p className="font-bold flex-1 dark:text-white">{label}</p>
                       <MdCheckCircle className="text-emerald-500" />
                     </div>
@@ -336,16 +336,16 @@ export default function DashboardPage() {
         </div>
 
         {/* Quick Actions */}
-        <div className="flex flex-wrap justify-center gap-6 pt-12 border-t border-slate-100 dark:border-white/5">
+        <div className="flex flex-wrap justify-center gap-6 pt-12 border-t border-[var(--border-subtle)]">
           <button
             onClick={() => router.push('/onboarding')}
-            className="px-10 py-5 bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 rounded-[1.5rem] font-bold text-slate-600 dark:text-white hover:bg-slate-50 dark:hover:bg-white/10 transition-all active:scale-[0.98] shadow-sm"
+            className="px-10 py-5 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-[1.5rem] font-bold text-[var(--muted-foreground)] hover:bg-[var(--muted)] transition-all active:scale-[0.98] shadow-sm"
           >
             Adjust Baselines
           </button>
           <button
             onClick={() => router.push('/echo')}
-            className="px-12 py-5 bg-slate-900 dark:bg-primary rounded-[1.5rem] font-black text-xl text-white hover:scale-[1.03] transition-all active:scale-[0.98] flex items-center gap-4 shadow-xl shadow-slate-200 dark:shadow-primary/20"
+            className="btn-primary px-12 py-5 text-xl flex items-center gap-4"
           >
             Launch Mirror Session <MdArrowForward />
           </button>

@@ -26,30 +26,30 @@ export function Step5Capacity({ profile, setProfile, onNext, onPrev }: Onboardin
               key={level}
               onClick={() => setActiveBrush(level)}
               className={`w-full p-6 rounded-[1.5rem] border-2 text-left transition-all duration-300 shadow-sm ${activeBrush === level
-                  ? 'border-primary bg-primary/10 scale-[1.02]'
-                  : 'border-slate-100 bg-slate-50 hover:bg-white dark:border-white/5 dark:bg-white/5 dark:hover:bg-white/10'
+                ? 'border-[var(--primary)] bg-[var(--primary)]/10 scale-[1.02]'
+                : 'border-[var(--border-subtle)] bg-[var(--card-bg)] hover:bg-[var(--muted)]'
                 }`}
             >
               <div className="font-extrabold capitalize text-lg tracking-tight mb-1">{level} Capacity</div>
-              <div className="text-sm font-medium text-slate-500 dark:text-white/40 leading-tight">
+              <div className="text-sm font-medium text-[var(--muted-foreground)] leading-tight">
                 {level === 'high' ? 'Peak focus & flow' : level === 'moderate' ? 'Balanced energy' : 'Minimal tasks'}
               </div>
             </button>
           ))}
         </div>
 
-        <div className="lg:col-span-3 bg-white rounded-[2rem] border border-slate-100 dark:border-white/5 dark:bg-white/5 overflow-hidden shadow-sm">
-          <div className="grid grid-cols-8 bg-slate-50 dark:bg-white/5 border-b border-slate-100 dark:border-white/10">
+        <div className="lg:col-span-3 bg-[var(--card-bg)] rounded-[2rem] border border-[var(--border-subtle)] overflow-hidden shadow-sm">
+          <div className="grid grid-cols-8 bg-[var(--muted)] border-b border-[var(--border-subtle)]">
             <div className="p-3" />
             {DAYS.map(d => (
-              <div key={d} className="p-3 text-center text-xs font-black text-slate-400 dark:text-white/30 uppercase tracking-widest">
+              <div key={d} className="p-3 text-center text-xs font-black text-[var(--muted-foreground)] uppercase tracking-widest">
                 {d}
               </div>
             ))}
           </div>
           {TIME_SLOTS.map(slot => (
-            <div key={slot.id} className="grid grid-cols-8 border-b border-slate-100 dark:border-white/5 last:border-0">
-              <div className="p-3 text-[10px] font-black text-slate-400 dark:text-white/30 flex flex-col justify-center border-r border-slate-100 dark:border-white/5 bg-slate-50/50 dark:bg-transparent">
+            <div key={slot.id} className="grid grid-cols-8 border-b border-[var(--border-subtle)] last:border-0">
+              <div className="p-3 text-[10px] font-black text-[var(--muted-foreground)] flex flex-col justify-center border-r border-[var(--border-subtle)] bg-[var(--muted)]/50">
                 {slot.id}
                 <span className="opacity-50 text-[8px]">{slot.label}</span>
               </div>
@@ -59,9 +59,9 @@ export function Step5Capacity({ profile, setProfile, onNext, onPrev }: Onboardin
                   <div
                     key={day}
                     onClick={() => paintCell(day, slot.id)}
-                    className={`h-14 border-r border-slate-100 dark:border-white/5 cursor-pointer transition-all last:border-0 hover:bg-primary/5 active:scale-95 ${val === 'high' ? 'bg-primary' :
-                        val === 'moderate' ? 'bg-primary/50' :
-                          val === 'restricted' ? 'bg-slate-200 dark:bg-white/10' : 'bg-transparent'
+                    className={`h-14 border-r border-[var(--border-subtle)] cursor-pointer transition-all last:border-0 hover:bg-[var(--primary)]/5 active:scale-95 ${val === 'high' ? 'bg-[var(--primary)]' :
+                      val === 'moderate' ? 'bg-[var(--primary)]/50' :
+                        val === 'restricted' ? 'bg-[var(--muted)]' : 'bg-transparent'
                       }`}
                   />
                 );

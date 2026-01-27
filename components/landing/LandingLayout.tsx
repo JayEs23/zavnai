@@ -7,7 +7,7 @@ import { LandingFooter } from "./LandingFooter";
 
 export const LandingLayout = () => {
   return (
-    <div className="bg-background-light dark:bg-background-dark text-slate-900 dark:text-white min-h-screen transition-colors duration-300">
+    <div className="bg-[var(--background)] text-[var(--foreground)] min-h-screen transition-colors duration-300">
       <LandingNavbar />
       <main className="pt-20">
         <HeroSection />

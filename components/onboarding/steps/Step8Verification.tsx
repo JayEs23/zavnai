@@ -24,7 +24,7 @@ export function Step8Verification({ profile, setProfile, onNext, onPrev }: Onboa
     <div className="space-y-12">
       <header className="space-y-4">
         <h1 className="text-4xl font-extrabold tracking-tight lg:text-5xl">Choose Your Verification</h1>
-        <p className="text-slate-600 dark:text-slate-400 text-lg max-w-2xl leading-relaxed">
+        <p className="text-[var(--muted-foreground)] text-lg max-w-2xl leading-relaxed">
           ZAVN combines internal reflection, objective data, and social accountability to keep you aligned.
         </p>
       </header>
@@ -35,19 +35,19 @@ export function Step8Verification({ profile, setProfile, onNext, onPrev }: Onboa
             key={v.id}
             onClick={() => toggleVerification(v.id)}
             className={`relative p-10 rounded-[2.5rem] border-2 text-left transition-all duration-500 hover:-translate-y-2 ${profile.verification.includes(v.id)
-                ? 'border-primary bg-primary/5 shadow-lg shadow-primary/5'
-                : 'border-slate-100 bg-slate-50 dark:border-white/5 dark:bg-white/5 hover:bg-white dark:hover:bg-white/10'
+              ? 'border-[var(--primary)] bg-[var(--primary)]/5 shadow-lg shadow-[var(--primary)]/5'
+              : 'border-[var(--border-subtle)] bg-[var(--card-bg)] hover:bg-[var(--background)]'
               }`}
           >
-            <div className={`size-16 rounded-2xl flex items-center justify-center text-3xl mb-8 transition-colors duration-500 ${profile.verification.includes(v.id) ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
+            <div className={`size-16 rounded-2xl flex items-center justify-center text-3xl mb-8 transition-colors duration-500 ${profile.verification.includes(v.id) ? 'bg-[var(--primary)] text-white' : 'bg-[var(--primary)]/10 text-[var(--primary)]'
               }`}>
               {VERIFICATION_ICONS[v.id as keyof typeof VERIFICATION_ICONS]}
             </div>
             <h3 className="font-extrabold text-xl mb-3 tracking-tight">{v.title}</h3>
-            <p className="text-[15px] text-slate-500 dark:text-slate-400 leading-relaxed font-medium">{v.desc}</p>
+            <p className="text-[15px] text-[var(--muted-foreground)] leading-relaxed font-medium">{v.desc}</p>
             {profile.verification.includes(v.id) && (
               <div className="absolute top-6 right-6">
-                <MdCheckCircle className="text-primary text-2xl animate-in zoom-in duration-300" />
+                <MdCheckCircle className="text-[var(--primary)] text-2xl animate-in zoom-in duration-300" />
               </div>
             )}
           </button>

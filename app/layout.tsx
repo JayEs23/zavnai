@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "ZAVN | Close the Gap Between Intention and Action",
   description:
-    "The world’s first voice-led behavior alignment system. Harness AI-driven behavioral science through natural conversation.",
+    "A voice-led behavior alignment system. Harness AI-driven behavioral science through natural conversation.",
 };
 
 export default function RootLayout({
@@ -33,7 +33,6 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="light"
           enableSystem={false}
-          disableTransitionOnChange
         >
           {children}
         </ThemeProvider>

@@ -15,8 +15,8 @@ export const ThemeToggle = () => {
 
     if (!mounted) {
         return (
-            <div className="h-10 w-10 flex items-center justify-center rounded-lg bg-black/5 dark:bg-white/5">
-                <div className="h-5 w-5 bg-black/10 dark:bg-white/10 rounded-full animate-pulse" />
+            <div className="size-10 rounded-lg icon-container">
+                <div className="h-5 w-5 bg-[var(--border-subtle)] rounded-full animate-pulse" />
             </div>
         );
     }
@@ -24,7 +24,7 @@ export const ThemeToggle = () => {
     return (
         <button
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="relative flex h-10 w-10 items-center justify-center rounded-lg bg-black/5 transition-colors hover:bg-black/10 dark:bg-white/5 dark:hover:bg-white/10"
+            className="relative size-10 rounded-lg icon-container hover:bg-[var(--border-subtle)] transition-colors"
             aria-label="Toggle theme"
         >
             <AnimatePresence mode="wait" initial={false}>
@@ -36,7 +36,7 @@ export const ThemeToggle = () => {
                         exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                     >
-                        <Moon className="h-5 w-5 text-blue-400" />
+                        <Moon className="h-5 w-5 text-slate-100" />
                     </motion.div>
                 ) : (
                     <motion.div
@@ -46,7 +46,7 @@ export const ThemeToggle = () => {
                         exit={{ scale: 0.5, opacity: 0, rotate: -45 }}
                         transition={{ duration: 0.2, ease: "easeInOut" }}
                     >
-                        <Sun className="h-5 w-5 text-amber-500" />
+                        <Sun className="h-5 w-5 text-slate-900" />
                     </motion.div>
                 )}
             </AnimatePresence>

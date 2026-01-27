@@ -9,10 +9,10 @@ const agents = [
 
 export default function AgentsPage() {
   return (
-    <div className="min-h-screen bg-background-light px-6 py-16 text-slate-900 dark:bg-background-dark dark:text-white">
+    <div className="min-h-screen bg-[var(--background)] px-6 py-16 text-[var(--foreground)] transition-colors duration-300">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-4xl font-bold tracking-tight">Agents</h1>
-        <p className="mt-3 max-w-2xl text-slate-600 dark:text-slate-400">
+        <p className="mt-3 max-w-2xl text-[var(--muted-foreground)]">
           Explore the core ZAVN cognitive agents and how they help you align
           intention with action.
         </p>
@@ -21,15 +21,15 @@ export default function AgentsPage() {
             <Link
               key={agent.id}
               href={`/agents/${agent.id}`}
-              className="group rounded-2xl border border-slate-200 bg-white p-6 transition hover:-translate-y-1 hover:border-primary/40 hover:shadow-lg dark:border-slate-800 dark:bg-charcoal-custom"
+              className="card group transition hover:-translate-y-1 hover:shadow-lg"
             >
-              <h2 className="text-xl font-semibold group-hover:text-primary">
+              <h2 className="text-xl font-semibold group-hover:text-[var(--primary)] text-[var(--foreground)]">
                 {agent.name}
               </h2>
-              <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+              <p className="mt-2 text-sm text-[var(--muted-foreground)]">
                 {agent.blurb}
               </p>
-              <span className="mt-4 inline-block text-xs font-semibold uppercase tracking-wide text-primary">
+              <span className="mt-4 inline-block text-xs font-semibold uppercase tracking-wide text-[var(--primary)]">
                 Learn more →
               </span>
             </Link>
