@@ -1,5 +1,4 @@
 import React from 'react';
-import { MdCheck } from 'react-icons/md';
 import { OnboardingStepProps } from '../types';
 import { PATTERNS } from '../constants';
 import { NavigationButtons } from '../shared/NavigationButtons';
@@ -7,28 +6,38 @@ import { NavigationButtons } from '../shared/NavigationButtons';
 export function Step4Patterns({ profile, setProfile, onNext, onPrev }: OnboardingStepProps) {
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap gap-4 justify-center py-4">
-        {PATTERNS.obstacles.map(p => (
-          <button
-            key={p.id}
-            onClick={() => setProfile(prev => ({
-              ...prev,
-              patterns: prev.patterns.includes(p.id)
-                ? prev.patterns.filter(x => x !== p.id)
-                : [...prev.patterns, p.id]
-            }))}
-            className={`flex items-center gap-3 px-8 py-4 rounded-full border-2 font-bold transition-all duration-300 ${profile.patterns.includes(p.id)
-              ? 'bg-[var(--primary)] border-[var(--primary)] text-white shadow-lg shadow-[var(--primary)]/20 scale-105'
-              : 'border-[var(--border-subtle)] bg-[var(--card-bg)] text-[var(--muted-foreground)] hover:border-[var(--primary)]/30 hover:bg-[var(--muted)]'
+      {/* Chips / Behavioral Patterns Section */}
+      <div className="flex flex-wrap gap-3 justify-center md:justify-start">
+        {PATTERNS.obstacles.map(p => {
+          const isSelected = profile.patterns.includes(p.id);
+          return (
+            <button
+              key={p.id}
+              onClick={() => setProfile(prev => ({
+                ...prev,
+                patterns: prev.patterns.includes(p.id)
+                  ? prev.patterns.filter(x => x !== p.id)
+                  : [...prev.patterns, p.id]
+              }))}
+              className={`flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-full px-6 font-bold shadow-sm transition-all hover:brightness-105 active:scale-95 ${
+                isSelected
+                  ? 'bg-primary text-[#102216]'
+                  : 'border border-[#111813]/10 dark:border-white/20 bg-white dark:bg-white/5 text-[#111813] dark:text-white font-medium hover:bg-primary/10'
               }`}
-          >
-            {profile.patterns.includes(p.id) ? <MdCheck className="text-xl" /> : <div className="w-5" />}
-            {p.label}
-          </button>
-        ))}
+            >
+              {isSelected ? (
+                <span className="material-symbols-outlined text-lg">check_circle</span>
+              ) : (
+                <span className="material-symbols-outlined text-lg opacity-40">circle</span>
+              )}
+              <span className="text-sm">{p.label}</span>
+            </button>
+          );
+        })}
       </div>
+
+      {/* Navigation Footer */}
       <NavigationButtons onPrev={onPrev} onNext={onNext} />
     </div>
   );
 }
-
