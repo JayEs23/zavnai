@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { settingsApi, UserSettings, ReminderPreferences } from '@/services/settingsApi';
+import { settingsApi, UserSettings, ReminderPreferences, NotificationChannels } from '@/services/settingsApi';
 import { remindersApi, ReminderSchedule } from '@/services/remindersApi';
 import { integrationApi, Integration } from '@/services/integrationApi';
 import { dashboardApi } from '@/services/dashboardApi';
@@ -55,7 +55,7 @@ export default function SettingsPage() {
         }
     };
 
-    const handleToggleChannel = (channel: string) => {
+    const handleToggleChannel = (channel: keyof NotificationChannels) => {
         if (!settings) return;
         const updatedChannels = {
             ...settings.notification_channels,
@@ -132,7 +132,7 @@ export default function SettingsPage() {
 
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Notification Channels</h3>
-                                {['email', 'push', 'in_app', 'whatsapp', 'sms', 'voice'].map((channel) => (
+                                {(['email', 'push', 'in_app', 'whatsapp', 'sms', 'voice'] as const).map((channel) => (
                                     <div key={channel} className="flex items-center justify-between p-4 border rounded-xl border-[var(--border-subtle)]">
                                         <div>
                                             <h4 className="font-semibold capitalize">{channel.replace('_', ' ')}</h4>
@@ -149,7 +149,7 @@ export default function SettingsPage() {
                                             <input
                                                 type="checkbox"
                                                 className="sr-only peer"
-                                                checked={settings.notification_channels?.[channel as keyof typeof settings.notification_channels] ?? false}
+                                                checked={settings.notification_channels?.[channel] ?? false}
                                                 onChange={() => handleToggleChannel(channel)}
                                             />
                                             <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"></div>

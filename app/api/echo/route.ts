@@ -2,7 +2,24 @@ import { NextRequest, NextResponse } from "next/server";
 import { trackedGenAI } from "@/lib/gemini";
 import { Opik } from "opik";
 
-const opik = new Opik();
+// Lazy initialize Opik to avoid reading env vars at module load time
+let opikInstance: Opik | null = null;
+
+function getOpik(): Opik | null {
+    // Only initialize if OPIK_API_KEY is available
+    if (!process.env.OPIK_API_KEY) {
+        return null;
+    }
+    if (!opikInstance) {
+        try {
+            opikInstance = new Opik();
+        } catch (error) {
+            console.warn("Failed to initialize Opik:", error);
+            return null;
+        }
+    }
+    return opikInstance;
+}
 
 export async function POST(req: NextRequest) {
     try {
@@ -30,9 +47,9 @@ export async function POST(req: NextRequest) {
         });
 
         // Gemini expects 'model' instead of 'assistant'
-        const contents = messages.map((m: any) => ({
+        const contents = messages.map((m: { role: string; content?: string; text?: string }) => ({
             role: m.role === "user" ? "user" : "model",
-            parts: [{ text: m.content || m.text }],
+            parts: [{ text: m.content || m.text || "" }],
         }));
 
         console.log("Gemini Request Contents:", JSON.stringify(contents, null, 2));
@@ -47,14 +64,22 @@ export async function POST(req: NextRequest) {
             content: text,
             success: true,
         });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Echo Agent Error:", error);
+        const errorMessage = error instanceof Error ? error.message : "Unknown error";
         return NextResponse.json(
-            { error: "Failed to generate reflection", details: error.message },
+            { error: "Failed to generate reflection", details: errorMessage },
             { status: 500 }
         );
     } finally {
-        // Ensure traces are sent
-        await opik.flush();
+        // Ensure traces are sent (only if Opik is initialized)
+        const opik = getOpik();
+        if (opik) {
+            try {
+                await opik.flush();
+            } catch (error) {
+                console.warn("Failed to flush Opik traces:", error);
+            }
+        }
     }
 }

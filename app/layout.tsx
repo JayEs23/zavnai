@@ -1,17 +1,9 @@
 import type { Metadata } from "next";
-import { Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
 
-const inter = Inter({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
-
-const jetbrainsMono = JetBrains_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
+// Using system fonts to avoid build-time network dependencies
+// This ensures the build works even if Google Fonts is unavailable
 
 export const metadata: Metadata = {
   title: "ZAVN | Close the Gap Between Intention and Action",
@@ -27,7 +19,10 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${inter.variable} ${jetbrainsMono.variable} antialiased`}
+        className="antialiased"
+        style={{
+          fontFamily: "var(--font-system-sans)",
+        }}
       >
         <ThemeProvider
           attribute="class"
