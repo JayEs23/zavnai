@@ -30,12 +30,37 @@ export interface ReflectionResponse {
     insights_created: number;
 }
 
+export interface GoalRefinementRequest {
+    goal: string;
+    successCriteria?: string;
+    targetDate?: string;
+}
+
+export interface GoalRefinementResponse {
+    refined_goal: string;
+    refined_success_criteria?: string;
+    explanation?: string;
+}
+
 export const agentApi = {
     /**
      * Submit a reflection to the Echo agent
      */
     reflect: async (data: ReflectionRequest): Promise<ReflectionResponse> => {
         return api.post<ReflectionResponse>('/api/agents/echo/reflect', data);
+    },
+
+    /**
+     * Refine a goal using Doyn's goal architecture approach
+     * Turns vague intentions into SMART goals
+     * Uses the backend Python SDK which works reliably with Gemini
+     */
+    refineGoal: async (data: GoalRefinementRequest): Promise<GoalRefinementResponse> => {
+        return api.post<GoalRefinementResponse>('/api/agents/doyn/refine-goal', {
+            goal: data.goal,
+            success_criteria: data.successCriteria,
+            target_date: data.targetDate,
+        });
     },
 
     /**

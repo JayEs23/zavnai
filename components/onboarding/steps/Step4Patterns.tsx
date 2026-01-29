@@ -2,6 +2,23 @@ import React from 'react';
 import { OnboardingStepProps } from '../types';
 import { PATTERNS } from '../constants';
 import { NavigationButtons } from '../shared/NavigationButtons';
+import { 
+  MdTimerOff, 
+  MdPriorityHigh, 
+  MdGroups, 
+  MdBolt, 
+  MdTrendingUp,
+  MdCheckCircle,
+  MdRadioButtonUnchecked
+} from 'react-icons/md';
+
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  'timer_off': MdTimerOff,
+  'priority_high': MdPriorityHigh,
+  'groups': MdGroups,
+  'bolt': MdBolt,
+  'trending_up': MdTrendingUp,
+};
 
 export function Step4Patterns({ profile, setProfile, onNext, onPrev }: OnboardingStepProps) {
   return (
@@ -10,25 +27,27 @@ export function Step4Patterns({ profile, setProfile, onNext, onPrev }: Onboardin
       <div className="flex flex-wrap gap-3 justify-center md:justify-start">
         {PATTERNS.obstacles.map(p => {
           const isSelected = profile.patterns.includes(p.id);
+          const Icon = iconMap[p.icon] || MdBolt;
           return (
             <button
               key={p.id}
+              type="button"
               onClick={() => setProfile(prev => ({
                 ...prev,
                 patterns: prev.patterns.includes(p.id)
                   ? prev.patterns.filter(x => x !== p.id)
                   : [...prev.patterns, p.id]
               }))}
-              className={`flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-full px-6 font-bold shadow-sm transition-all hover:brightness-105 active:scale-95 ${
+              className={`pattern-pill ${
                 isSelected
-                  ? 'bg-primary text-[#102216]'
-                  : 'border border-[#111813]/10 dark:border-white/20 bg-white dark:bg-white/5 text-[#111813] dark:text-white font-medium hover:bg-primary/10'
+                  ? 'pattern-pill-selected'
+                  : 'pattern-pill-unselected'
               }`}
             >
               {isSelected ? (
-                <span className="material-symbols-outlined text-lg">check_circle</span>
+                <MdCheckCircle className="text-lg" />
               ) : (
-                <span className="material-symbols-outlined text-lg opacity-40">circle</span>
+                <Icon className="text-lg opacity-60" />
               )}
               <span className="text-sm">{p.label}</span>
             </button>

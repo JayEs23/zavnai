@@ -23,24 +23,24 @@ export function OnboardingShell({
   const progress = Math.round((step / totalSteps) * 100);
 
   return (
-    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-background-light dark:bg-background-dark transition-colors duration-300">
+    <div className="relative flex min-h-screen w-full flex-col overflow-x-hidden bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
       {/* Header / TopNavBar */}
-      <header className="w-full border-b border-solid border-gray-200 dark:border-white/10 bg-white dark:bg-background-dark/50 backdrop-blur-sm sticky top-0 z-50">
+      <header className="w-full border-b border-[var(--border-subtle)] bg-[var(--card-bg)]/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="max-w-[1200px] mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="size-8 bg-primary rounded-lg flex items-center justify-center text-black">
+            <div className="size-8 bg-[var(--primary)]/10 rounded-lg flex items-center justify-center border border-[var(--border-subtle)]">
               <Image
                 src="/zavn-icon.png"
                 alt="ZAVN logo"
-                width={32}
-                height={32}
+                width={24}
+                height={24}
                 className="object-contain p-1"
               />
             </div>
-            <h2 className="text-gray-900 dark:text-white text-xl font-bold tracking-tight">ZAVN</h2>
+            <h2 className="text-[var(--foreground)] text-xl font-bold tracking-tight">ZAVN</h2>
           </div>
           <div className="flex items-center gap-6">
-            <span className="text-sm font-medium text-gray-600 dark:text-gray-400">Step {step} of {totalSteps}</span>
+            <span className="text-sm font-medium text-[var(--muted-foreground)]">Step {step} of {totalSteps}</span>
           </div>
         </div>
       </header>
@@ -51,41 +51,41 @@ export function OnboardingShell({
           {/* Progress Indicator */}
           <div className="flex flex-col gap-3 w-full px-2">
             <div className="flex justify-between items-end">
-              <h3 className="text-gray-900 dark:text-white text-sm font-semibold uppercase tracking-wider">Onboarding Progress</h3>
-              <p className="text-primary text-sm font-bold">{progress}% Complete</p>
+              <h3 className="text-[var(--foreground)] text-sm font-semibold uppercase tracking-wider">Onboarding Progress</h3>
+              <p className="text-[var(--primary)] text-sm font-bold">{progress}% Complete</p>
             </div>
-            <div className="h-2 w-full rounded-full bg-gray-200 dark:bg-white/10 overflow-hidden">
+            <div className="h-2 w-full rounded-full bg-[var(--muted)] overflow-hidden">
               <div 
-                className="h-full bg-primary transition-all duration-500" 
+                className="h-full bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] transition-all duration-500" 
                 style={{ width: `${progress}%` }}
               ></div>
             </div>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">{stepLabel}</p>
+            <p className="text-[var(--muted-foreground)] text-sm">{stepLabel}</p>
           </div>
 
           {/* Headline */}
-          <div className="text-center space-y-2">
-            <h1 className="text-gray-900 dark:text-white text-4xl font-extrabold tracking-tight sm:text-5xl">
+          <div className="text-center space-y-3">
+            <h1 className="text-[var(--foreground)] text-4xl font-extrabold tracking-tight sm:text-5xl">
               {title}
             </h1>
-            <p className="text-gray-500 dark:text-gray-400 text-lg">
+            <p className="text-[var(--muted-foreground)] text-lg leading-relaxed">
               {subtitle}
             </p>
           </div>
 
           {/* Main Content Card */}
-          <div className="bg-white dark:bg-white/5 border border-gray-100 dark:border-white/10 rounded-xl p-8 shadow-xl shadow-gray-200/50 dark:shadow-none">
+          <div className="bg-[var(--card-bg)] border border-[var(--card-border)] rounded-2xl p-8 sm:p-10 shadow-lg">
             {children}
           </div>
         </div>
       </main>
 
       {/* Background Decor */}
-      <div className="fixed top-0 right-0 -z-10 opacity-20 dark:opacity-10 pointer-events-none">
-        <div className="w-[500px] h-[500px] bg-primary rounded-full blur-[120px] -mr-48 -mt-48"></div>
+      <div className="fixed top-0 right-0 -z-10 opacity-10 pointer-events-none">
+        <div className="w-[500px] h-[500px] bg-[var(--primary)] rounded-full blur-[120px] -mr-48 -mt-48"></div>
       </div>
-      <div className="fixed bottom-0 left-0 -z-10 opacity-20 dark:opacity-10 pointer-events-none">
-        <div className="w-[400px] h-[400px] bg-primary rounded-full blur-[100px] -ml-48 -mb-48"></div>
+      <div className="fixed bottom-0 left-0 -z-10 opacity-10 pointer-events-none">
+        <div className="w-[400px] h-[400px] bg-[var(--accent)] rounded-full blur-[100px] -ml-48 -mb-48"></div>
       </div>
     </div>
   );

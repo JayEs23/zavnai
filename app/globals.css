@@ -130,7 +130,7 @@ body {
 
   /* Onboarding specific styles */
   .form-input {
-    @apply flex w-full min-w-0 resize-none overflow-hidden rounded-lg text-foreground focus:outline-0 focus:ring-2 focus:ring-primary border border-border-subtle bg-card-bg h-14 placeholder:text-muted-foreground p-[15px] text-base font-normal leading-normal;
+    @apply flex w-full min-w-0 resize-none overflow-hidden rounded-xl text-[var(--foreground)] focus:outline-0 focus:ring-2 focus:ring-[var(--primary)]/20 focus:border-[var(--primary)] border border-[var(--border-subtle)] bg-[var(--card-bg)] h-14 placeholder:text-[var(--muted-foreground)] px-4 py-3 text-base font-normal leading-normal transition-all;
   }
 
   .btn-onboarding-primary {
@@ -146,15 +146,15 @@ body {
   }
 
   .pattern-pill {
-    @apply flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-full px-6 font-bold shadow-sm transition-all hover:brightness-105 active:scale-95;
+    @apply flex h-12 shrink-0 items-center justify-center gap-x-2 rounded-full px-6 font-semibold shadow-sm transition-all hover:brightness-105 active:scale-95 cursor-pointer;
   }
 
   .pattern-pill-selected {
-    @apply bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] text-white shadow-lg shadow-primary/30;
+    @apply bg-gradient-to-r from-[var(--gradient-start)] to-[var(--gradient-end)] text-white shadow-lg shadow-[var(--primary)]/30;
   }
 
   .pattern-pill-unselected {
-    @apply border border-border-subtle bg-card-bg text-foreground font-medium hover:bg-muted hover:border-primary/30;
+    @apply border border-[var(--border-subtle)] bg-[var(--card-bg)] text-[var(--foreground)] font-medium hover:bg-[var(--muted)] hover:border-[var(--primary)]/30;
   }
 
   /* Agent-specific accent colors */
