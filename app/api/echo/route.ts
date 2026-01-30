@@ -113,8 +113,8 @@ export async function POST(req: NextRequest) {
                     console.log(`[Echo Agent] Success with ${modelName}`);
                     break; 
                 }
-            } catch (error: any) {
-                const errorMsg = error?.message || String(error);
+            } catch (error: unknown) {
+                const errorMsg = error instanceof Error ? error.message : String(error);
                 console.warn(`[Echo Agent] ${modelName} failed:`, errorMsg);
                 lastError = error instanceof Error ? error : new Error(String(error));
                 continue; 
@@ -134,14 +134,15 @@ export async function POST(req: NextRequest) {
             success: true,
         });
 
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
         console.error("Echo Agent Route Error:", error);
         
         return NextResponse.json(
             { 
                 error: "Failed to generate reflection", 
-                details: error.message,
-                ...(process.env.NODE_ENV === 'development' ? { stack: error.stack } : {})
+                details: errorMsg,
+                ...(process.env.NODE_ENV === 'development' ? { stack: error instanceof Error ? error.stack : undefined } : {})
             },
             { status: 500 }
         );
