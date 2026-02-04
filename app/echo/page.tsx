@@ -1,551 +1,358 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
-import { MdMic, MdMicOff, MdHistory, MdArrowBack, MdAnalytics, MdTerminal, MdPsychology, MdSend } from 'react-icons/md';
-import Link from 'next/link';
+/**
+ * Echo Interview - Premium Voice Interface
+ * Fixed for Gemini 2.0 Flash Live API
+ */
 
-interface Message {
-    role: 'model' | 'user';
-    text: string;
-    timestamp: string;
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { GoogleGenAI } from '@google/genai';
+import { useSession } from 'next-auth/react';
+import { useRouter } from 'next/navigation';
+import { MdMic, MdMicOff, MdClose } from 'react-icons/md';
+import { VoicePulse } from '@/components/VoicePulse';
+
+// --- Types & Constants ---
+
+interface ExtractedContract {
+    goal: string;
+    deadline: string; // ISO 8601
+    financial_stake: number;
+    common_excuses: string[];
+    transcript: string;
 }
 
+const ECHO_SYSTEM_INSTRUCTION = `You are Echo, a vocal intake agent for ZAVN. 
+Your role is to conduct a vocal intake session. Greet the user warmly immediately.
+You MUST extract these 4 items:
+1. SPECIFIC GOAL: Measurable achievement.
+2. HARD DEADLINE: Specific date/time.
+3. FINANCIAL STAKE: USD amount "skin in the game".
+4. COMMON EXCUSES: At least 2-3 resistance patterns.
+
+When you have ALL FOUR, call the 'finalize_contract' tool with the data.`;
+
+const ECHO_TOOLS = [
+    {
+        functionDeclarations: [
+            {
+                name: 'finalize_contract',
+                description: 'Call this only when all 4 data points are extracted.',
+                parameters: {
+                    type: 'OBJECT',
+                    properties: {
+                        goal: { type: 'STRING' },
+                        deadline: { type: 'STRING' },
+                        financial_stake: { type: 'NUMBER' },
+                        common_excuses: { type: 'ARRAY', items: { type: 'STRING' } }
+                    },
+                    required: ['goal', 'deadline', 'financial_stake', 'common_excuses']
+                }
+            }
+        ]
+    }
+];
+
 export default function EchoPage() {
-    const [interactionMode, setInteractionMode] = useState<'voice' | 'text'>('voice');
-    const [entries, setEntries] = useState<Message[]>([
-        { role: 'model', text: "I'm Echo. I'm here to mirror your behavioral patterns. What's on your mind?", timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
-    ]);
-    const [truthScore, setTruthScore] = useState(82);
-    const [accuracy, setAccuracy] = useState(90);
+    const { data: session } = useSession();
+    const router = useRouter();
+
+    // UI States
     const [isMuted, setIsMuted] = useState(false);
-    const [duration, setDuration] = useState('00:00');
+    const [isConnected, setIsConnected] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
-    const [hasContradiction, setHasContradiction] = useState(false);
-    const [startTime] = useState(new Date());
-    const [textInput, setTextInput] = useState('');
-    const [isTextLoading, setIsTextLoading] = useState(false);
+    const [isSpeaking, setIsSpeaking] = useState(false);
+    const [showGreeting, setShowGreeting] = useState(true);
+    const [duration, setDuration] = useState('00:00');
+    const [micError, setMicError] = useState<string | null>(null);
+    const [extractionStatus, setExtractionStatus] = useState({
+        goal: false,
+        deadline: false,
+        stake: false,
+        excuses: false
+    });
 
-    const canvasRef = useRef<HTMLCanvasElement>(null);
-    const audioContextInputRef = useRef<AudioContext | null>(null);
-    const audioContextOutputRef = useRef<AudioContext | null>(null);
-    const analyserRef = useRef<AnalyserNode | null>(null);
-    const nextStartTimeRef = useRef(0);
+    // Audio & API Refs
+    const audioContextRef = useRef<AudioContext | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
     const sessionRef = useRef<any>(null);
-    const scrollRef = useRef<HTMLDivElement>(null);
+    const transcriptRef = useRef<string>('');
+    const startTimeRef = useRef(new Date());
+    const nextPlaybackTimeRef = useRef(0);
 
-    const currentInputTranscriptionRef = useRef('');
-    const currentOutputTranscriptionRef = useRef('');
+    // --- Utility: PCM Audio Conversion ---
 
-    // Mock user context as in original web app
-    const userContext = {
-        primary_goal: "Exercise 3x per week",
-        top_patterns: ["Over-committing", "Mid-week drop-off"]
+    const base64ToUint8Array = (base64: string) => {
+        const binary = atob(base64);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        return bytes;
     };
 
-    const floatingChips = useMemo(() => [
-        { text: 'Time Underestimation', top: '25%', left: '20%', delay: '0s' },
-        { text: 'Ambiguous Deadlines', top: '15%', right: '25%', delay: '1s' },
-        { text: 'Task Fragmentation', bottom: '20%', left: '15%', delay: '2s' },
-        { text: 'Context Switching', bottom: '30%', right: '10%', delay: '3s' },
-    ], []);
+    // --- Contract Finalization ---
+
+    const finalizeContract = useCallback(async (data: any) => {
+        setIsProcessing(true);
+        const contractData: ExtractedContract = {
+            ...data,
+            transcript: transcriptRef.current
+        };
+
+        try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+            const response = await fetch(`${apiUrl}/api/v1/goals/ingest-contract`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${session?.accessToken || ''}`
+                },
+                body: JSON.stringify(contractData)
+            });
+
+            if (response.ok) {
+                setTimeout(() => router.push('/dashboard'), 2500);
+            } else {
+                throw new Error('API Error');
+            }
+        } catch (error) {
+            console.error("Finalize Error:", error);
+            setMicError("Failed to save contract. Reconnecting...");
+            setIsProcessing(false);
+        }
+    }, [session, router]);
+
+    // --- Core Connection Logic ---
+
+    const connectService = useCallback(async () => {
+        const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
+        
+        if (!apiKey) return setMicError("Gemini API Key missing");
+
+        try {
+            const genAI = new GoogleGenAI(apiKey);
+            
+            // 1. Setup Microphone
+            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            streamRef.current = stream;
+
+            // 2. Setup Audio Context (Input: 16k, Output: 24k)
+            const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+            audioContextRef.current = audioCtx;
+
+            // 3. Connect to Gemini Live
+            // Note: Use 'any' for session because the SDK types for Live are still evolving
+            const session = await (genAI as any).live.connect({
+                model: 'gemini-2.0-flash-exp',
+                config: {
+                    systemInstruction: ECHO_SYSTEM_INSTRUCTION,
+                    tools: ECHO_TOOLS,
+                    generationConfig: { responseModalities: ["audio"] }
+                }
+            });
+            sessionRef.current = session;
+
+            // 4. Handle Outgoing Audio (Mic -> Gemini)
+            const source = audioCtx.createMediaStreamSource(stream);
+            const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+            
+            processor.onaudioprocess = (e) => {
+                if (isMuted || !sessionRef.current) return;
+                const inputData = e.inputBuffer.getChannelData(0);
+                const pcm = new Int16Array(inputData.length);
+                for (let i = 0; i < inputData.length; i++) {
+                    pcm[i] = Math.max(-1, Math.min(1, inputData[i])) * 0x7FFF;
+                }
+                session.sendRealtimeInput([{
+                    mimeType: 'audio/pcm;rate=16000',
+                    data: btoa(String.fromCharCode(...new Uint8Array(pcm.buffer)))
+                }]);
+            };
+
+            source.connect(processor);
+            processor.connect(audioCtx.destination);
+
+            // 5. Handle Incoming Messages (Gemini -> User)
+            session.on('message', async (msg: any) => {
+                setIsConnected(true);
+
+                // Handle Audio Output
+                const audioPart = msg.serverContent?.modelTurn?.parts?.find((p: any) => p.inlineData);
+                if (audioPart && audioContextRef.current) {
+                    setIsSpeaking(true);
+                    setShowGreeting(false);
+                    
+                    const rawData = base64ToUint8Array(audioPart.inlineData.data);
+                    const int16Data = new Int16Array(rawData.buffer);
+                    const float32Data = new Float32Array(int16Data.length);
+                    for (let i = 0; i < int16Data.length; i++) float32Data[i] = int16Data[i] / 32768.0;
+
+                    const buffer = audioContextRef.current.createBuffer(1, float32Data.length, 24000);
+                    buffer.getChannelData(0).set(float32Data);
+
+                    const source = audioContextRef.current.createBufferSource();
+                    source.buffer = buffer;
+                    source.connect(audioContextRef.current.destination);
+                    
+                    const now = audioContextRef.current.currentTime;
+                    if (nextPlaybackTimeRef.current < now) nextPlaybackTimeRef.current = now;
+                    
+                    source.start(nextPlaybackTimeRef.current);
+                    nextPlaybackTimeRef.current += buffer.duration;
+                    
+                    source.onended = () => {
+                        if (audioContextRef.current && audioContextRef.current.currentTime >= nextPlaybackTimeRef.current) {
+                            setIsSpeaking(false);
+                        }
+                    };
+                }
+
+                // Handle Transcripts
+                if (msg.serverContent?.modelTurn?.parts?.find((p: any) => p.text)) {
+                    transcriptRef.current += msg.serverContent.modelTurn.parts.map((p: any) => p.text).join(' ');
+                }
+
+                // Handle Tool Calls
+                const toolCall = msg.serverContent?.modelTurn?.parts?.find((p: any) => p.functionCall);
+                if (toolCall) {
+                    const fc = toolCall.functionCall;
+                    if (fc.name === 'finalize_contract') {
+                        finalizeContract(fc.args);
+                    }
+                }
+            });
+
+        } catch (err: any) {
+            console.error("Connection Error:", err);
+            setMicError(err.message || "Could not connect to Echo.");
+        }
+    }, [isMuted, finalizeContract]);
+
+    // --- Effects ---
+
+    useEffect(() => {
+        connectService();
+        return () => {
+            sessionRef.current?.close();
+            streamRef.current?.getTracks().forEach(t => t.stop());
+            audioContextRef.current?.close();
+        };
+    }, []);
 
     useEffect(() => {
         const timer = setInterval(() => {
-            const diff = Math.floor((new Date().getTime() - startTime.getTime()) / 1000);
+            const diff = Math.floor((new Date().getTime() - startTimeRef.current.getTime()) / 1000);
             const mins = Math.floor(diff / 60).toString().padStart(2, '0');
             const secs = (diff % 60).toString().padStart(2, '0');
             setDuration(`${mins}:${secs}`);
         }, 1000);
         return () => clearInterval(timer);
-    }, [startTime]);
+    }, []);
 
-    useEffect(() => {
-        if (scrollRef.current) scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
-    }, [entries]);
-
-    // Audio Visualizer Animation (Mirrored from Claire)
-    useEffect(() => {
-        if (interactionMode !== 'voice' || !canvasRef.current || !analyserRef.current) return;
-        const canvas = canvasRef.current;
-        const ctx = canvas.getContext('2d')!;
-        const analyser = analyserRef.current;
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        const draw = () => {
-            if (interactionMode !== 'voice') return;
-            requestAnimationFrame(draw);
-            analyser.getByteFrequencyData(dataArray);
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-            const centerX = canvas.width / 2;
-            const centerY = canvas.height / 2;
-            const radius = 80;
-
-            ctx.beginPath();
-            ctx.arc(centerX, centerY, radius + 20, 0, Math.PI * 2);
-            ctx.strokeStyle = 'rgba(33, 237, 125, 0.05)';
-            ctx.stroke();
-
-            const bars = 100;
-            for (let i = 0; i < bars; i++) {
-                const barHeight = dataArray[i] / 2;
-                const angle = (i * Math.PI * 2) / bars;
-                const x1 = centerX + Math.cos(angle) * radius;
-                const y1 = centerY + Math.sin(angle) * radius;
-                const x2 = centerX + Math.cos(angle) * (radius + barHeight);
-                const y2 = centerY + Math.sin(angle) * (radius + barHeight);
-
-                ctx.strokeStyle = hasContradiction ? '#ff4d4d' : '#21ed7d';
-                ctx.lineWidth = 2;
-                ctx.lineCap = 'round';
-                ctx.beginPath();
-                ctx.moveTo(x1, y1);
-                ctx.lineTo(x2, y2);
-                ctx.stroke();
-            }
-        };
-        draw();
-    }, [hasContradiction, interactionMode]);
-
-    const encode = (bytes: Uint8Array) => {
-        let binary = '';
-        for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-        return btoa(binary);
-    };
-
-    const decode = (base64: string) => {
-        const binaryString = atob(base64);
-        const bytes = new Uint8Array(binaryString.length);
-        for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-        return bytes;
-    };
-
-    const decodeAudioData = async (data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number) => {
-        const dataInt16 = new Int16Array(data.buffer);
-        const frameCount = dataInt16.length / numChannels;
-        const buffer = ctx.createBuffer(numChannels, frameCount, sampleRate);
-        for (let channel = 0; channel < numChannels; channel++) {
-            const channelData = buffer.getChannelData(channel);
-            for (let i = 0; i < frameCount; i++) channelData[i] = dataInt16[i * numChannels + channel] / 32768.0;
-        }
-        return buffer;
-    };
-
-    useEffect(() => {
-        if (interactionMode !== 'voice') {
-            if (sessionRef.current) {
-                sessionRef.current.close();
-                sessionRef.current = null;
-            }
-            return;
-        }
-
-        const connect = async () => {
-            const ai = new GoogleGenAI({ apiKey: process.env.NEXT_PUBLIC_GEMINI_API_KEY || "" });
-
-            audioContextInputRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
-            audioContextOutputRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
-            analyserRef.current = audioContextInputRef.current.createAnalyser();
-            analyserRef.current.fftSize = 256;
-
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-
-                const sessionPromise = ai.live.connect({
-                    model: 'gemini-1.5-flash-8b',
-                    callbacks: {
-                        onopen: () => {
-                            const source = audioContextInputRef.current!.createMediaStreamSource(stream);
-                            source.connect(analyserRef.current!);
-                            const scriptProcessor = audioContextInputRef.current!.createScriptProcessor(4096, 1, 1);
-                            scriptProcessor.onaudioprocess = (e) => {
-                                if (isMuted) return;
-                                const inputData = e.inputBuffer.getChannelData(0);
-                                const int16 = new Int16Array(inputData.length);
-                                for (let i = 0; i < inputData.length; i++) int16[i] = inputData[i] * 32768;
-                                const pcmBlob = { data: encode(new Uint8Array(int16.buffer)), mimeType: 'audio/pcm;rate=16000' };
-                                sessionPromise.then(s => s.sendRealtimeInput({ media: pcmBlob }));
-                            };
-                            scriptProcessor.connect(audioContextInputRef.current!.destination);
-                        },
-                        onmessage: async (message: LiveServerMessage) => {
-                            if (message.serverContent?.outputTranscription) currentOutputTranscriptionRef.current += message.serverContent.outputTranscription.text;
-                            else if (message.serverContent?.inputTranscription) currentInputTranscriptionRef.current += message.serverContent.inputTranscription.text;
-
-                            if (message.serverContent?.turnComplete) {
-                                const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-                                setEntries(prev => [
-                                    ...prev,
-                                    ...(currentInputTranscriptionRef.current ? [{ role: 'user', text: currentInputTranscriptionRef.current, timestamp: time }] as any : []),
-                                    ...(currentOutputTranscriptionRef.current ? [{ role: 'model', text: currentOutputTranscriptionRef.current, timestamp: time }] as any : [])
-                                ]);
-                                currentInputTranscriptionRef.current = '';
-                                currentOutputTranscriptionRef.current = '';
-
-                                if (Math.random() > 0.7) {
-                                    setHasContradiction(true);
-                                    setTimeout(() => setHasContradiction(false), 4000);
-                                    setTruthScore(s => Math.max(30, s - 5));
-                                }
-                            }
-
-                            const base64 = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-                            if (base64 && audioContextOutputRef.current) {
-                                const ctx = audioContextOutputRef.current;
-                                nextStartTimeRef.current = Math.max(nextStartTimeRef.current, ctx.currentTime);
-                                const buffer = await decodeAudioData(decode(base64), ctx, 24000, 1);
-                                const src = ctx.createBufferSource();
-                                src.buffer = buffer; src.connect(ctx.destination);
-                                src.start(nextStartTimeRef.current);
-                                nextStartTimeRef.current += buffer.duration;
-                            }
-                        },
-                    },
-                    config: {
-                        responseModalities: [Modality.AUDIO],
-                        inputAudioTranscription: {},
-                        outputAudioTranscription: {},
-                        systemInstruction: `You are Echo, the Reflection Agent for ZAVN. Your goal is to mirror the user's behavioral patterns for "${userContext.primary_goal}". Be Socratic, direct, and slightly challenging. Find contradictions in their logic. Use their known patterns: ${userContext.top_patterns.join(", ")} as evidence.`
-                    }
-                });
-                sessionRef.current = await sessionPromise;
-            } catch (err) {
-                console.error("Connection failed", err);
-            }
-        };
-        connect();
-        return () => sessionRef.current?.close();
-    }, [isMuted, interactionMode]);
-
-    const handleSendText = async () => {
-        if (!textInput.trim() || isTextLoading) return;
-
-        const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        const userMessage: Message = { role: 'user', text: textInput, timestamp: time };
-        setEntries(prev => [...prev, userMessage]);
-        setTextInput('');
-        setIsTextLoading(true);
-
-        try {
-            const response = await fetch('/api/echo', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    messages: entries.map(e => ({ role: e.role, content: e.text })).concat({ role: 'user', content: textInput }),
-                    userContext
-                })
-            });
-
-            const data = await response.json();
-            if (data.success) {
-                setEntries(prev => [...prev, { role: 'model', text: data.content, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }]);
-
-                // Random pattern feedback for text mode 
-                if (Math.random() > 0.6) {
-                    setHasContradiction(true);
-                    setTimeout(() => setHasContradiction(false), 3000);
-                    setTruthScore(s => Math.max(30, s - 3));
-                }
-            } else {
-                throw new Error(data.error);
-            }
-        } catch (error) {
-            console.error("Failed to get reflection:", error);
-            setEntries(prev => [...prev, { role: 'model', text: "I'm having trouble reflecting right now. Please try again.", timestamp: time }]);
-        } finally {
-            setIsTextLoading(false);
-        }
-    };
+    // --- UI Render ---
 
     return (
-        <div className="flex h-screen w-full flex-col overflow-hidden bg-[var(--background)] text-[var(--foreground)] font-sans transition-all duration-1000">
-            {/* Header Mirroring Claire */}
-            <header className="flex items-center justify-between border-b border-[var(--border-subtle)] bg-[var(--background)]/80 backdrop-blur-md px-8 py-3 sticky top-0 z-50">
+        <div className="flex h-screen w-full flex-col overflow-hidden bg-[#09090b] text-zinc-100">
+            {/* Header */}
+            <header className="flex items-center justify-between px-8 py-6 border-b border-zinc-900 z-50">
                 <div className="flex items-center gap-4">
-                    <Link href="/dashboard" className="p-2 hover:bg-[var(--muted)] rounded-full transition-colors shrink-0 text-[var(--foreground)]">
-                        <MdArrowBack size={20} />
-                    </Link>
-                    <h2 className="text-lg font-bold tracking-tight">ZAVN <span className="text-primary/80 uppercase tracking-widest text-[10px] ml-1">ECHO MIRROR</span></h2>
+                    <h2 className="text-xl font-black tracking-tight font-mono">
+                        ZAVN <span className="text-amber-500 uppercase tracking-widest text-[10px] ml-1 font-medium">Echo</span>
+                    </h2>
                 </div>
-
-                <div className="flex flex-1 justify-center max-w-xl">
-                    <div className="flex items-center gap-1 bg-[var(--muted)] rounded-full p-1 border border-[var(--border-subtle)]">
-                        <button
-                            onClick={() => setInteractionMode('voice')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'voice' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
-                        >
-                            Voice
-                        </button>
-                        <button
-                            onClick={() => setInteractionMode('text')}
-                            className={`px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transition-all ${interactionMode === 'text' ? 'bg-[var(--primary)] text-white' : 'text-[var(--muted-foreground)] hover:text-[var(--foreground)]'}`}
-                        >
-                            Text
-                        </button>
-                    </div>
-                </div>
-
                 <div className="flex items-center gap-6">
-                    <p className="text-[10px] font-mono text-[var(--muted-foreground)] uppercase">T: {duration}</p>
-                    <button onClick={() => setIsProcessing(true)} className="btn-primary px-6 py-2 rounded-lg text-xs">
-                        Finalize
+                    <p className="text-xs font-mono text-zinc-600">{duration}</p>
+                    <button
+                        onClick={() => router.push('/dashboard')}
+                        className="px-6 py-2 rounded-3xl border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-all text-sm font-medium flex items-center gap-2"
+                    >
+                        <MdClose size={18} />
+                        End Session
                     </button>
                 </div>
             </header>
 
-            <div className="flex flex-1 overflow-hidden">
-                {/* Calibration Sidebar */}
-                <aside className="w-72 border-r border-[var(--border-subtle)] bg-[var(--background)] flex flex-col p-6 shrink-0 gap-8">
-                    <div>
-                        <h3 className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                            <MdAnalytics className="text-[var(--primary)]" />
-                            Mirror Calibration
-                        </h3>
-                        <div className="bg-[var(--card-bg)] rounded-xl p-6 border border-[var(--border-subtle)] flex flex-col items-center gap-4 relative overflow-hidden group">
-                            <div className="relative size-32 flex items-center justify-center">
-                                <svg className="size-full -rotate-90" viewBox="0 0 100 100">
-                                    <circle className="text-[var(--muted)]" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeWidth="8"></circle>
-                                    <circle className="text-[var(--primary)] transition-all duration-1000" cx="50" cy="50" fill="transparent" r="40" stroke="currentColor" strokeDasharray="251.2" strokeDashoffset={251.2 - (251.2 * accuracy) / 100} strokeLinecap="round" strokeWidth="8"></circle>
-                                </svg>
-                                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                    <span className="text-3xl font-black text-[var(--foreground)]">{accuracy}%</span>
-                                    <span className="text-[9px] uppercase tracking-widest text-[var(--primary)] font-bold">Accuracy</span>
-                                </div>
-                            </div>
-                            <p className="text-center text-[10px] text-[var(--muted-foreground)] px-2 leading-relaxed uppercase font-bold">Linguistic pattern alignment level.</p>
+            {/* Main Scene */}
+            <main className="flex-1 relative flex items-center justify-center">
+                {/* Status HUD */}
+                <div className="absolute top-8 left-1/2 -translate-x-1/2 z-20">
+                    <div className="flex items-center gap-4 bg-zinc-900/80 backdrop-blur-md border border-zinc-800 rounded-3xl px-6 py-3">
+                        <div className="flex items-center gap-2">
+                            <div className={`size-2 rounded-full ${isSpeaking ? 'bg-amber-500 animate-pulse' : isConnected ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                                {micError ? 'Error' : isSpeaking ? 'Echo Speaking' : isConnected ? 'Echo Listening' : 'Connecting'}
+                            </span>
                         </div>
                     </div>
+                </div>
 
-                    <div className="space-y-4">
-                        <h3 className="text-[10px] font-bold text-[var(--muted-foreground)] uppercase tracking-[0.2em] px-2 text-center">Truth Markers</h3>
-                        <div className="space-y-4 text-center">
-                            <div className="p-4 bg-[var(--primary)]/5 border border-[var(--primary)]/20 rounded-lg">
-                                <p className="text-[10px] font-bold text-[var(--primary)] mb-1 uppercase tracking-widest font-mono">Truth Score</p>
-                                <p className="text-2xl font-black text-[var(--foreground)]">{truthScore}/100</p>
-                            </div>
+                {/* Orb & Pulse */}
+                <div className="relative z-10 flex flex-col items-center">
+                    {micError ? (
+                        <div className="text-center p-8 bg-red-500/10 rounded-2xl border border-red-500/20 max-w-sm">
+                            <MdMicOff className="text-red-500 mx-auto mb-4" size={48} />
+                            <p className="text-sm text-zinc-400 font-mono uppercase">{micError}</p>
                         </div>
-                    </div>
-                </aside>
-
-                {/* Main Visualizer */}
-                <main className="flex-1 flex flex-col overflow-hidden relative">
-                    <div className="absolute inset-0 opacity-5 pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, #21ed7d 1px, transparent 0)', backgroundSize: '24px 24px' }}></div>
-
-                    <div className="p-8 relative z-10 text-center">
-                        <h2 className="text-3xl font-black tracking-tight mb-1 text-[var(--foreground)]">Linguistic Mirroring</h2>
-                        <p className="text-[var(--primary)]/80 text-[10px] font-bold uppercase tracking-widest">{interactionMode === 'voice' ? 'Identifying behavioral loops through audio frames...' : 'Mapping behavioral intent via text analysis...'}</p>
-                    </div>
-
-                    <div className="flex-1 relative flex items-center justify-center">
-                        <AnimatePresence mode="wait">
-                            {interactionMode === 'voice' ? (
-                                <motion.div
-                                    key="voice-viz"
-                                    initial={{ opacity: 0, scale: 0.9 }}
-                                    animate={{ opacity: 1, scale: 1 }}
-                                    exit={{ opacity: 0, scale: 0.9 }}
-                                    className="absolute inset-0 flex items-center justify-center"
-                                >
-                                    <canvas ref={canvasRef} width={600} height={600} className="absolute z-0" />
-                                    <div className="relative z-20 flex flex-col items-center">
-                                        <div className={`bg-[var(--primary)] text-white font-black px-8 py-4 rounded-xl text-2xl uppercase tracking-tighter shadow-2xl border-4 border-white/20 transition-all duration-500 ${hasContradiction ? 'bg-red-500 scale-110 rotate-2' : 'rotate-[-2deg]'}`}>
-                                            {hasContradiction ? 'CONTRADICTION' : 'Echo Core'}
-                                        </div>
-                                        <div className="h-12 w-px bg-gradient-to-b from-[var(--primary)] to-transparent mt-2"></div>
-                                    </div>
-                                </motion.div>
-                            ) : (
-                                <motion.div
-                                    key="text-viz"
-                                    initial={{ opacity: 0, y: 20 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    exit={{ opacity: 0, y: -20 }}
-                                    className="size-full flex flex-col p-8 pt-0"
-                                >
-                                    <div ref={scrollRef} className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pb-8">
-                                        {entries.map((e, i) => (
-                                            <div key={i} className={`flex gap-3 ${e.role === 'user' ? 'justify-end' : ''}`}>
-                                                {e.role === 'model' && (
-                                                    <div className="size-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white shrink-0 shadow-lg">
-                                                        <MdPsychology size={18} />
-                                                    </div>
-                                                )}
-                                                <div className={`max-w-[85%] flex flex-col gap-1 ${e.role === 'user' ? 'items-end' : ''}`}>
-                                                    <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-[var(--card-bg)] border-[var(--border-subtle)] text-[var(--foreground)] rounded-tl-none italic' : 'bg-[var(--primary)]/10 border-[var(--primary)]/20 text-[var(--foreground)] rounded-tr-none'}`}>
-                                                        {e.text}
-                                                    </div>
-                                                    <span className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
-                                                </div>
-                                            </div>
-                                        ))}
-                                        {isTextLoading && (
-                                            <div className="flex justify-start">
-                                                <div className="bg-[var(--card-bg)] p-4 rounded-xl rounded-tl-none border border-[var(--border-subtle)] flex gap-1">
-                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce" />
-                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce [animation-delay:0.1s]" />
-                                                    <span className="w-1 h-1 bg-[var(--primary)] rounded-full animate-bounce [animation-delay:0.2s]" />
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
-
-                        {interactionMode === 'voice' && floatingChips.map((chip, i) => (
-                            <div key={i} className="absolute z-10" style={{ top: chip.top, left: chip.left, right: chip.right, bottom: chip.bottom }}>
-                                <div className="flex items-center gap-2 bg-[var(--background)]/80 backdrop-blur-md border border-[var(--border-subtle)] p-3 rounded-lg text-[10px] font-bold uppercase tracking-widest text-[var(--foreground)] shadow-xl">
-                                    {chip.text}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-
-                    {/* Logic Terminal */}
-                    <div className="h-48 border-t border-[var(--border-subtle)] bg-[var(--muted)]/20 p-6 flex gap-8 shrink-0">
-                        <div className="flex flex-col gap-3 min-w-[280px]">
-                            <div className="flex items-center gap-2 text-[var(--primary)]">
-                                <MdTerminal size={16} />
-                                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Logic Snippets</span>
-                            </div>
-                            <div className="flex-1 bg-black rounded-lg p-4 font-mono text-[9px] text-[#21ed7d] border border-white/10 shadow-inner overflow-hidden uppercase">
-                                <p className="mb-1">{`> detect_drift("Motivation") = ${truthScore < 85 ? 'TRUE' : 'FALSE'}`}</p>
-                                <p className="mb-1">{`> variance_score: ${(accuracy / 100).toFixed(4)}`}</p>
-                                <p className="animate-pulse">{`> ${interactionMode === 'voice' ? 'analyzing stress patterns...' : 'searching for linguistic hedging...'}`}</p>
-                            </div>
-                        </div>
-                        <div className="flex-1 flex flex-col gap-3">
-                            <div className="flex items-center gap-2 text-[var(--muted-foreground)]">
-                                <MdAnalytics size={16} />
-                                <span className="text-[10px] font-bold uppercase tracking-[0.2em]">Goal Alignment Summary</span>
-                            </div>
-                            <div className="p-4 bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-lg flex-1 overflow-y-auto">
-                                <p className="text-[11px] text-[var(--muted-foreground)] leading-relaxed font-medium uppercase tracking-tighter">
-                                    Current session focusing on <span className="text-[var(--primary)] font-bold">{userContext.primary_goal}</span>.
-                                    Correlation between <span className="text-[var(--primary)] font-bold">{userContext.top_patterns[0]}</span> and current markers.
-                                    Mirror calibration suggesting logic adjustment for mid-week capacity.
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </main>
-
-                {/* Perspective Sidebar (Voice mode only) */}
-                <AnimatePresence>
-                    {interactionMode === 'voice' && (
-                        <motion.aside
-                            initial={{ width: 0, opacity: 0 }}
-                            animate={{ width: 384, opacity: 1 }}
-                            exit={{ width: 0, opacity: 0 }}
-                            className="border-l border-[var(--border-subtle)] bg-[var(--background)] flex flex-col shrink-0 overflow-hidden"
-                        >
-                            <div className="p-6 border-b border-[var(--border-subtle)] flex justify-between items-center whitespace-nowrap">
-                                <h3 className="text-[10px] font-bold text-[var(--foreground)] uppercase tracking-widest">Reflection History</h3>
-                                <span className="text-[9px] font-mono text-[var(--primary)] bg-[var(--primary)]/10 px-2 py-0.5 rounded tracking-tighter">VOICE_LIVE</span>
-                            </div>
-
-                            <div ref={scrollRef} className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-                                {entries.map((e, i) => (
-                                    <div key={i} className={`flex gap-3 ${e.role === 'user' ? 'justify-end' : ''}`}>
-                                        {e.role === 'model' && (
-                                            <div className="size-8 rounded-full bg-[var(--primary)] flex items-center justify-center text-white shrink-0 shadow-lg">
-                                                <MdPsychology size={18} />
-                                            </div>
-                                        )}
-                                        <div className={`max-w-[85%] flex flex-col gap-1 ${e.role === 'user' ? 'items-end' : ''}`}>
-                                            <div className={`p-4 rounded-xl text-xs leading-relaxed border transition-all duration-300 ${e.role === 'model' ? 'bg-[var(--card-bg)] border-[var(--border-subtle)] text-[var(--foreground)] rounded-tl-none' : 'bg-[var(--primary)]/10 border-[var(--primary)]/20 text-[var(--foreground)] rounded-tr-none'}`}>
-                                                {e.text}
-                                            </div>
-                                            <span className="text-[9px] font-bold text-[var(--muted-foreground)] uppercase tracking-widest px-1">{e.role} • {e.timestamp}</span>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-
-                            <div className="p-6 bg-[var(--background)] border-t border-[var(--border-subtle)]">
-                                <div className="relative group">
-                                    <div className="w-full bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-xl px-4 py-8 text-[var(--foreground)] text-[10px] text-center italic uppercase tracking-[0.2em] font-bold border-dashed animate-pulse">
-                                        Echo is listening...
-                                    </div>
-                                    <button onClick={() => setIsMuted(!isMuted)} className={`absolute top-1/2 -translate-y-1/2 right-4 p-3 rounded-xl transition-all flex items-center justify-center ${isMuted ? 'bg-red-500/20 text-red-500 border border-red-500/30' : 'bg-[var(--primary)] text-white shadow-lg hover:scale-110'}`}>
-                                        {isMuted ? <MdMicOff size={24} /> : <MdMic size={24} />}
-                                    </button>
-                                </div>
-                            </div>
-                        </motion.aside>
+                    ) : (
+                        <VoicePulse 
+                            isActive={isConnected && !isMuted} 
+                            isSpeaking={isSpeaking}
+                        />
                     )}
-                </AnimatePresence>
-            </div>
+                </div>
 
-            {/* Bottom Input (Text mode only) */}
-            <AnimatePresence>
-                {interactionMode === 'text' && (
-                    <motion.footer
-                        initial={{ y: 100 }}
-                        animate={{ y: 0 }}
-                        exit={{ y: 100 }}
-                        className="p-6 bg-[var(--background)] border-t border-[var(--border-subtle)] relative z-50"
+                {/* Controls */}
+                <div className="absolute bottom-12 left-1/2 -translate-x-1/2 z-20">
+                    <button
+                        onClick={() => setIsMuted(!isMuted)}
+                        className={`size-20 rounded-full flex items-center justify-center transition-all ${
+                            isMuted 
+                            ? 'bg-red-500/20 text-red-500 border border-red-500/30' 
+                            : 'bg-amber-500 text-black shadow-[0_0_50px_-12px_rgba(245,158,11,0.5)]'
+                        }`}
                     >
-                        <div className="max-w-3xl mx-auto w-full relative">
-                            <textarea
-                                value={textInput}
-                                onChange={(e) => setTextInput(e.target.value)}
-                                onKeyDown={(e) => {
-                                    if (e.key === 'Enter' && !e.shiftKey) {
-                                        e.preventDefault();
-                                        handleSendText();
-                                    }
-                                }}
-                                placeholder="Type your reflection to mirror..."
-                                className="w-full bg-[var(--card-bg)] border border-[var(--border-subtle)] rounded-2xl p-5 pr-16 focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/50 transition-all resize-none min-h-[80px] text-xs uppercase font-bold tracking-wider placeholder:text-[var(--muted-foreground)]"
-                                rows={1}
-                            />
-                            <button
-                                onClick={handleSendText}
-                                disabled={!textInput.trim() || isTextLoading}
-                                className="absolute right-4 bottom-4 p-3 btn-primary text-white rounded-xl disabled:opacity-50 disabled:hover:scale-100"
-                            >
-                                <MdSend size={20} />
-                            </button>
-                        </div>
-                    </motion.footer>
+                        {isMuted ? <MdMicOff size={32} /> : <MdMic size={32} />}
+                    </button>
+                </div>
+            </main>
+
+            {/* Greeting Overlay */}
+            <AnimatePresence>
+                {showGreeting && !micError && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] bg-black/90 backdrop-blur-xl flex flex-col items-center justify-center text-center p-8"
+                    >
+                        <motion.div 
+                            animate={{ scale: [1, 1.05, 1], opacity: [0.5, 1, 0.5] }}
+                            transition={{ duration: 3, repeat: Infinity }}
+                            className="size-40 rounded-full bg-amber-500/20 blur-3xl absolute"
+                        />
+                        <h1 className="text-5xl font-black mb-4 tracking-tighter">ESTABLISHING LINK</h1>
+                        <p className="text-amber-500 font-mono tracking-[0.3em] text-xs uppercase animate-pulse">
+                            Initializing Echo Neural Interface...
+                        </p>
+                    </motion.div>
                 )}
             </AnimatePresence>
 
-            {/* Finalizing Overlay */}
+            {/* Success/Processing Overlay */}
             <AnimatePresence>
                 {isProcessing && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center gap-8"
+                        className="fixed inset-0 z-[110] bg-black flex flex-col items-center justify-center"
                     >
-                        <div className="relative size-48">
-                            <div className="absolute inset-0 rounded-full border-2 border-primary/20 animate-pulse"></div>
-                            <div className="absolute inset-0 rounded-full border border-primary animate-spin border-t-transparent"></div>
-                            <div className="absolute inset-4 rounded-full bg-primary/5 flex items-center justify-center">
-                                <MdPsychology className="text-6xl text-primary animate-pulse" />
-                            </div>
-                        </div>
-                        <div className="text-center space-y-2">
-                            <h3 className="text-2xl font-black text-white uppercase tracking-tighter">Compiling Behavioral Map</h3>
-                            <p className="text-primary/60 font-mono text-[10px] uppercase tracking-[0.3em]">Mapping linguistic markers to identified goals...</p>
-                            <button onClick={() => setIsProcessing(false)} className="mt-8 text-white/40 hover:text-white text-[10px] border border-white/10 px-4 py-2 rounded-lg transition-all uppercase tracking-widest font-bold">Cancel</button>
-                        </div>
+                        <div className="size-20 border-2 border-amber-500 border-t-transparent animate-spin rounded-full mb-8" />
+                        <h2 className="text-2xl font-bold font-mono tracking-widest text-amber-500 uppercase">
+                            Contract Finalized
+                        </h2>
                     </motion.div>
                 )}
             </AnimatePresence>
-
-            <style jsx>{`
-                .custom-scrollbar::-webkit-scrollbar { width: 4px; } 
-                .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-                .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
-                .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #21ed7d; }
-            `}</style>
         </div>
     );
 }

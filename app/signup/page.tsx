@@ -1,242 +1,206 @@
-'use client';
+"use client";
 
-import Image from "next/image";
+/**
+ * ZAVN Identity Protocol
+ * Terminal Minimalism / Discovery Gateway
+ */
+
+import React from "react";
 import Link from "next/link";
-import { FormEvent, useState } from "react";
-import {
-  MdStar,
-  MdPerson,
-  MdMail,
-  MdLock,
-  MdVisibility,
-  MdArrowForward,
-} from "react-icons/md";
-import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 import { signIn } from "next-auth/react";
-import { authApi } from "@/services/authApi";
+import { useRouter } from "next/navigation";
 
 export default function SignupPage() {
   const router = useRouter();
-  const [showPassword, setShowPassword] = useState(false);
-  const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [name, setName] = React.useState("");
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [isGlitching, setIsGlitching] = React.useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    setIsGlitching(true);
 
-    try {
-      await authApi.register({
-        email,
-        password,
-        auth_provider: "email",
-      });
+    setTimeout(async () => {
+      setIsLoading(true);
+      setError("");
 
-      await authApi.login({ email, password });
+      try {
+        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+        const res = await fetch(`${apiUrl}/api/auth/register`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ full_name: name, email, password }),
+        });
 
-      const result = await signIn("credentials", {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (!result || result.error) {
-        setError("Unable to sign you in after registration");
+        if (res.ok) {
+          // Auto sign-in after registration
+          await signIn("credentials", {
+            email,
+            password,
+            callbackUrl: "/echo",
+          });
+        } else {
+          const data = await res.json();
+          setError(data.detail || "Registration failed.");
+          setIsGlitching(false);
+        }
+      } catch (err) {
+        setError("System error during initialization.");
+        setIsGlitching(false);
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      if (typeof window !== "undefined") {
-        localStorage.setItem("full_name", fullName);
-      }
-
-      router.push("/onboarding");
-    } catch (err: any) {
-      setError(err?.message || "Failed to create account");
-      setIsLoading(false);
-    }
+    }, 150);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
-      <div className="flex min-h-screen w-full flex-col md:flex-row font-sans">
-        {/* Brand & Testimonial Side Panel (Left) */}
-        <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--muted)] p-12 lg:flex lg:w-5/12">
-          <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[var(--border-subtle)] blur-[120px]" />
-          <div className="relative z-10">
-            <Link href="/" className="mb-16 flex items-center gap-3 group">
-              <div className="relative size-10 icon-container rounded-xl transition-transform group-hover:scale-110">
-                <Image
-                  src="/zavn-icon.png"
-                  alt="ZAVN logo"
-                  fill
-                  className="object-contain p-1.5"
-                />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-white/70">
-                ZAVN
-              </h2>
-            </Link>
-            <div className="space-y-8 mt-12">
-              <h1 className="text-5xl lg:text-7xl font-black leading-[1.05] tracking-tighter text-[var(--foreground)]">
-                Build high-performance <br /> habits with ZAVN.
+    <main className={`min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all duration-300 ${isGlitching ? 'scale-[1.02] brightness-125' : ''}`}>
+      {/* Background Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.03)_0%,transparent_70%)]" />
+      </div>
+
+      {isGlitching && (
+        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+          <div className="w-full h-px bg-amber-500/50 shadow-[0_0_15px_#f59e0b] absolute top-1/2 animate-scan" />
+          <div className="w-full h-px bg-amber-500/30 absolute top-1/3 animate-scan [animation-delay:50ms]" />
+        </div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="w-full max-w-[400px] z-10"
+      >
+        <div className="flex flex-col items-center space-y-12">
+          {/* Pulsing Z Logo */}
+          <motion.div
+            animate={{ 
+              boxShadow: ["0 0 20px rgba(245,158,11,0.1)", "0 0 40px rgba(245,158,11,0.3)", "0 0 20px rgba(245,158,11,0.1)"],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="size-16 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.2)]"
+          >
+            <span className="mono text-[#09090b] font-black text-3xl">Z</span>
+          </motion.div>
+
+          <div className="w-full space-y-8">
+            <div className="space-y-2 text-center">
+              <span className="mono text-amber-500 text-[10px] tracking-[0.5em] uppercase font-black">
+                [IDENTITY_PROTOCOL]
+              </span>
+              <h1 className="text-xl font-black tracking-[0.2em] text-zinc-100 uppercase mono">
+                Initialize_Identity
               </h1>
-              <p className="max-w-md text-xl text-body">
-                Join thousands of individuals closing the gap between intention and action. Start your 7-day trial.
-              </p>
-            </div>
-          </div>
-          <div className="relative z-10">
-            <div className="space-y-5 rounded-[2.5rem] border border-[var(--border-subtle)] bg-[var(--card-bg)] p-10 shadow-sm backdrop-blur-md">
-              <div className="flex gap-1.5 text-amber-400">
-                {Array.from({ length: 5 }).map((_, idx) => (
-                  <MdStar key={idx} className="text-xl" />
-                ))}
-              </div>
-              <p className="text-lg font-medium italic leading-relaxed text-[var(--foreground)]/90">
-                &quot;ZAVN transformed how I approach my daily energy management; the
-                cognitive agents are like having a performance coach in my pocket.&quot;
-              </p>
-              <div className="flex items-center gap-4 pt-4 border-t border-[var(--border-subtle)]">
-                <div className="relative size-12 overflow-hidden rounded-2xl bg-[var(--muted)]">
-                  <Image
-                    src="/placeholder.svg"
-                    alt="Testimonial avatar"
-                    fill
-                    className="object-cover"
-                  />
-                </div>
-                <div>
-                  <p className="text-base font-bold text-[var(--foreground)]">Marcus Thorne</p>
-                  <p className="text-xs font-black uppercase tracking-widest text-[var(--primary)]">Founder, Flux Systems</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </aside>
-
-        {/* Registration Form Side (Right) */}
-        <main className="flex flex-1 flex-col items-center justify-center bg-[var(--background)] p-6 md:p-12 lg:p-24 transition-colors duration-300">
-          <div className="w-full max-w-[460px] space-y-10">
-            {/* Mobile Logo */}
-            <div className="mb-12 flex items-center justify-center gap-3 lg:hidden">
-              <div className="relative size-10 icon-container rounded-xl">
-                <Image src="/zavn-icon.png" alt="ZAVN" fill className="object-contain p-1.5" />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)]">ZAVN</h2>
             </div>
 
-            <div className="text-center lg:text-left space-y-2">
-              <h2 className="text-4xl font-extrabold tracking-tight text-[var(--foreground)]">
-                Create your account
-              </h2>
-              <p className="text-lg font-medium text-[var(--muted-foreground)]">
-                The journey to alignment starts here.
-              </p>
-            </div>
-
-            {/* Registration Form */}
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="label">
-                  Full Name
-                </label>
-                <div className="relative">
-                  <MdPerson className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[var(--muted-foreground)]" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
+                    [FULL_IDENTITY]
+                  </label>
                   <input
                     type="text"
+                    placeholder="ENTER_NAME"
                     required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Enter your name"
-                    className="input-field pl-12 pr-4 bg-[var(--muted)]/50"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
                   />
                 </div>
-              </div>
-
-              <div className="space-y-2">
-                <label className="label">
-                  Email address
-                </label>
-                <div className="relative">
-                  <MdMail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[var(--muted-foreground)]" />
+                <div className="space-y-2">
+                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
+                    [COMM_NODE]
+                  </label>
                   <input
                     type="email"
+                    placeholder="ENTER_EMAIL"
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    placeholder="name@example.com"
-                    className="input-field pl-12 pr-4 bg-[var(--muted)]/50"
+                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
+                    [SECURE_CIPHER]
+                  </label>
+                  <input
+                    type="password"
+                    placeholder="ENTER_PASSPHRASE"
+                    required
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
                   />
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <label className="label">
-                  Password
-                </label>
-                <div className="relative">
-                  <MdLock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[var(--muted-foreground)]" />
-                  <input
-                    type={showPassword ? "text" : "password"}
-                    required
-                    minLength={8}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    placeholder="Create a strong password"
-                    className="input-field pl-12 pr-12 bg-[var(--muted)]/50"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword((p) => !p)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 text-[var(--muted-foreground)] transition-colors hover:text-[var(--foreground)]"
-                  >
-                    <MdVisibility className="text-xl" />
-                  </button>
+              {error && (
+                <div className="p-3 bg-red-500/5 border border-red-500/20">
+                  <p className="mono text-[9px] text-red-500 text-center uppercase tracking-[0.2em] font-black">
+                    [CRITICAL_FAILURE: {error}]
+                  </p>
                 </div>
-              </div>
+              )}
 
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex h-14 w-full items-center justify-center gap-2 text-lg btn-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="group relative w-full py-5 bg-transparent border border-amber-500/20 overflow-hidden hover:border-amber-500 transition-all duration-500"
               >
-                <span>{isLoading ? "Creating account..." : "Create Account"}</span>
-                <MdArrowForward className="text-xl" />
+                <span className="relative z-10 mono text-amber-500 font-black tracking-[0.4em] uppercase text-xs group-hover:text-zinc-100 transition-colors">
+                  {isLoading ? "INITIALIZING..." : "INITIALIZE_ID"}
+                </span>
+                <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
               </button>
             </form>
 
-            {error && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-                {error}
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-900" />
               </div>
-            )}
-
-            <div className="space-y-8 pt-4 text-center">
-              <p className="text-sm font-medium text-[var(--muted-foreground)] leading-relaxed">
-                By creating an account, you agree to our{" "}
-                <Link href="/terms" className="font-bold text-[var(--primary)] hover:underline underline-offset-4">Terms</Link> and{" "}
-                <Link href="/privacy" className="font-bold text-[var(--primary)] hover:underline underline-offset-4">Privacy Policy</Link>.
-              </p>
-              <div className="border-t border-[var(--border-subtle)] pt-8">
-                <p className="text-[var(--muted-foreground)] font-medium">
-                  Already have an account?
-                  <Link
-                    href="/login"
-                    className="ml-2 font-black text-[var(--primary)] hover:underline underline-offset-4"
-                  >
-                    Log In
-                  </Link>
-                </p>
+              <div className="relative flex justify-center text-[8px] uppercase mono tracking-[0.3em] font-black">
+                <span className="bg-[#09090b] px-4 text-zinc-700">
+                  External_Handshake
+                </span>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => signIn("google", { callbackUrl: "/echo" })}
+                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
+              >
+                <FaGoogle className="text-zinc-100" /> Google
+              </button>
+              <button
+                type="button"
+                onClick={() => signIn("github", { callbackUrl: "/echo" })}
+                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
+              >
+                <FaGithub className="text-zinc-100" /> GitHub
+              </button>
+            </div>
+
+            <p className="text-center text-[9px] mono text-zinc-600 uppercase tracking-widest font-black">
+              Already a member?{" "}
+              <Link href="/login" className="text-amber-500/60 hover:text-amber-500 transition-colors underline decoration-amber-500/20 underline-offset-4">
+                Access_Network
+              </Link>
+            </p>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </motion.div>
+    </main>
   );
 }

@@ -1,3 +1,5 @@
+import { getSession } from "next-auth/react";
+
 /**
  * API client for ZAVN backend
  */
@@ -19,7 +21,10 @@ async function request<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${API_URL}${endpoint}`;
+  // Normalize URL to avoid double slashes
+  const baseUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const path = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+  const url = `${baseUrl}${path}`;
   
   const config: RequestInit = {
     headers: {
@@ -29,15 +34,29 @@ async function request<T>(
     ...options,
   };
 
-  // Add auth token if available
+  // Add auth token from NextAuth session if available
   if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('auth_token');
+    const session = await getSession();
+    const token = (session as any)?.accessToken;
+    
     if (token) {
       config.headers = {
         ...config.headers,
         Authorization: `Bearer ${token}`,
       };
+    } else {
+      // Fallback to localStorage for legacy or non-NextAuth flows
+      const localToken = typeof window !== 'undefined' ? localStorage.getItem('auth_token') : null;
+      if (localToken) {
+        config.headers = {
+          ...config.headers,
+          Authorization: `Bearer ${localToken}`,
+        };
+      }
     }
+  } else {
+    // If on server side (SSR), we can't use getSession() from next-auth/react easily without req
+    // But this client is mainly used in client components
   }
 
   const response = await fetch(url, config);

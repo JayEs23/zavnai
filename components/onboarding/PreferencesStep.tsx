@@ -1,194 +1,206 @@
-/**
- * Step 3: Preferences and Echo starting points
- */
-
 'use client';
 
 import React, { useState } from 'react';
-import { PreferencesStepData } from '@/services/onboardingApi';
+import { motion } from 'framer-motion';
+import { MdSchedule, MdPhone, MdEmail, MdNotifications } from 'react-icons/md';
+import { ExtractedProfile } from '@/services/entityExtraction';
 
 interface PreferencesStepProps {
-  onNext: (data: PreferencesStepData) => void;
-  initialData?: Partial<PreferencesStepData>;
-  isLoading?: boolean;
+  extractedProfile: ExtractedProfile;
+  onComplete: (preferences: UserPreferences) => void;
 }
 
-const COMMUNICATION_STYLES = [
-  { value: 'direct', label: 'Direct', description: 'Straightforward and to the point' },
-  { value: 'gentle', label: 'Gentle', description: 'Soft and supportive' },
-  { value: 'conversational', label: 'Conversational', description: 'Friendly and engaging' },
-] as const;
+export interface UserPreferences {
+  call_window_start: string; // HH:MM format
+  call_window_end: string; // HH:MM format
+  escalation_preference: 'soft' | 'hard';
+  communication_channel: 'call' | 'sms' | 'whatsapp' | 'email';
+  echo_vibe: 'challenging' | 'supportive' | 'balanced';
+}
 
-const TIME_COMMITMENTS = [
-  { value: 'low', label: 'Low', description: '15-30 minutes per week' },
-  { value: 'medium', label: 'Medium', description: '1-2 hours per week' },
-  { value: 'high', label: 'High', description: '3+ hours per week' },
-] as const;
+export default function PreferencesStep({ extractedProfile, onComplete }: PreferencesStepProps) {
+  // Infer defaults from extracted profile
+  const getDefaultCallWindow = () => {
+    if (extractedProfile.energy_peak === 'morning') {
+      return { start: '07:00', end: '22:00' };
+    } else if (extractedProfile.energy_peak === 'late_night') {
+      return { start: '10:00', end: '23:00' };
+    }
+    return { start: '09:00', end: '21:00' };
+  };
 
-const GROWTH_AREAS = [
-  'Productivity',
-  'Health & Wellness',
-  'Finance',
-  'Learning',
-  'Relationships',
-  'Career',
-  'Creativity',
-  'Mindfulness',
-  'Fitness',
-  'Personal Development',
-];
+  const defaults = getDefaultCallWindow();
 
-export default function PreferencesStep({
-  onNext,
-  initialData = {},
-  isLoading = false,
-}: PreferencesStepProps) {
-  const [formData, setFormData] = useState<PreferencesStepData>({
-    communication_style: initialData.communication_style || 'conversational',
-    time_commitment: initialData.time_commitment || 'medium',
-    growth_areas: initialData.growth_areas || [],
-    additional_responses: initialData.additional_responses || {},
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    call_window_start: defaults.start,
+    call_window_end: defaults.end,
+    escalation_preference: extractedProfile.vibe_score >= 7 ? 'hard' : 'soft',
+    communication_channel: 'call',
+    echo_vibe: 'balanced',
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
-
-  const toggleGrowthArea = (area: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      growth_areas: prev.growth_areas.includes(area)
-        ? prev.growth_areas.filter((a) => a !== area)
-        : [...prev.growth_areas, area],
-    }));
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (formData.growth_areas.length === 0) {
-      newErrors.growth_areas = 'Please select at least one growth area';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validate()) {
-      onNext(formData);
-    }
+  const handleSubmit = () => {
+    onComplete(preferences);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Tell us about your preferences
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Help Echo understand how to best support you
+    <div className="w-full space-y-12">
+      <div className="space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="size-2 bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
+          <h2 className="text-3xl font-black text-zinc-100 uppercase tracking-tighter leading-none">System Calibration</h2>
+        </div>
+        <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.3em] ml-5 leading-relaxed">
+          Establishing intervention parameters and agent personality profiles.
         </p>
       </div>
 
-      {/* Communication Style */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Communication Style <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {COMMUNICATION_STYLES.map((style) => (
-            <button
-              key={style.value}
-              type="button"
-              onClick={() =>
-                setFormData({ ...formData, communication_style: style.value })
-              }
-              className={`p-4 border-2 rounded-lg text-left transition-all ${
-                formData.communication_style === style.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {style.label}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {style.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Time Commitment */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Time Commitment <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TIME_COMMITMENTS.map((commitment) => (
-            <button
-              key={commitment.value}
-              type="button"
-              onClick={() =>
-                setFormData({ ...formData, time_commitment: commitment.value })
-              }
-              className={`p-4 border-2 rounded-lg text-left transition-all ${
-                formData.time_commitment === commitment.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {commitment.label}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {commitment.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Growth Areas */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Growth Areas <span className="text-red-500">*</span>
-          <span className="text-gray-500 font-normal ml-2">
-            (Select all that apply)
-          </span>
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {GROWTH_AREAS.map((area) => (
-            <button
-              key={area}
-              type="button"
-              onClick={() => toggleGrowthArea(area)}
-              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                formData.growth_areas.includes(area)
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                  : 'border-gray-200 text-gray-700 hover:border-gray-300 dark:border-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {area}
-            </button>
-          ))}
-        </div>
-        {errors.growth_areas && (
-          <p className="mt-2 text-sm text-red-500">{errors.growth_areas}</p>
-        )}
-      </div>
-
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      {/* AI Suggestions */}
+      {extractedProfile.energy_peak && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-500/5 border border-amber-500/20 p-6 relative overflow-hidden"
         >
-          {isLoading ? 'Completing...' : 'Complete Onboarding'}
+          <div className="scan-line opacity-10" />
+          <p className="text-[10px] text-amber-500 font-black uppercase tracking-[0.2em] leading-relaxed relative z-10">
+            <span className="opacity-50">[ANALYSIS_COMPLETE]:</span> We detected a {' '}
+            <span className="text-zinc-100 underline decoration-amber-500/30 underline-offset-4">{extractedProfile.energy_peak === 'morning' ? 'circadian peak in AM hours' : 'circadian peak in PM hours'}</span>. 
+            Operational window auto-calibrated to match peak cognitive capacity.
+          </p>
+        </motion.div>
+      )}
+
+      <div className="space-y-12">
+        {/* Call Window */}
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <MdSchedule className="text-zinc-700" size={16} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Operational_Window</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-8">
+            <div className="space-y-3">
+              <label className="block text-[9px] font-black text-zinc-700 uppercase tracking-widest ml-1">
+                Start_Time
+              </label>
+              <input
+                type="time"
+                value={preferences.call_window_start}
+                onChange={(e) =>
+                  setPreferences({ ...preferences, call_window_start: e.target.value })
+                }
+                className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-amber-500 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs tracking-widest"
+              />
+            </div>
+            <div className="space-y-3">
+              <label className="block text-[9px] font-black text-zinc-700 uppercase tracking-widest ml-1">
+                End_Time
+              </label>
+              <input
+                type="time"
+                value={preferences.call_window_end}
+                onChange={(e) =>
+                  setPreferences({ ...preferences, call_window_end: e.target.value })
+                }
+                className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-amber-500 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs tracking-widest"
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Escalation Preference */}
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <MdNotifications className="text-zinc-700" size={16} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Intervention_Protocol</h3>
+          </div>
+          <div className="grid grid-cols-2 gap-6">
+            <button
+              onClick={() => setPreferences({ ...preferences, escalation_preference: 'soft' })}
+              className={`p-6 border transition-all duration-500 text-left group relative overflow-hidden ${
+                preferences.escalation_preference === 'soft'
+                  ? 'bg-amber-500/5 border-amber-500 text-amber-500'
+                  : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+              }`}
+            >
+              <div className="scan-line opacity-5" />
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2">Soft_Mirror</div>
+              <div className="text-[9px] uppercase font-bold opacity-40 leading-relaxed">Socratic reflection and behavior nudging.</div>
+            </button>
+            <button
+              onClick={() => setPreferences({ ...preferences, escalation_preference: 'hard' })}
+              className={`p-6 border transition-all duration-500 text-left group relative overflow-hidden ${
+                preferences.escalation_preference === 'hard'
+                  ? 'bg-amber-500/5 border-amber-500 text-amber-500'
+                  : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+              }`}
+            >
+              <div className="scan-line opacity-5" />
+              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2">Hard_Lock</div>
+              <div className="text-[9px] uppercase font-bold opacity-40 leading-relaxed">Direct accountability and high-stakes enforcement.</div>
+            </button>
+          </div>
+        </div>
+
+        {/* Communication Channel */}
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <MdPhone className="text-zinc-700" size={16} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Comm_Channel</h3>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {(['call', 'sms', 'whatsapp', 'email'] as const).map((channel) => (
+              <button
+                key={channel}
+                onClick={() => setPreferences({ ...preferences, communication_channel: channel })}
+                className={`py-4 border text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${
+                  preferences.communication_channel === channel
+                    ? 'bg-amber-500 text-[#09090b] border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+                }`}
+              >
+                {channel}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Echo Vibe */}
+        <div className="space-y-6">
+          <div className="flex items-center space-x-3">
+            <MdEmail className="text-zinc-700" size={16} />
+            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Zephyr_Personality</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-4">
+            {(['challenging', 'balanced', 'supportive'] as const).map((vibe) => (
+              <button
+                key={vibe}
+                onClick={() => setPreferences({ ...preferences, echo_vibe: vibe })}
+                className={`py-4 border text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${
+                  preferences.echo_vibe === vibe
+                    ? 'bg-amber-500 text-[#09090b] border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
+                    : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+                }`}
+              >
+                {vibe}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className="pt-12">
+        <button
+          onClick={handleSubmit}
+          className="group relative w-full py-6 bg-transparent border border-amber-500/20 overflow-hidden hover:border-amber-500 transition-all duration-700"
+        >
+          <div className="scan-line opacity-20" />
+          <span className="relative z-10 mono text-amber-500 font-black tracking-[0.4em] uppercase text-xs group-hover:text-zinc-100 transition-colors">
+            COMMIT_CONFIGURATION
+          </span>
+          <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
         </button>
       </div>
-    </form>
+    </div>
   );
 }
-

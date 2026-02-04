@@ -1,160 +1,126 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { Opik } from "opik";
-
-// Lazy initialize Opik to avoid reading env vars at module load time
-let opikInstance: Opik | null = null;
-
-function getOpik(): Opik | null {
-    if (!process.env.OPIK_API_KEY) {
-        return null;
-    }
-    if (!opikInstance) {
-        try {
-            opikInstance = new Opik();
-        } catch (error) {
-            console.warn("Failed to initialize Opik:", error);
-            return null;
-        }
-    }
-    return opikInstance;
-}
+import { SchemaType } from "@google/generative-ai";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { getGeminiModel } from "@/lib/gemini";
+import type { Session } from "next-auth";
 
 export async function POST(req: NextRequest) {
     try {
-        // 1. Check API Key
+        // Get session with proper typing
+        const session = await getServerSession(authOptions) as Session | null;
+        
+        if (!session?.user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         if (!process.env.GEMINI_API_KEY) {
-            console.error("GEMINI_API_KEY is not set");
-            return NextResponse.json(
-                { error: "GEMINI_API_KEY is not configured", details: "Please set GEMINI_API_KEY in your environment variables" },
-                { status: 500 }
-            );
+            return NextResponse.json({ error: "GEMINI_API_KEY not configured" }, { status: 500 });
         }
 
-        const { messages, userContext } = await req.json();
+        const { messages, isOnboarding } = await req.json();
 
-        // 2. Validate request
-        if (!messages || !Array.isArray(messages) || messages.length === 0) {
-            return NextResponse.json(
-                { error: "Invalid request", details: "Messages array is required and must not be empty" },
-                { status: 400 }
-            );
-        }
+        const systemInstruction = isOnboarding 
+            ? `
+            # ROLE
+            You are the ZAVN Echo Onboarding Agent. Your goal is to move the user from "Intent" to "Action" in under 3 minutes while silently profiling their lifestyle for personalization.
 
-        // 3. Determine specific logic (Goal Refinement vs Reflection)
-        const isGoalRefinement = messages.some(m => 
-            m.content?.includes("Refine this goal") || 
-            m.content?.includes("SMART goal") ||
-            m.content?.includes("refined goal")
-        );
+            # PERSONALITY
+            - Warm, high-agency, and slightly provocative. 
+            - You ask: "What is the one thing you're avoiding that, if finished, would make today a win?"
 
-        // PRESERVED ORIGINAL PROMPTS
-        const systemPrompt = isGoalRefinement
-            ? `You are Doyn, the Goal Architect for ZAVN. Your role is to transform vague intentions into clear, actionable SMART goals.
+            # DISCOVERY GOALS
+            1. The Gap: What is the specific action they are avoiding?
+            2. The Friction: WHY are they avoiding it?
+            3. The Rhythm: Infer their energy levels.
+            4. The Persona: Infer their professional context.
 
-            Your task:
-            - Take the user's vague goal and make it SPECIFIC (clear action verbs, concrete details)
-            - Make it MEASURABLE (include numbers, metrics, or observable outcomes)
-            - Ensure it's ACHIEVABLE (realistic given the context)
-            - Make it RELEVANT (aligned with their stated intent)
-            - Add TIME-BOUND elements (deadlines, milestones, or timeframes)
+            # OPERATIONAL RULES
+            - Once a goal is identified, trigger the save_commitment tool.
+            - Ask ONE question about their support system: "Who is the one person who wouldn't let you off the hook for this?"
 
-            Output format:
-            - Provide ONLY the refined goal statement
-            - Be direct and actionable
-            - Use clear, specific language
-            - Include measurable criteria if possible
-            - Do NOT ask questions, reflect, or provide commentary
-            - Just give the refined goal
+            # GUARDRAILS
+            - Never sound like a therapist. Sound like a high-performance coach.
+            `
+            : `You are Echo, the Reflection Agent for ZAVN. Act as a mirror for the user.`;
 
-            Example transformations:
-            - "Get more users" → "Acquire 100 new registered users through organic marketing channels within 90 days"
-            - "Be healthier" → "Reduce daily sugar intake to under 25g and complete 3 strength training sessions per week for the next 30 days"
-            - "Learn coding" → "Complete 2 interactive coding tutorials per week and build 1 small project per month for the next 6 months"`
+        const model = getGeminiModel({ 
+            systemInstruction,
+        });
 
-            : `You are Echo, the Reflection Agent for ZAVN.
-            Your goal is to act as a mirror for the user, helping them understand their own behavioral patterns.
-            
-            User Context:
-            - Goal: ${userContext?.primary_goal || "General personal growth"}
-            - Known Patterns: ${userContext?.top_patterns?.join(", ") || "None identified yet"}
-            
-            Interaction Style:
-            1. Socratic: Ask deep, open-ended questions.
-            2. BRIEF: Keep responses under 3 sentences unless explaining a complex pattern.
-            3. Validating: Acknowledge feelings but keep focus on the gap between intent and action.
-        `;
-
-        // 4. Format messages for Gemini (map 'assistant' to 'model')
-        const contents = messages.map((m: { role: string; content?: string; text?: string }) => ({
-            role: m.role === "user" ? "user" : "model",
-            parts: [{ text: m.content || m.text || "" }],
-        }));
-
-        // 5. Model Fallback Logic - Use direct GoogleGenerativeAI to avoid Opik wrapper API version issues
-        const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
-        const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-pro", "gemini-pro"];
-        let lastError: Error | null = null;
-        let text: string | null = null;
-
-        for (const modelName of modelsToTry) {
-            try {
-                console.log(`[Echo Agent] Attempting ${modelName}...`);
-                // Use direct SDK without Opik wrapper to avoid API version conflicts
-                const model = genAI.getGenerativeModel({
-                    model: modelName,
-                    systemInstruction: systemPrompt,
-                });
-                
-                const result = await model.generateContent({ contents });
-                text = result.response.text();
-                
-                if (text) {
-                    console.log(`[Echo Agent] Success with ${modelName}`);
-                    break; 
+        const chat = model.startChat({
+            history: messages.length > 1 
+                ? messages.slice(0, -1).map((m: any) => ({
+                    role: m.role === "user" ? "user" : "model",
+                    parts: [{ text: m.content || m.text || "" }],
+                }))
+                : [],
+            tools: [
+                {
+                    functionDeclarations: [
+                        {
+                            name: "save_commitment",
+                            description: "Saves a high-stakes commitment to the database.",
+                            parameters: {
+                                type: SchemaType.OBJECT,
+                                properties: {
+                                    goal_title: { type: SchemaType.STRING },
+                                    task_detail: { type: SchemaType.STRING },
+                                    due_at: { type: SchemaType.STRING },
+                                    stake_amount: { type: SchemaType.NUMBER }
+                                },
+                                required: ["goal_title", "task_detail", "due_at"]
+                            }
+                        }
+                    ]
                 }
-            } catch (error: unknown) {
-                const errorMsg = error instanceof Error ? error.message : String(error);
-                console.warn(`[Echo Agent] ${modelName} failed:`, errorMsg);
-                lastError = error instanceof Error ? error : new Error(String(error));
-                continue; 
-            }
-        }
+            ]
+        });
 
-        if (!text) {
-            throw new Error(
-                `Failed to generate content with any Gemini model. Last error: ${lastError?.message || "Unknown error"}. ` +
-                `Tried models: ${modelsToTry.join(", ")}`
-            );
+        const lastMessage = messages[messages.length - 1].content || messages[messages.length - 1].text;
+        
+        const prompt = lastMessage === "START_SESSION" 
+            ? "The user has just joined. Introduce yourself as Echo and start the onboarding discovery. Do not wait for a user message to begin."
+            : lastMessage;
+
+        const result = await chat.sendMessage(prompt);
+        const response = await result.response;
+        
+        const functionCalls = response.functionCalls();
+        if (functionCalls) {
+            for (const call of functionCalls) {
+                if (call.name === "save_commitment") {
+                    const backendRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/agents/save-commitment`, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${(session as any).accessToken}`
+                        },
+                        body: JSON.stringify(call.args)
+                    });
+                    const data = await backendRes.json();
+                    
+                    const finalResult = await chat.sendMessage([{
+                        functionResponse: {
+                            name: "save_commitment",
+                            response: data
+                        }
+                    }]);
+                    return NextResponse.json({
+                        content: finalResult.response.text(),
+                        success: true
+                    });
+                }
+            }
         }
 
         return NextResponse.json({
-            role: "model",
-            content: text,
+            content: response.text(),
             success: true,
         });
 
-    } catch (error: unknown) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error("Echo Agent Route Error:", error);
-        
-        return NextResponse.json(
-            { 
-                error: "Failed to generate reflection", 
-                details: errorMsg,
-                ...(process.env.NODE_ENV === 'development' ? { stack: error instanceof Error ? error.stack : undefined } : {})
-            },
-            { status: 500 }
-        );
-    } finally {
-        // Ensure traces are sent to Opik
-        const opik = getOpik();
-        if (opik) {
-            try {
-                await opik.flush();
-            } catch (error) {
-                console.warn("Failed to flush Opik traces:", error);
-            }
-        }
+    } catch (error: any) {
+        console.error("Gemini Proxy Error:", error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
     }
 }

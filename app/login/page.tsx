@@ -1,164 +1,184 @@
-'use client';
+"use client";
 
+/**
+ * ZAVN Auth Gateway
+ * Terminal Minimalism / Industrial Command Center
+ */
+
+import React from "react";
 import Link from "next/link";
-import Image from "next/image";
-import { FormEvent, useState } from "react";
-import { useRouter } from "next/navigation";
+import { motion } from "framer-motion";
+import { MdEmail, MdLockOutline } from "react-icons/md";
+import { FaGoogle, FaGithub } from "react-icons/fa";
 import { signIn } from "next-auth/react";
-import { authApi } from "@/services/authApi";
-import { MdMail, MdLock, MdArrowForward } from "react-icons/md";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const [email, setEmail] = React.useState("");
+  const [password, setPassword] = React.useState("");
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [isGlitching, setIsGlitching] = React.useState(false);
 
-  const handleSubmit = async (e: FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError(null);
-    setIsLoading(true);
+    setIsGlitching(true);
+    
+    // Scan-line glitch effect duration
+    setTimeout(async () => {
+      setIsLoading(true);
+      setError("");
 
-    try {
-      // 1) Log in against backend API (stores JWT + user_id in localStorage)
-      await authApi.login({ email, password });
+      try {
+        const result = await signIn("credentials", {
+          email,
+          password,
+          redirect: true,
+          callbackUrl: "/echo",
+        });
 
-      // 2) Establish NextAuth session using the same credentials
-      const result = await signIn("credentials", {
-        redirect: false,
-        email,
-        password,
-      });
-
-      if (!result || result.error) {
-        setError("Invalid email or password");
+        if (result?.error) {
+          setError("Invalid credentials. Access denied.");
+          setIsGlitching(false);
+        }
+      } catch (err) {
+        setError("System error during authentication.");
+        setIsGlitching(false);
+      } finally {
         setIsLoading(false);
-        return;
       }
-
-      router.push("/onboarding");
-    } catch (err: any) {
-      setError(err?.message || "Failed to log in");
-      setIsLoading(false);
-    }
+    }, 150);
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] transition-colors duration-300">
-      <div className="flex min-h-screen w-full flex-col md:flex-row font-sans">
-        {/* Brand Side Panel (Left) */}
-        <aside className="relative hidden min-h-screen flex-col justify-between overflow-hidden border-r border-[var(--border-subtle)] bg-[var(--muted)] p-12 lg:flex lg:w-5/12">
-          <div className="absolute -left-24 -top-24 h-96 w-96 rounded-full bg-[var(--primary)]/20 blur-[120px]" />
-          <div className="relative z-10">
-            <Link href="/" className="mb-16 flex items-center gap-3 group">
-              <div className="relative size-10 icon-container rounded-xl transition-transform group-hover:scale-110">
-                <Image
-                  src="/zavn-icon.png"
-                  alt="ZAVN logo"
-                  fill
-                  className="object-contain p-1.5"
-                />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)]">
-                ZAVN
-              </h2>
-            </Link>
-            <div className="space-y-8 mt-12">
-              <h1 className="text-5xl lg:text-7xl font-black leading-[1.05] tracking-tighter text-[var(--foreground)]">
-                Welcome back.
+    <main className={`min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all duration-300 ${isGlitching ? 'scale-[1.02] brightness-125' : ''}`}>
+      {/* Background Elements */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.03)_0%,transparent_70%)]" />
+      </div>
+
+      {isGlitching && (
+        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
+          <div className="w-full h-px bg-amber-500/50 shadow-[0_0_15px_#f59e0b] absolute top-1/2 animate-scan" />
+          <div className="w-full h-px bg-amber-500/30 absolute top-1/3 animate-scan [animation-delay:50ms]" />
+        </div>
+      )}
+
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="w-full max-w-[400px] z-10"
+      >
+        <div className="flex flex-col items-center space-y-12">
+          {/* Pulsing Z Logo */}
+          <motion.div
+            animate={{ 
+              boxShadow: ["0 0 20px rgba(245,158,11,0.1)", "0 0 40px rgba(245,158,11,0.3)", "0 0 20px rgba(245,158,11,0.1)"],
+              scale: [1, 1.05, 1]
+            }}
+            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
+            className="size-16 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.2)]"
+          >
+            <span className="mono text-[#09090b] font-black text-3xl">Z</span>
+          </motion.div>
+
+          <div className="w-full space-y-8">
+            <div className="space-y-2 text-center">
+              <span className="mono text-amber-500 text-[10px] tracking-[0.5em] uppercase font-black">
+                [GATEKEEPER_PROTOCOL]
+              </span>
+              <h1 className="text-xl font-black tracking-[0.2em] text-zinc-100 uppercase mono">
+                Initialize_Session
               </h1>
-              <p className="max-w-md text-xl text-[var(--muted-foreground)]">
-                Continue your journey to alignment. Your progress awaits.
-              </p>
-            </div>
-          </div>
-        </aside>
-
-        {/* Login Form Side (Right) */}
-        <main className="flex flex-1 flex-col items-center justify-center bg-[var(--background)] p-6 md:p-12 lg:p-24 transition-colors duration-300">
-          <div className="w-full max-w-[460px] space-y-10">
-            {/* Mobile Logo */}
-            <div className="mb-12 flex items-center justify-center gap-3 lg:hidden">
-              <div className="relative size-10 icon-container rounded-xl">
-                <Image src="/zavn-icon.png" alt="ZAVN" fill className="object-contain p-1.5" />
-              </div>
-              <h2 className="text-2xl font-black tracking-tight text-[var(--foreground)]">ZAVN</h2>
             </div>
 
-            <div className="text-center lg:text-left space-y-2">
-              <h2 className="text-4xl font-extrabold tracking-tight text-[var(--foreground)]">
-                Log in
-              </h2>
-              <p className="text-lg font-medium text-[var(--muted-foreground)]">
-                Welcome back. Enter your credentials to continue.
-              </p>
-            </div>
-
-            {error && (
-              <div className="rounded-xl border border-red-200 bg-red-50 dark:bg-red-500/10 dark:border-red-500/20 px-4 py-3 text-sm text-red-600 dark:text-red-400 font-medium">
-                {error}
-              </div>
-            )}
-
-            <form className="space-y-6" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="label">Email address</label>
-                <div className="relative">
-                  <MdMail className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[var(--muted-foreground)]" />
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
+                    [FULL_IDENTITY]
+                  </label>
                   <input
                     type="email"
+                    placeholder="ENTER_EMAIL"
+                    required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    required
-                    placeholder="name@example.com"
-                    className="input-field pl-12 pr-4 bg-[var(--muted)]/50"
+                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
                   />
                 </div>
-              </div>
-              <div className="space-y-2">
-                <label className="label">Password</label>
-                <div className="relative">
-                  <MdLock className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-xl text-[var(--muted-foreground)]" />
+                <div className="space-y-2">
+                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
+                    [SECURE_CIPHER]
+                  </label>
                   <input
                     type="password"
+                    placeholder="ENTER_PASSPHRASE"
+                    required
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="••••••••"
-                    className="input-field pl-12 pr-4 bg-[var(--muted)]/50"
+                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
                   />
                 </div>
               </div>
+
+              {error && (
+                <div className="p-3 bg-red-500/5 border border-red-500/20">
+                  <p className="mono text-[9px] text-red-500 text-center uppercase tracking-[0.2em] font-black">
+                    [CRITICAL_FAILURE: {error}]
+                  </p>
+                </div>
+              )}
+
               <button
                 type="submit"
                 disabled={isLoading}
-                className="flex h-14 w-full items-center justify-center gap-2 text-lg btn-primary active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                className="group relative w-full py-5 bg-transparent border border-amber-500/20 overflow-hidden hover:border-amber-500 transition-all duration-500"
               >
-                <span>{isLoading ? "Logging in..." : "Log in"}</span>
-                <MdArrowForward className="text-xl" />
+                <span className="relative z-10 mono text-amber-500 font-black tracking-[0.4em] uppercase text-xs group-hover:text-zinc-100 transition-colors">
+                  {isLoading ? "AUTHENTICATING..." : "INITIALIZE_INTEGRITY"}
+                </span>
+                <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
               </button>
             </form>
 
-            <div className="space-y-8 pt-4 text-center">
-              <div className="border-t border-[var(--border-subtle)] pt-8">
-                <p className="text-[var(--muted-foreground)] font-medium">
-                  New to ZAVN?{" "}
-                  <Link
-                    href="/signup"
-                    className="ml-2 font-black text-[var(--primary)] hover:underline underline-offset-4"
-                  >
-                    Create an account
-                  </Link>
-                </p>
+            <div className="relative py-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-zinc-900" />
+              </div>
+              <div className="relative flex justify-center text-[8px] uppercase mono tracking-[0.3em] font-black">
+                <span className="bg-[#09090b] px-4 text-zinc-700">
+                  External_Handshake
+                </span>
               </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                onClick={() => signIn("google", { callbackUrl: "/echo" })}
+                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
+              >
+                <FaGoogle className="text-zinc-100" /> Google
+              </button>
+              <button
+                type="button"
+                onClick={() => signIn("github", { callbackUrl: "/verify" })}
+                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
+              >
+                <FaGithub className="text-zinc-100" /> GitHub
+              </button>
+            </div>
+
+            <p className="text-center text-[9px] mono text-zinc-600 uppercase tracking-widest font-black">
+              First time access?{" "}
+              <Link href="/signup" className="text-amber-500/60 hover:text-amber-500 transition-colors underline decoration-amber-500/20 underline-offset-4">
+                Initialize_Identity
+              </Link>
+            </p>
           </div>
-        </main>
-      </div>
-    </div>
+        </div>
+      </motion.div>
+    </main>
   );
 }
-
-
-

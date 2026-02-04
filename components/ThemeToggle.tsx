@@ -2,11 +2,10 @@
 
 import { useTheme } from "next-themes";
 import { useEffect, useState } from "react";
-import { Sun, Moon } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 
 export const ThemeToggle = () => {
-    const { theme, setTheme } = useTheme();
+    const { theme } = useTheme();
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
@@ -15,41 +14,33 @@ export const ThemeToggle = () => {
 
     if (!mounted) {
         return (
-            <div className="size-10 rounded-lg icon-container">
-                <div className="h-5 w-5 bg-[var(--border-subtle)] rounded-full animate-pulse" />
-            </div>
+            <div className="w-20 h-8 border border-zinc-800 bg-zinc-900/50 animate-pulse" />
         );
     }
 
+    // Theme is forced to light, so always show light mode
+    const isDark = false;
+
     return (
-        <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="relative size-10 rounded-lg icon-container hover:bg-[var(--border-subtle)] transition-colors"
-            aria-label="Toggle theme"
+        <div
+            className="group relative w-20 h-8 border border-zinc-800 bg-zinc-900/50 overflow-hidden transition-colors opacity-50 cursor-not-allowed"
+            aria-label="Theme locked to light mode"
+            title="Light mode only (dark mode coming soon)"
         >
-            <AnimatePresence mode="wait" initial={false}>
-                {theme === "dark" ? (
-                    <motion.div
-                        key="moon"
-                        initial={{ scale: 0.5, opacity: 0, rotate: -45 }}
-                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                        exit={{ scale: 0.5, opacity: 0, rotate: 45 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
-                    >
-                        <Moon className="h-5 w-5 text-slate-100" />
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="sun"
-                        initial={{ scale: 0.5, opacity: 0, rotate: 45 }}
-                        animate={{ scale: 1, opacity: 1, rotate: 0 }}
-                        exit={{ scale: 0.5, opacity: 0, rotate: -45 }}
-                        transition={{ duration: 0.2, ease: "easeInOut" }}
-                    >
-                        <Sun className="h-5 w-5 text-slate-900" />
-                    </motion.div>
-                )}
-            </AnimatePresence>
-        </button>
+            <div className="absolute inset-0 flex items-center justify-between px-2 pointer-events-none">
+                <span className="mono text-[8px] uppercase tracking-tighter text-[var(--primary)] font-bold">
+                    LIGHT
+                </span>
+                <span className="mono text-[8px] uppercase tracking-tighter text-zinc-600">
+                    DARK
+                </span>
+            </div>
+            
+            <motion.div
+                className="absolute top-1 bottom-1 w-8 bg-[var(--primary)]/20 border border-[var(--primary)]/50"
+                initial={{ left: "4px" }}
+                animate={{ left: "4px" }}
+            />
+        </div>
     );
 };
