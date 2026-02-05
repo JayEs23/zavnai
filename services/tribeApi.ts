@@ -1,0 +1,170 @@
+/**
+ * Tribe API Service
+ * 
+ * Handles all tribe member management including:
+ * - Adding accountability partners
+ * - AI vetting process
+ * - Trust score tracking
+ * - Permissions management
+ */
+
+import { api } from '@/lib/api';
+
+// ============================================================================
+// TYPES
+// ============================================================================
+
+export interface TribeMember {
+  id: string;
+  name: string;
+  contact_info: string; // Phone (E.164) or email
+  platform: 'whatsapp' | 'sms' | 'email' | 'phone';
+  relationship?: 'peer' | 'mentor' | 'partner' | 'spouse' | 'inner_circle' | 'professional';
+  relationship_tier?: 'inner_circle' | 'mentor' | 'professional';
+  
+  // Vetting Status
+  vetting_status: 'pending' | 'invited' | 'assessing' | 'verified' | 'rejected';
+  vetting_score?: number; // 0.0 - 1.0 (AI-determined trust score)
+  trust_level?: 'high' | 'medium' | 'low' | 'unverified';
+  reliability_notes?: string;
+  
+  // Permissions
+  can_see_private_goals: boolean;
+  view_vault: boolean;
+  can_pity_override: boolean; // Can override user's pity-based negotiations
+  
+  // Timestamps
+  created_at: string;
+  verified_at?: string;
+}
+
+export interface CreateTribeMemberRequest {
+  name: string;
+  contact_info: string; // Phone (E.164 format) or email
+  platform?: 'whatsapp' | 'sms' | 'email' | 'phone';
+  relationship?: string;
+  relationship_tier?: 'inner_circle' | 'mentor' | 'professional';
+  can_see_private_goals?: boolean;
+  view_vault?: boolean;
+  can_pity_override?: boolean;
+}
+
+export interface TrustScoreUpdate {
+  interaction_type: 'message_sent' | 'message_responded' | 'accountability_check' | 'goal_shared' | 'intervention_requested';
+  interaction_outcome: 'positive' | 'negative' | 'neutral' | 'unresponsive';
+}
+
+export interface TribeMemberWithHistory extends TribeMember {
+  interaction_history?: {
+    date: string;
+    type: string;
+    outcome: string;
+    notes?: string;
+  }[];
+  trust_score_history?: {
+    date: string;
+    score: number;
+    reason: string;
+  }[];
+}
+
+// ============================================================================
+// API METHODS
+// ============================================================================
+
+export const tribeApi = {
+  /**
+   * Get all tribe members for the current user
+   */
+  getTribeMembers: async (): Promise<TribeMember[]> => {
+    return api.get<TribeMember[]>('/tribe');
+  },
+
+  /**
+   * Add a new tribe member (initiates AI vetting)
+   */
+  addTribeMember: async (data: CreateTribeMemberRequest): Promise<TribeMember> => {
+    return api.post<TribeMember>('/tribe', data);
+  },
+
+  /**
+   * Get a specific tribe member by ID (with interaction history)
+   */
+  getTribeMember: async (memberId: string): Promise<TribeMemberWithHistory> => {
+    return api.get<TribeMemberWithHistory>(`/tribe/${memberId}`);
+  },
+
+  /**
+   * Update tribe member details
+   */
+  updateTribeMember: async (
+    memberId: string,
+    updates: Partial<CreateTribeMemberRequest>
+  ): Promise<TribeMember> => {
+    return api.patch<TribeMember>(`/tribe/${memberId}`, updates);
+  },
+
+  /**
+   * Remove a tribe member
+   */
+  removeTribeMember: async (memberId: string): Promise<{ success: boolean }> => {
+    return api.delete<{ success: boolean }>(`/tribe/${memberId}`);
+  },
+
+  /**
+   * Update trust score based on interaction
+   */
+  updateTrustScore: async (
+    memberId: string,
+    update: TrustScoreUpdate
+  ): Promise<TribeMember> => {
+    return api.post<TribeMember>(`/tribe/${memberId}/trust-score`, update);
+  },
+
+  /**
+   * Resend vetting invitation to tribe member
+   */
+  resendVetting: async (memberId: string): Promise<{ success: boolean; message: string }> => {
+    return api.post<{ success: boolean; message: string }>(
+      `/tribe/${memberId}/resend-vetting`,
+      {}
+    );
+  },
+
+  /**
+   * Get verified tribe members only
+   */
+  getVerifiedMembers: async (): Promise<TribeMember[]> => {
+    const members = await tribeApi.getTribeMembers();
+    return members.filter((m) => m.vetting_status === 'verified');
+  },
+
+  /**
+   * Get pending tribe members (awaiting vetting)
+   */
+  getPendingMembers: async (): Promise<TribeMember[]> => {
+    const members = await tribeApi.getTribeMembers();
+    return members.filter(
+      (m) => m.vetting_status === 'pending' || m.vetting_status === 'invited' || m.vetting_status === 'assessing'
+    );
+  },
+
+  /**
+   * Get high-trust tribe members (trust score > 0.7)
+   */
+  getHighTrustMembers: async (): Promise<TribeMember[]> => {
+    const members = await tribeApi.getTribeMembers();
+    return members.filter(
+      (m) => m.vetting_status === 'verified' && m.vetting_score && m.vetting_score >= 0.7
+    );
+  },
+
+  /**
+   * Get inner circle members
+   */
+  getInnerCircle: async (): Promise<TribeMember[]> => {
+    const members = await tribeApi.getTribeMembers();
+    return members.filter((m) => m.relationship_tier === 'inner_circle');
+  },
+};
+

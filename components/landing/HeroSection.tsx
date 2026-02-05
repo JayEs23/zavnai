@@ -1,133 +1,175 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
+import { ArrowRight, CheckCircle2 } from "lucide-react";
 
 export const HeroSection = () => {
-  const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-  const [randomHeights, setRandomHeights] = useState<number[]>([]);
-
-  useEffect(() => {
-    // We use requestAnimationFrame to avoid the "cascading renders" linter warning
-    // while still ensuring the random values are only generated on the client.
-    requestAnimationFrame(() => {
-      const heights = [...Array(40)].map(() => Math.random() * 100);
-      setRandomHeights(heights);
-    });
-    
-    const handleMouseMove = (e: MouseEvent) => {
-      setMousePos({
-        x: (e.clientX / window.innerWidth - 0.5) * 40,
-        y: (e.clientY / window.innerHeight - 0.5) * 40,
-      });
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
-  }, []);
-
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-4 overflow-hidden bg-[#09090b]">
-      {/* Kinetic Amber Dust Effect */}
-      <motion.div
-        className="absolute inset-0 pointer-events-none opacity-40"
-        animate={{
-          background: `radial-gradient(circle at ${50 + mousePos.x/2}% ${50 + mousePos.y/2}%, rgba(245, 158, 11, 0.12) 0%, transparent 70%)`,
-        }}
-        transition={{ type: "tween", ease: "linear", duration: 0.2 }}
-      />
-      <div className="absolute inset-0 pointer-events-none grain-overlay opacity-[0.04]" />
-
-      <div className="relative z-10 text-center space-y-12 max-w-6xl">
+    <section className="relative min-h-[90vh] flex items-center justify-center px-6 lg:px-12 overflow-hidden hero-gradient">
+      <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center py-20">
+        {/* Left Column - Content */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8 }}
-          className="space-y-6"
+          transition={{ duration: 0.6 }}
+          className="space-y-8 text-center lg:text-left"
         >
-          <div className="flex items-center justify-center gap-3 mono text-[10px] text-amber-500 font-black uppercase tracking-[0.5em] mb-4">
-            <span className="opacity-30 border-t border-amber-500/30 w-12" />
-            <span className="bg-amber-500/5 px-3 py-1 border border-amber-500/20">
-              [SYSTEM_STATUS: ACTIVE_MIRROR]
+          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
+            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+            <span className="text-sm font-semibold text-primary">
+              AI-Powered Behavioral Alignment
             </span>
-            <span className="opacity-30 border-t border-amber-500/30 w-12" />
           </div>
-          <h1 className="text-6xl md:text-[150px] font-black tracking-tighter text-zinc-100 leading-[0.75] uppercase">
-            INTENTION IS A <br />
-            <span className="text-amber-500 glow-amber">LIABILITY.</span>
+
+          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-tight">
+            Close the Gap Between{" "}
+            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
+              Intention and Action
+            </span>
           </h1>
-        </motion.div>
 
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4, duration: 0.8 }}
-          className="text-lg md:text-xl text-zinc-500 max-w-2xl mx-auto font-medium leading-relaxed uppercase tracking-[0.2em] mono"
-        >
-          Bridge the gap between who you say you are and what you actually do. 
-          A voice-led, high-stakes alignment network powered by Gemini Live.
-        </motion.p>
+          <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
+            ZAVN helps you bridge the divide between who you say you are and what you actually do.
+            A voice-led accountability system powered by behavioral science and AI.
+          </p>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6, duration: 0.8 }}
-          className="flex flex-col items-center space-y-24"
-        >
-          <Link href="/signup" className="group relative px-24 py-8 bg-transparent overflow-hidden border border-zinc-800 hover:border-amber-500 transition-all duration-700">
-            <div className="scan-line opacity-50" />
-            <span className="relative z-10 mono text-amber-500 font-black tracking-[0.5em] uppercase text-xl group-hover:text-zinc-950 transition-colors duration-500">
-              INITIALIZE INTEGRITY
-            </span>
-            <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
-          </Link>
+          <div className="space-y-4">
+            {[
+              "Voice-first natural conversations",
+              "Real accountability with stakes",
+              "Supportive tribe community",
+            ].map((feature, i) => (
+              <motion.div
+                key={feature}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}
+                className="flex items-center gap-3 text-foreground"
+              >
+                <CheckCircle2 className="w-5 h-5 text-secondary flex-shrink-0" />
+                <span>{feature}</span>
+              </motion.div>
+            ))}
+          </div>
 
-          {/* Real-time Echo Waveform */}
-          <div className="flex flex-col items-center gap-6">
-            <div className="flex items-end space-x-1.5 h-24">
-              {randomHeights.map((height, i) => (
-                <motion.div
-                  key={i}
-                  className="w-1 bg-amber-500"
-                  animate={{
-                    height: [`${height}%`, `${Math.random() * 100}%`, `${height}%`],
-                  }}
-                  transition={{
-                    duration: 0.8 + Math.random() * 1.5,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  style={{
-                    opacity: 0.2 + (height / 100) * 0.8,
-                    boxShadow: "0 0 15px rgba(245, 158, 11, 0.2)",
-                  }}
-                />
-              ))}
+          <div className="flex flex-col sm:flex-row gap-4 pt-4">
+            <Link href="/signup" className="btn-gradient group">
+              Get Started Free
+              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+            </Link>
+            <Link href="#how-it-works" className="btn-secondary">
+              Learn More
+            </Link>
+          </div>
+
+          <div className="flex items-center gap-8 pt-4 text-sm text-muted-foreground justify-center lg:justify-start">
+            <div>
+              <div className="text-2xl font-bold text-foreground">14,802+</div>
+              <div>Active Users</div>
             </div>
-            <div className="flex items-center gap-3 mono text-[9px] text-amber-500/40 uppercase tracking-[0.4em] font-black">
-              <div className="size-1.5 rounded-full bg-amber-500 animate-pulse" />
-              Listening_for_behavioral_drift...
+            <div className="w-px h-12 bg-border" />
+            <div>
+              <div className="text-2xl font-bold text-foreground">$1.2M+</div>
+              <div>In Stakes</div>
+            </div>
+            <div className="w-px h-12 bg-border" />
+            <div>
+              <div className="text-2xl font-bold text-foreground">94%</div>
+              <div>Success Rate</div>
             </div>
           </div>
         </motion.div>
-      </div>
 
-      {/* Industrial Grid Lines */}
-      <div className="absolute inset-0 pointer-events-none border-x border-zinc-800/10 opacity-50 mx-auto max-w-7xl" />
-      <div className="absolute inset-0 pointer-events-none border-y border-zinc-800/10 opacity-50 my-auto max-h-[60vh]" />
-      
-      {/* Background Micro-readouts */}
-      <div className="absolute bottom-12 left-12 hidden lg:block mono text-[8px] text-zinc-800 space-y-2 uppercase tracking-widest font-black">
-        <p>[CONNECT_ID]: 0x8294-ZVN</p>
-        <p>[LATENCY]: 12MS</p>
-        <p>[PACKET_LOSS]: 0.00%</p>
-        <p>[MODEL]: GEMINI_2.0_LIVE_PROD</p>
-      </div>
-      <div className="absolute bottom-12 right-12 hidden lg:block mono text-[8px] text-zinc-800 space-y-2 text-right uppercase tracking-widest font-black">
-        <p>[ALIGNED_NODES]: 14,802</p>
-        <p>[TOTAL_STAKED]: $1,248,402</p>
-        <p>[STATUS]: OPERATIONAL</p>
-        <p>[LOCATION]: GLOBAL_EDGE</p>
+        {/* Right Column - Visual */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2, duration: 0.6 }}
+          className="hidden lg:flex items-center justify-center"
+        >
+          <div className="relative">
+            {/* Main card with shadow */}
+            <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-border max-w-md">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+                    <svg
+                      className="w-8 h-8 text-white"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Your Goals</h3>
+                    <p className="text-sm text-muted-foreground">Track your progress</p>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  {[
+                    { label: "Morning Routine", progress: 85, color: "primary" },
+                    { label: "Reading Goal", progress: 70, color: "secondary" },
+                    { label: "Exercise", progress: 92, color: "accent" },
+                  ].map((item) => (
+                    <div key={item.label} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span className="font-medium">{item.label}</span>
+                        <span className="text-muted-foreground">{item.progress}%</span>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${item.progress}%` }}
+                          transition={{ delay: 0.5, duration: 1 }}
+                          className={`h-full bg-gradient-to-r ${
+                            item.color === "primary"
+                              ? "from-primary to-primary/80"
+                              : item.color === "secondary"
+                              ? "from-secondary to-secondary/80"
+                              : "from-accent to-accent/80"
+                          }`}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Floating elements */}
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-8 -right-8 bg-white rounded-2xl shadow-xl p-4 border border-border"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
+                <span className="text-sm font-semibold">On Track!</span>
+              </div>
+            </motion.div>
+
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+              className="absolute -bottom-8 -left-8 bg-white rounded-2xl shadow-xl p-4 border border-border"
+            >
+              <div className="text-sm">
+                <div className="font-semibold">7-day streak 🔥</div>
+                <div className="text-muted-foreground">Keep it up!</div>
+              </div>
+            </motion.div>
+          </div>
+        </motion.div>
       </div>
     </section>
   );

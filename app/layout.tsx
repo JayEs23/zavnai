@@ -14,7 +14,11 @@ const manrope = Manrope({
 export const metadata: Metadata = {
   title: "ZAVN | Close the Gap Between Intention and Action",
   description:
-    "A voice-led behavior alignment system. Harness AI-driven behavioral science through natural conversation.",
+    "AI-powered behavioral alignment system that helps you bridge the divide between who you say you are and what you do. Voice-first accountability with real stakes.",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({

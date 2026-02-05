@@ -1,184 +1,165 @@
 "use client";
 
-/**
- * ZAVN Auth Gateway
- * Terminal Minimalism / Industrial Command Center
- */
-
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { motion } from "framer-motion";
-import { MdEmail, MdLockOutline } from "react-icons/md";
-import { FaGoogle, FaGithub } from "react-icons/fa";
-import { signIn } from "next-auth/react";
+import Image from "next/image";
+import { ArrowLeft } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = React.useState("");
-  const [password, setPassword] = React.useState("");
-  const [isLoading, setIsLoading] = React.useState(false);
-  const [error, setError] = React.useState("");
-  const [isGlitching, setIsGlitching] = React.useState(false);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsGlitching(true);
-    
-    // Scan-line glitch effect duration
-    setTimeout(async () => {
-      setIsLoading(true);
-      setError("");
-
-      try {
-        const result = await signIn("credentials", {
-          email,
-          password,
-          redirect: true,
-          callbackUrl: "/echo",
-        });
-
-        if (result?.error) {
-          setError("Invalid credentials. Access denied.");
-          setIsGlitching(false);
-        }
-      } catch (err) {
-        setError("System error during authentication.");
-        setIsGlitching(false);
-      } finally {
-        setIsLoading(false);
-      }
-    }, 150);
+    // Handle login logic
+    console.log("Login:", { email, password });
   };
 
   return (
-    <main className={`min-h-screen bg-[#09090b] flex flex-col items-center justify-center p-4 relative overflow-hidden transition-all duration-300 ${isGlitching ? 'scale-[1.02] brightness-125' : ''}`}>
-      {/* Background Elements */}
-      <div className="absolute inset-0 pointer-events-none">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(245,158,11,0.03)_0%,transparent_70%)]" />
+    <div className="min-h-screen bg-hero-gradient flex">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary to-accent p-12 flex-col justify-between text-white">
+        <Link href="/" className="flex items-center gap-3">
+          <Image
+            src="/zavn-icon.png"
+            alt="ZAVN Logo"
+            width={40}
+            height={40}
+            className="brightness-0 invert"
+          />
+          <span className="text-2xl font-bold">ZAVN</span>
+        </Link>
+
+        <div className="space-y-6">
+          <h1 className="text-5xl font-bold leading-tight">
+            Welcome Back
+          </h1>
+          <p className="text-xl text-white/90">
+            Continue your journey toward closing the gap between intention and action.
+          </p>
+        </div>
+
+        <div className="space-y-4 text-white/90">
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">✓</div>
+            <span>Track your commitments</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">✓</div>
+            <span>Connect with your tribe</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <div className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">✓</div>
+            <span>Build lasting habits</span>
+          </div>
+        </div>
       </div>
 
-      {isGlitching && (
-        <div className="absolute inset-0 z-50 pointer-events-none overflow-hidden">
-          <div className="w-full h-px bg-amber-500/50 shadow-[0_0_15px_#f59e0b] absolute top-1/2 animate-scan" />
-          <div className="w-full h-px bg-amber-500/30 absolute top-1/3 animate-scan [animation-delay:50ms]" />
-        </div>
-      )}
-
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 1 }}
-        className="w-full max-w-[400px] z-10"
-      >
-        <div className="flex flex-col items-center space-y-12">
-          {/* Pulsing Z Logo */}
-          <motion.div
-            animate={{ 
-              boxShadow: ["0 0 20px rgba(245,158,11,0.1)", "0 0 40px rgba(245,158,11,0.3)", "0 0 20px rgba(245,158,11,0.1)"],
-              scale: [1, 1.05, 1]
-            }}
-            transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-            className="size-16 bg-amber-500 flex items-center justify-center shadow-[0_0_30px_rgba(245,158,11,0.2)]"
-          >
-            <span className="mono text-[#09090b] font-black text-3xl">Z</span>
-          </motion.div>
-
-          <div className="w-full space-y-8">
-            <div className="space-y-2 text-center">
-              <span className="mono text-amber-500 text-[10px] tracking-[0.5em] uppercase font-black">
-                [GATEKEEPER_PROTOCOL]
-              </span>
-              <h1 className="text-xl font-black tracking-[0.2em] text-zinc-100 uppercase mono">
-                Initialize_Session
-              </h1>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-6">
-                <div className="space-y-2">
-                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
-                    [FULL_IDENTITY]
-                  </label>
-                  <input
-                    type="email"
-                    placeholder="ENTER_EMAIL"
-                    required
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <label className="mono text-[9px] text-zinc-500 uppercase tracking-widest font-black block ml-1">
-                    [SECURE_CIPHER]
-                  </label>
-                  <input
-                    type="password"
-                    placeholder="ENTER_PASSPHRASE"
-                    required
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="w-full bg-[#09090b] border border-zinc-800 py-4 px-6 mono text-[11px] text-amber-500 focus:outline-none focus:border-amber-500 transition-all placeholder:text-zinc-800 tracking-wider"
-                  />
-                </div>
-              </div>
-
-              {error && (
-                <div className="p-3 bg-red-500/5 border border-red-500/20">
-                  <p className="mono text-[9px] text-red-500 text-center uppercase tracking-[0.2em] font-black">
-                    [CRITICAL_FAILURE: {error}]
-                  </p>
-                </div>
-              )}
-
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="group relative w-full py-5 bg-transparent border border-amber-500/20 overflow-hidden hover:border-amber-500 transition-all duration-500"
-              >
-                <span className="relative z-10 mono text-amber-500 font-black tracking-[0.4em] uppercase text-xs group-hover:text-zinc-100 transition-colors">
-                  {isLoading ? "AUTHENTICATING..." : "INITIALIZE_INTEGRITY"}
-                </span>
-                <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
-              </button>
-            </form>
-
-            <div className="relative py-4">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-zinc-900" />
-              </div>
-              <div className="relative flex justify-center text-[8px] uppercase mono tracking-[0.3em] font-black">
-                <span className="bg-[#09090b] px-4 text-zinc-700">
-                  External_Handshake
-                </span>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => signIn("google", { callbackUrl: "/echo" })}
-                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
-              >
-                <FaGoogle className="text-zinc-100" /> Google
-              </button>
-              <button
-                type="button"
-                onClick={() => signIn("github", { callbackUrl: "/verify" })}
-                className="flex items-center justify-center gap-3 py-4 border border-zinc-900 grayscale opacity-40 hover:grayscale-0 hover:opacity-100 hover:border-amber-500/50 transition-all mono text-[9px] font-black tracking-widest uppercase"
-              >
-                <FaGithub className="text-zinc-100" /> GitHub
-              </button>
-            </div>
-
-            <p className="text-center text-[9px] mono text-zinc-600 uppercase tracking-widest font-black">
-              First time access?{" "}
-              <Link href="/signup" className="text-amber-500/60 hover:text-amber-500 transition-colors underline decoration-amber-500/20 underline-offset-4">
-                Initialize_Identity
+      {/* Right Side - Form */}
+      <div className="flex-1 flex items-center justify-center p-6 lg:p-12">
+        <div className="w-full max-w-md space-y-8">
+          <div>
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors mb-8"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to home
+            </Link>
+            <h2 className="text-3xl font-bold text-foreground">Log in to your account</h2>
+            <p className="text-muted-foreground mt-2">
+              Don&apos;t have an account?{" "}
+              <Link href="/signup" className="text-primary font-semibold hover:underline">
+                Sign up
               </Link>
             </p>
           </div>
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label htmlFor="email" className="label">
+                Email address
+              </label>
+              <input
+                id="email"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="input-field"
+                placeholder="you@example.com"
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label htmlFor="password" className="label mb-0">
+                  Password
+                </label>
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-primary font-medium hover:underline"
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <input
+                id="password"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="input-field"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button type="submit" className="btn-primary w-full">
+              Log in
+            </button>
+          </form>
+
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-white text-muted-foreground">Or continue with</span>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <button className="btn-secondary w-full">
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path
+                  fill="currentColor"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
+                />
+                <path
+                  fill="currentColor"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
+                />
+              </svg>
+              Continue with Google
+            </button>
+
+            <button className="btn-secondary w-full">
+              <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"/>
+              </svg>
+              Continue with GitHub
+            </button>
+          </div>
         </div>
-      </motion.div>
-    </main>
+      </div>
+    </div>
   );
 }

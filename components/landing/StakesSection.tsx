@@ -2,93 +2,135 @@
 
 import React from "react";
 import { motion } from "framer-motion";
+import { Shield, Target, Trophy, Zap } from "lucide-react";
+
+const features = [
+  {
+    icon: Target,
+    title: "Real Accountability",
+    description: "Put something meaningful on the line. Stakes create the motivation you need to follow through.",
+  },
+  {
+    icon: Shield,
+    title: "Behavioral Science",
+    description: "Built on proven principles of commitment contracts and implementation intentions.",
+  },
+  {
+    icon: Zap,
+    title: "Instant Feedback",
+    description: "Get real-time insights and adjustments based on your behavior patterns.",
+  },
+  {
+    icon: Trophy,
+    title: "Celebrate Progress",
+    description: "Track your wins, build momentum, and see how far you've come.",
+  },
+];
 
 export const StakesSection = () => {
   return (
-    <section className="py-40 px-4 bg-[#09090b] border-b border-zinc-900 relative overflow-hidden">
-      {/* Background Decor */}
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-red-500/[0.02] rounded-full blur-[120px] pointer-events-none" />
-      
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-32 items-center relative z-10">
-        <div className="space-y-16">
-          <div className="space-y-8">
-            <div className="flex items-center gap-3 mono text-red-500 text-[10px] font-black uppercase tracking-[0.4em]">
-              <span className="size-1.5 bg-red-500 animate-pulse" />
-              [CRITICAL_MODULE: FORFEITURE_AS_A_FEATURE]
-            </div>
-            <h2 className="text-6xl md:text-9xl font-black tracking-tighter text-zinc-100 uppercase leading-[0.75]">
-              FORFEITURE <br />
-              <span className="text-red-500 glow-red">IS THE EDGE.</span>
+    <section id="features" className="section-padding bg-muted">
+      <div className="max-w-container">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Left: Content */}
+          <motion.div
+            initial={{ opacity: 0, x: -20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-6">
+              More Than Just Tracking
             </h2>
-          </div>
-          
-          <p className="text-xl text-zinc-500 font-bold uppercase tracking-widest leading-relaxed max-w-xl mono">
-            ZAVN does not track habits. It enforces integrity. Your money is 
-            escrowed to a restricted member of your choice. Achievement is 
-            the only way to get it back.
-          </p>
+            <p className="text-xl text-muted-foreground mb-8">
+              ZAVN uses behavioral science and real stakes to create genuine accountability.
+              It's not about willpower—it's about creating systems that work.
+            </p>
 
-          <div className="pt-16 border-t border-zinc-900 space-y-12">
-            <div className="flex flex-col space-y-4">
-              <span className="mono text-[10px] text-zinc-700 uppercase tracking-[0.4em] font-black">
-                NETWORK_TOTAL_FORFEITED
-              </span>
-              <div className="flex items-baseline space-x-4">
-                <span className="text-7xl md:text-9xl font-black text-red-500 mono tracking-tighter glow-red">
-                  $1,248,402
-                </span>
+            <div className="space-y-6">
+              {features.map((feature, index) => {
+                const Icon = feature.icon;
+                return (
+                  <motion.div
+                    key={feature.title}
+                    initial={{ opacity: 0, y: 10 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1, duration: 0.4 }}
+                    className="flex gap-4"
+                  >
+                    <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                      <Icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground mb-1">
+                        {feature.title}
+                      </h3>
+                      <p className="text-muted-foreground">{feature.description}</p>
               </div>
+                  </motion.div>
+                );
+              })}
             </div>
-            <div className="bg-red-500/5 border border-red-500/20 p-4 w-fit">
-              <p className="mono text-[9px] text-red-500/70 uppercase tracking-[0.3em] font-black">
-                [SYSTEM_DATA]: Integrity Reallocation in Progress // No Appeals Detected
-              </p>
+          </motion.div>
+
+          {/* Right: Visual */}
+          <motion.div
+            initial={{ opacity: 0, x: 20 }}
+            whileInView={{ opacity: 1, x: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+            className="relative"
+          >
+            <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-border">
+              <h3 className="text-xl font-bold mb-6">Your Commitments</h3>
+              <div className="space-y-4">
+                {[
+                  { name: "Morning Meditation", streak: 14, status: "active", color: "primary" },
+                  { name: "Exercise 3x/week", streak: 8, status: "active", color: "secondary" },
+                  { name: "Read 30min daily", streak: 21, status: "active", color: "accent" },
+                ].map((commitment, i) => (
+                  <motion.div
+                    key={commitment.name}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.5 + i * 0.1 }}
+                    className="flex items-center justify-between p-4 rounded-xl bg-muted/50 border border-border hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className={`w-3 h-3 rounded-full bg-${commitment.color}`} />
+                      <div>
+                        <div className="font-semibold">{commitment.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {commitment.streak} day streak 🔥
             </div>
           </div>
         </div>
+                    <div className="px-3 py-1 rounded-full bg-success/10 text-success text-sm font-semibold">
+                      {commitment.status}
+              </div>
+                  </motion.div>
+                ))}
+              </div>
 
-        {/* The Vault Mockup */}
-        <div className="relative aspect-square bg-zinc-950 border border-zinc-900 p-1 rounded-none group shadow-[0_0_100px_rgba(239,68,68,0.05)]">
-          <div className="absolute -inset-1 border border-red-500/10 pointer-events-none" />
-          <div className="h-full w-full border border-zinc-900 flex flex-col relative z-10 bg-[#09090b]">
-            <div className="p-8 border-b border-zinc-900 flex justify-between items-center mono text-[9px] text-zinc-600 font-black uppercase tracking-[0.3em]">
-              <div className="flex items-center gap-2">
-                <div className="size-1.5 bg-zinc-800" />
-                <span>VAULT_ID: ZVN-9942</span>
-              </div>
-              <span className="text-red-500 animate-pulse">[LOCKED_BY_INTEGRITY]</span>
-            </div>
-            <div className="flex-1 flex flex-col items-center justify-center space-y-12 p-12">
-              <div className="relative size-64">
-                {/* Visual Radar Effect */}
-                <div className="absolute inset-0 rounded-full border border-zinc-900" />
-                <div className="absolute inset-0 rounded-full border-t-2 border-red-500 animate-spin [animation-duration:3s]" />
-                <div className="absolute inset-[10%] rounded-full border border-zinc-900/50" />
-                <div className="absolute inset-[20%] rounded-full border border-zinc-900/30" />
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="mono text-6xl text-zinc-100 font-black tracking-tighter glow-red">$500</span>
-                  <span className="mono text-[8px] text-zinc-700 uppercase tracking-widest mt-2">Escrow_Balance</span>
-                </div>
-              </div>
-              <div className="text-center space-y-3">
-                <div className="mono text-[10px] text-zinc-500 uppercase tracking-[0.4em] font-black border border-zinc-900 px-4 py-1">
-                  ACTIVE_STAKE: "COMPLETE_Q1_STRATEGY"
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between text-sm">
+                  <span className="text-muted-foreground">Total Stake</span>
+                  <span className="text-2xl font-bold text-foreground">$150</span>
                 </div>
               </div>
             </div>
-            <div className="p-10 bg-zinc-950 border-t border-zinc-900">
-              <div className="grid grid-cols-2 gap-12">
-                <div className="space-y-3">
-                  <span className="mono text-[8px] text-zinc-700 uppercase tracking-widest font-black">Beneficiary</span>
-                  <p className="text-zinc-100 font-black uppercase text-xs tracking-tighter mono">Tribe_Node: Alex_K</p>
-                </div>
-                <div className="space-y-3 text-right">
-                  <span className="mono text-[8px] text-zinc-700 uppercase tracking-widest font-black">Release_Window</span>
-                  <p className="text-red-500 font-black uppercase text-xs tracking-tighter animate-pulse mono">14:02:55_REMAINING</p>
-                </div>
-              </div>
-            </div>
-          </div>
+
+            {/* Floating badge */}
+            <motion.div
+              animate={{ y: [0, -10, 0] }}
+              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+              className="absolute -top-6 -right-6 bg-gradient-to-r from-primary to-accent rounded-2xl shadow-xl p-4 text-white"
+            >
+              <div className="text-sm font-semibold">100% Success Rate</div>
+              <div className="text-xs opacity-90">This Week</div>
+            </motion.div>
+          </motion.div>
         </div>
       </div>
     </section>

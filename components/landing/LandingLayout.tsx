@@ -7,10 +7,9 @@ import { LandingFooter } from "./LandingFooter";
 
 export const LandingLayout = () => {
   return (
-    <div className="bg-[#09090b] text-zinc-100 min-h-screen selection:bg-amber-500 selection:text-black font-sans">
-      <div className="grain-overlay opacity-[0.03]" />
+    <div className="bg-white min-h-screen">
       <LandingNavbar />
-      <main className="relative">
+      <main className="pt-20">
         <HeroSection />
         <EcosystemSection />
         <StakesSection />
