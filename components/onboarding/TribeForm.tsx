@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
+import { MdAdd, MdDelete, MdPeople } from 'react-icons/md';
 
 export interface TribeMember {
   name: string;
@@ -108,154 +109,176 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
   };
 
   return (
-    <div className="w-full space-y-8">
-      <div className="space-y-2">
-        <h2 className="text-2xl font-black text-[var(--foreground)] uppercase tracking-tighter">Tribe Formation</h2>
-        <p className="text-[var(--muted-foreground)] text-xs uppercase font-bold tracking-widest">
-          Recruiting high-stakes accountability partners for your network.
-        </p>
-      </div>
-
-      <div className="space-y-6">
-        {members.map((member, index) => (
-          <motion.div
-            key={index}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-[#09090b] border border-zinc-900 p-8 space-y-8 relative overflow-hidden group hover:border-amber-500/30 transition-all duration-500"
-          >
-            <div className="absolute top-0 right-0 p-4 opacity-[0.03] font-black text-8xl select-none group-hover:opacity-[0.07] transition-opacity">
-              0{index + 1}
+    <div className="w-full max-w-5xl mx-auto px-6 py-12">
+      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8">
+        <div className="space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <MdPeople className="text-white" size={24} />
             </div>
-            
-            <div className="flex items-center justify-between relative z-10">
-              <div className="flex items-center gap-3">
-                <div className="size-2 bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-                <h3 className="text-[10px] font-black text-amber-500 uppercase tracking-[0.4em]">Node_{index + 1}</h3>
-              </div>
-              {members.length > 1 && (
-                <button
-                  onClick={() => removeMember(index)}
-                  className="text-zinc-700 hover:text-red-500 transition-all text-[9px] font-black uppercase tracking-widest border border-zinc-900 px-3 py-1 hover:border-red-500/30"
-                >
-                  [Terminate]
-                </button>
-              )}
+            <div>
+              <h2 className="text-3xl font-bold text-foreground">Build Your Tribe</h2>
+              <p className="text-muted-foreground">Add people who will keep you accountable to your goals</p>
             </div>
+          </div>
+        </div>
 
-            {errors[index] && (
-              <div className="bg-red-500/5 border border-red-500/20 p-4 text-red-500 text-[9px] font-black uppercase tracking-widest">
-                [CRITICAL_FAILURE]: {errors[index]}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 relative z-10">
-              {/* Name */}
-              <div className="space-y-3">
-                <label className="block text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-1">
-                  [IDENTITY_NAME]
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={member.name}
-                    onChange={(e) => updateMember(index, 'name', e.target.value)}
-                    placeholder="ENTER_NAME"
-                    className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-zinc-100 placeholder:text-zinc-800 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs uppercase tracking-wider"
-                  />
-                </div>
-              </div>
-
-              {/* Relationship */}
-              <div className="space-y-3">
-                <label className="block text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-1">
-                  [NETWORK_ROLE]
-                </label>
-                <select
-                  value={member.relationship}
-                  onChange={(e) => updateMember(index, 'relationship', e.target.value)}
-                  className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-zinc-100 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs uppercase appearance-none cursor-pointer tracking-wider"
-                >
-                  <option value="friend">Friend</option>
-                  <option value="colleague">Colleague</option>
-                  <option value="partner">Partner</option>
-                  <option value="spouse">Spouse</option>
-                  <option value="mentor">Mentor</option>
-                  <option value="peer">Peer</option>
-                </select>
-              </div>
-
-              {/* Platform */}
-              <div className="sm:col-span-2 space-y-3">
-                <label className="block text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-1">
-                  [COMM_PROTOCOL]
-                </label>
-                <div className="flex gap-2">
-                  {(['whatsapp', 'sms', 'email'] as const).map((platform) => (
+        <div className="space-y-6">
+          {members.length === 0 ? (
+            <div className="text-center py-12 bg-muted/30 rounded-xl border-2 border-dashed border-border">
+              <MdPeople className="mx-auto text-muted-foreground mb-4" size={48} />
+              <p className="text-muted-foreground mb-4">No accountability partners added yet</p>
+              <button
+                onClick={addMember}
+                className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium inline-flex items-center gap-2"
+              >
+                <MdAdd size={20} />
+                Add Your First Partner
+              </button>
+            </div>
+          ) : (
+            members.map((member, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-gradient-to-br from-primary/5 to-accent/5 border border-border rounded-xl p-6 space-y-6"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white font-bold text-sm">
+                      {index + 1}
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground">Partner {index + 1}</h3>
+                  </div>
+                  {members.length > 1 && (
                     <button
-                      key={platform}
-                      onClick={() => updateMember(index, 'platform', platform)}
-                      className={`flex-1 py-4 border transition-all text-[9px] font-black uppercase tracking-widest ${
-                        member.platform === platform
-                          ? 'bg-amber-500 text-[#09090b] border-amber-500'
-                          : 'bg-[#09090b] border-zinc-800 text-zinc-600 hover:border-amber-500/30'
-                      }`}
+                      onClick={() => removeMember(index)}
+                      className="text-red-500 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg"
                     >
-                      {platform}
+                      <MdDelete size={20} />
                     </button>
-                  ))}
+                  )}
                 </div>
-              </div>
 
-              {/* Contact */}
-              <div className="sm:col-span-2 space-y-3">
-                <label className="block text-[9px] font-black text-zinc-600 uppercase tracking-[0.2em] ml-1">
-                  {member.platform === 'email' ? '[ACCESS_EMAIL]' : '[ACCESS_PHONE]'}
-                </label>
-                <input
-                  type={member.platform === 'email' ? 'email' : 'tel'}
-                  value={member.contact}
-                  onChange={(e) => updateMember(index, 'contact', e.target.value)}
-                  placeholder={
-                    member.platform === 'email'
-                      ? "IDENTITY@NETWORK.COM"
-                      : "+10000000000"
-                  }
-                  className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-zinc-100 placeholder:text-zinc-800 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs tracking-wider"
-                />
-              </div>
-            </div>
-          </motion.div>
-        ))}
-      </div>
+                {errors[index] && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm flex items-center gap-2">
+                    <span>⚠️</span>
+                    <span>{errors[index]}</span>
+                  </div>
+                )}
 
-      <div className="flex flex-col sm:flex-row items-center gap-6 pt-12">
-        <button
-          onClick={addMember}
-          className="w-full sm:w-auto px-10 py-5 bg-transparent border border-amber-500/20 hover:border-amber-500 transition-all text-[10px] font-black uppercase tracking-[0.4em] text-amber-500 group relative overflow-hidden"
-        >
-          <div className="scan-line opacity-10" />
-          <span className="relative z-10">[+] Add_Node</span>
-          <div className="absolute inset-0 bg-amber-500/5 translate-y-full group-hover:translate-y-0 transition-transform duration-500" />
-        </button>
-        <div className="flex-1" />
-        <div className="flex w-full sm:w-auto gap-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                  {/* Name */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Name
+                    </label>
+                    <input
+                      type="text"
+                      value={member.name}
+                      onChange={(e) => updateMember(index, 'name', e.target.value)}
+                      placeholder="Enter name"
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                  </div>
+
+                  {/* Relationship */}
+                  <div className="space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      Relationship
+                    </label>
+                    <select
+                      value={member.relationship}
+                      onChange={(e) => updateMember(index, 'relationship', e.target.value)}
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer capitalize"
+                    >
+                      <option value="friend">Friend</option>
+                      <option value="colleague">Colleague</option>
+                      <option value="partner">Partner</option>
+                      <option value="spouse">Spouse</option>
+                      <option value="mentor">Mentor</option>
+                      <option value="peer">Peer</option>
+                    </select>
+                  </div>
+
+                  {/* Platform */}
+                  <div className="sm:col-span-2 space-y-3">
+                    <label className="block text-sm font-medium text-foreground">
+                      Contact Method
+                    </label>
+                    <div className="flex gap-3">
+                      {(['whatsapp', 'sms', 'email'] as const).map((platform) => (
+                        <button
+                          key={platform}
+                          onClick={() => updateMember(index, 'platform', platform)}
+                          className={`flex-1 py-3 border-2 rounded-xl transition-all text-sm font-medium capitalize ${
+                            member.platform === platform
+                              ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                              : 'border-border bg-white text-foreground hover:border-primary/30'
+                          }`}
+                        >
+                          {platform}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Contact */}
+                  <div className="sm:col-span-2 space-y-2">
+                    <label className="block text-sm font-medium text-foreground">
+                      {member.platform === 'email' ? 'Email Address' : 'Phone Number'}
+                    </label>
+                    <input
+                      type={member.platform === 'email' ? 'email' : 'tel'}
+                      value={member.contact}
+                      onChange={(e) => updateMember(index, 'contact', e.target.value)}
+                      placeholder={
+                        member.platform === 'email'
+                          ? "email@example.com"
+                          : "+1234567890"
+                      }
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      {member.platform === 'email' 
+                        ? 'Enter a valid email address' 
+                        : 'Use E.164 format (e.g., +1234567890)'}
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+
+        {members.length > 0 && (
+          <button
+            onClick={addMember}
+            className="w-full py-3 border-2 border-dashed border-border rounded-xl text-foreground hover:border-primary hover:bg-primary/5 transition-all font-medium inline-flex items-center justify-center gap-2"
+          >
+            <MdAdd size={20} />
+            Add Another Partner
+          </button>
+        )}
+
+        <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 border-t border-border">
           <button
             onClick={onSkip}
-            className="flex-1 sm:flex-none px-8 py-5 text-zinc-600 hover:text-zinc-100 transition-all text-[10px] font-black uppercase tracking-[0.4em] mono"
+            className="w-full sm:w-auto px-6 py-3 text-muted-foreground hover:text-foreground transition-colors font-medium"
           >
-            Skip_Phase
+            Skip for now
           </button>
+          <div className="flex-1" />
           <button
             onClick={handleSubmit}
-            className="flex-1 sm:flex-none px-12 py-5 bg-amber-500 text-[#09090b] font-black uppercase tracking-[0.4em] text-[10px] hover:opacity-90 transition-all shadow-[0_0_30px_rgba(245,158,11,0.2)] group relative overflow-hidden"
+            disabled={members.length === 0}
+            className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-primary to-accent text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <div className="scan-line opacity-20" />
-            <span className="relative z-10">Deploy_Tribe</span>
+            Continue
           </button>
         </div>
       </div>
     </div>
   );
 }
-

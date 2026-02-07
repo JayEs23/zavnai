@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MdSchedule, MdPhone, MdEmail, MdNotifications } from 'react-icons/md';
+import { MdSchedule, MdPhone, MdEmail, MdNotifications, MdCheckCircle } from 'react-icons/md';
 import { ExtractedProfile } from '@/services/entityExtraction';
 
 interface PreferencesStepProps {
@@ -44,162 +44,177 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
   };
 
   return (
-    <div className="w-full space-y-12">
-      <div className="space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="size-2 bg-amber-500 shadow-[0_0_10px_rgba(245,158,11,0.5)]" />
-          <h2 className="text-3xl font-black text-zinc-100 uppercase tracking-tighter leading-none">System Calibration</h2>
-        </div>
-        <p className="text-zinc-500 text-[10px] uppercase font-black tracking-[0.3em] ml-5 leading-relaxed">
-          Establishing intervention parameters and agent personality profiles.
-        </p>
-      </div>
-
-      {/* AI Suggestions */}
-      {extractedProfile.energy_peak && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-amber-500/5 border border-amber-500/20 p-6 relative overflow-hidden"
-        >
-          <div className="scan-line opacity-10" />
-          <p className="text-[10px] text-amber-500 font-black uppercase tracking-[0.2em] leading-relaxed relative z-10">
-            <span className="opacity-50">[ANALYSIS_COMPLETE]:</span> We detected a {' '}
-            <span className="text-zinc-100 underline decoration-amber-500/30 underline-offset-4">{extractedProfile.energy_peak === 'morning' ? 'circadian peak in AM hours' : 'circadian peak in PM hours'}</span>. 
-            Operational window auto-calibrated to match peak cognitive capacity.
+    <div className="w-full max-w-4xl mx-auto px-6 py-12">
+      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-bold text-foreground">Set Your Preferences</h2>
+          <p className="text-muted-foreground">
+            Help us personalize your experience by setting up your communication preferences and interaction style.
           </p>
-        </motion.div>
-      )}
-
-      <div className="space-y-12">
-        {/* Call Window */}
-        <div className="space-y-6">
-          <div className="flex items-center space-x-3">
-            <MdSchedule className="text-zinc-700" size={16} />
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Operational_Window</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-8">
-            <div className="space-y-3">
-              <label className="block text-[9px] font-black text-zinc-700 uppercase tracking-widest ml-1">
-                Start_Time
-              </label>
-              <input
-                type="time"
-                value={preferences.call_window_start}
-                onChange={(e) =>
-                  setPreferences({ ...preferences, call_window_start: e.target.value })
-                }
-                className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-amber-500 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs tracking-widest"
-              />
-            </div>
-            <div className="space-y-3">
-              <label className="block text-[9px] font-black text-zinc-700 uppercase tracking-widest ml-1">
-                End_Time
-              </label>
-              <input
-                type="time"
-                value={preferences.call_window_end}
-                onChange={(e) =>
-                  setPreferences({ ...preferences, call_window_end: e.target.value })
-                }
-                className="w-full px-6 py-4 bg-[#09090b] border border-zinc-800 text-amber-500 focus:outline-none focus:border-amber-500 transition-all font-mono text-xs tracking-widest"
-              />
-            </div>
-          </div>
         </div>
 
-        {/* Escalation Preference */}
-        <div className="space-y-6">
-          <div className="flex items-center space-x-3">
-            <MdNotifications className="text-zinc-700" size={16} />
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Intervention_Protocol</h3>
-          </div>
-          <div className="grid grid-cols-2 gap-6">
-            <button
-              onClick={() => setPreferences({ ...preferences, escalation_preference: 'soft' })}
-              className={`p-6 border transition-all duration-500 text-left group relative overflow-hidden ${
-                preferences.escalation_preference === 'soft'
-                  ? 'bg-amber-500/5 border-amber-500 text-amber-500'
-                  : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
-              }`}
-            >
-              <div className="scan-line opacity-5" />
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2">Soft_Mirror</div>
-              <div className="text-[9px] uppercase font-bold opacity-40 leading-relaxed">Socratic reflection and behavior nudging.</div>
-            </button>
-            <button
-              onClick={() => setPreferences({ ...preferences, escalation_preference: 'hard' })}
-              className={`p-6 border transition-all duration-500 text-left group relative overflow-hidden ${
-                preferences.escalation_preference === 'hard'
-                  ? 'bg-amber-500/5 border-amber-500 text-amber-500'
-                  : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
-              }`}
-            >
-              <div className="scan-line opacity-5" />
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] mb-2">Hard_Lock</div>
-              <div className="text-[9px] uppercase font-bold opacity-40 leading-relaxed">Direct accountability and high-stakes enforcement.</div>
-            </button>
-          </div>
-        </div>
+        {/* AI Suggestions */}
+        {extractedProfile.energy_peak && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3"
+          >
+            <MdCheckCircle className="text-primary flex-shrink-0 mt-0.5" size={20} />
+            <p className="text-sm text-foreground">
+              <strong>Smart suggestion:</strong> We detected you're most productive in the {' '}
+              <span className="font-semibold text-primary">
+                {extractedProfile.energy_peak === 'morning' ? 'morning' : 'evening'}
+              </span>. 
+              We've adjusted your availability window to match your peak hours.
+            </p>
+          </motion.div>
+        )}
 
-        {/* Communication Channel */}
-        <div className="space-y-6">
-          <div className="flex items-center space-x-3">
-            <MdPhone className="text-zinc-700" size={16} />
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Comm_Channel</h3>
+        <div className="space-y-8">
+          {/* Call Window */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdSchedule className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Availability Window</h3>
+                <p className="text-sm text-muted-foreground">When can we reach out to you?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pl-12">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences.call_window_start}
+                  onChange={(e) =>
+                    setPreferences({ ...preferences, call_window_start: e.target.value })
+                  }
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences.call_window_end}
+                  onChange={(e) =>
+                    setPreferences({ ...preferences, call_window_end: e.target.value })
+                  }
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {(['call', 'sms', 'whatsapp', 'email'] as const).map((channel) => (
+
+          {/* Escalation Preference */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdNotifications className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Accountability Style</h3>
+                <p className="text-sm text-muted-foreground">How should we keep you on track?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-12">
               <button
-                key={channel}
-                onClick={() => setPreferences({ ...preferences, communication_channel: channel })}
-                className={`py-4 border text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${
-                  preferences.communication_channel === channel
-                    ? 'bg-amber-500 text-[#09090b] border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                    : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+                onClick={() => setPreferences({ ...preferences, escalation_preference: 'soft' })}
+                className={`p-5 border-2 rounded-xl transition-all text-left ${
+                  preferences.escalation_preference === 'soft'
+                    ? 'border-primary bg-primary/5 shadow-md'
+                    : 'border-border bg-white hover:border-primary/30'
                 }`}
               >
-                {channel}
+                <div className="text-base font-semibold text-foreground mb-2">Gentle Nudge</div>
+                <div className="text-sm text-muted-foreground">Supportive reminders and reflective questions to guide you.</div>
               </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Echo Vibe */}
-        <div className="space-y-6">
-          <div className="flex items-center space-x-3">
-            <MdEmail className="text-zinc-700" size={16} />
-            <h3 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.3em]">Zephyr_Personality</h3>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            {(['challenging', 'balanced', 'supportive'] as const).map((vibe) => (
               <button
-                key={vibe}
-                onClick={() => setPreferences({ ...preferences, echo_vibe: vibe })}
-                className={`py-4 border text-[9px] font-black uppercase tracking-[0.2em] transition-all duration-500 ${
-                  preferences.echo_vibe === vibe
-                    ? 'bg-amber-500 text-[#09090b] border-amber-500 shadow-[0_0_20px_rgba(245,158,11,0.2)]'
-                    : 'bg-[#09090b] border-zinc-900 text-zinc-600 hover:border-amber-500/30'
+                onClick={() => setPreferences({ ...preferences, escalation_preference: 'hard' })}
+                className={`p-5 border-2 rounded-xl transition-all text-left ${
+                  preferences.escalation_preference === 'hard'
+                    ? 'border-primary bg-primary/5 shadow-md'
+                    : 'border-border bg-white hover:border-primary/30'
                 }`}
               >
-                {vibe}
+                <div className="text-base font-semibold text-foreground mb-2">Direct Accountability</div>
+                <div className="text-sm text-muted-foreground">High-stakes reminders with clear consequences.</div>
               </button>
-            ))}
+            </div>
+          </div>
+
+          {/* Communication Channel */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdPhone className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Preferred Channel</h3>
+                <p className="text-sm text-muted-foreground">How would you like us to contact you?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-12">
+              {(['call', 'sms', 'whatsapp', 'email'] as const).map((channel) => (
+                <button
+                  key={channel}
+                  onClick={() => setPreferences({ ...preferences, communication_channel: channel })}
+                  className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                    preferences.communication_channel === channel
+                      ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                      : 'border-border bg-white text-foreground hover:border-primary/30'
+                  }`}
+                >
+                  {channel}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Echo Vibe */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdEmail className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Coach Personality</h3>
+                <p className="text-sm text-muted-foreground">What tone works best for you?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-12">
+              {(['challenging', 'balanced', 'supportive'] as const).map((vibe) => (
+                <button
+                  key={vibe}
+                  onClick={() => setPreferences({ ...preferences, echo_vibe: vibe })}
+                  className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                    preferences.echo_vibe === vibe
+                      ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                      : 'border-border bg-white text-foreground hover:border-primary/30'
+                  }`}
+                >
+                  {vibe}
+                </button>
+              ))}
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="pt-12">
-        <button
-          onClick={handleSubmit}
-          className="group relative w-full py-6 bg-transparent border border-amber-500/20 overflow-hidden hover:border-amber-500 transition-all duration-700"
-        >
-          <div className="scan-line opacity-20" />
-          <span className="relative z-10 mono text-amber-500 font-black tracking-[0.4em] uppercase text-xs group-hover:text-zinc-100 transition-colors">
-            COMMIT_CONFIGURATION
-          </span>
-          <div className="absolute inset-0 bg-amber-500 translate-y-full group-hover:translate-y-0 transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)]" />
-        </button>
+        <div className="pt-6">
+          <button
+            onClick={handleSubmit}
+            className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+          >
+            Continue
+          </button>
+        </div>
       </div>
     </div>
   );

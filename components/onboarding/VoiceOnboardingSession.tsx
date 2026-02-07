@@ -12,7 +12,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, LiveServerMessage, Modality } from '@google/genai';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { MdMic, MdMicOff, MdSend, MdVolumeUp } from 'react-icons/md';
-import { trackGemini } from 'opik-gemini';
+import { useSession } from 'next-auth/react';
+import { opikTracker } from '@/lib/opik/client-tracker';
 
 interface VoiceOnboardingSessionProps {
   onComplete: (transcript: string, insights: Record<string, unknown>) => void;
@@ -45,6 +46,7 @@ const MAX_DURATION_MS = 5 * 60 * 1000; // 5 minutes
 const STORAGE_KEY = 'zavn_echo_onboarding_conversation';
 
 export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnboardingSessionProps) {
+  const { data: session } = useSession();
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputText, setInputText] = useState('');
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -184,7 +186,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     return newMessage;
   };
 
-  // Send text message
+  // Send text message (via backend for proper tracking and logging)
   const sendTextMessage = async (text: string) => {
     if (!text.trim() || isProcessing) return;
 
@@ -193,32 +195,30 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     setIsProcessing(true);
 
     try {
-      // Use Opik-tracked Gemini for text responses
-      const genAI = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GEMINI_API_KEY || '');
-      const trackedGenAI = trackGemini(genAI, {
-        projectName: process.env.NEXT_PUBLIC_OPIK_PROJECT_NAME || 'Zavn',
-      });
-
-      const model = trackedGenAI.getGenerativeModel({ 
-        model: 'gemini-2.0-flash-exp',
-        systemInstruction: ECHO_SYSTEM_INSTRUCTION
-      });
-
-      // Build conversation history for context
+      // Call backend endpoint for Echo chat (ensures Opik tracking and database logging)
       const conversationHistory = messages.map(m => ({
-        role: m.role === 'user' ? 'user' : 'model',
-        parts: [{ text: m.content }]
+        role: m.role,
+        content: m.content
       }));
 
-      const chat = model.startChat({
-        history: conversationHistory,
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/echo/chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${(session as any)?.accessToken}`, // Include auth token
+        },
+        body: JSON.stringify({
+          message: text,
+          history: conversationHistory
+        })
       });
 
-      const result = await chat.sendMessage(text);
-      const response = await result.response;
-      const responseText = response.text();
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
 
-      addMessage('assistant', responseText, 'text');
+      const data = await response.json();
+      addMessage('assistant', data.response, 'text');
     } catch (error) {
       console.error('Error sending text message:', error);
       onError('Failed to send message. Please try again.');
@@ -376,133 +376,150 @@ When you have gathered sufficient information (usually after 3-5 minutes), natur
   };
 
   return (
-    <div className="flex h-full w-full flex-col bg-[#09090b] text-zinc-100">
+    <div className="flex h-full w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
       {/* Header */}
-      <header className="flex items-center justify-between px-6 py-4 border-b border-zinc-900">
-        <div className="flex items-center gap-4">
-          <h2 className="text-lg font-black tracking-tight mono">
-            Echo Onboarding
-          </h2>
-          <div className="flex items-center gap-2 text-xs text-zinc-500">
-            <div className={`size-2 rounded-full ${isVoiceActive && isConnected ? 'bg-green-500 animate-pulse' : 'bg-zinc-700'}`} />
-            <span>{isVoiceActive && isConnected ? 'Voice Active' : 'Text Only'}</span>
-          </div>
-        </div>
-        <div className="flex items-center gap-4">
-          <span className="text-xs mono text-zinc-500">
-            {formatTime(timeRemaining)} remaining
-          </span>
-          <button
-            onClick={handleEndConversation}
-            className="px-4 py-2 rounded-2xl border border-zinc-800 text-zinc-400 hover:text-zinc-100 hover:border-zinc-700 transition-all text-xs font-medium"
-          >
-            End Session
-          </button>
-        </div>
-      </header>
-
-      {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
-        {messages.length === 0 && (
-          <div className="flex items-center justify-center h-full">
-            <div className="text-center space-y-4 max-w-md">
-              <div className="size-16 rounded-full bg-amber-500/10 border-2 border-amber-500/20 flex items-center justify-center mx-auto">
-                <MdVolumeUp className="text-amber-500" size={32} />
+      <div className="bg-white border-b border-border px-6 py-4">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
+              <MdVolumeUp className="text-white" size={20} />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-foreground">
+                Chat with Echo
+              </h2>
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <div className={`w-2 h-2 rounded-full ${isVoiceActive && isConnected ? 'bg-green-500 animate-pulse' : 'bg-gray-400'}`} />
+                <span>{isVoiceActive && isConnected ? 'Voice Active' : 'Text Chat'}</span>
               </div>
-              <h3 className="text-xl font-black text-zinc-100 uppercase tracking-tighter mono">
-                Welcome to Echo
-              </h3>
-              <p className="text-sm text-zinc-400">
-                I&apos;m here to get to know you and understand your goals. You can chat with me or use voice - whatever feels natural!
-              </p>
             </div>
           </div>
-        )}
-
-        <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+          
+          <div className="flex items-center gap-4">
+            <span className="text-sm text-muted-foreground">
+              {formatTime(timeRemaining)} remaining
+            </span>
+            <button
+              onClick={handleEndConversation}
+              className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-colors text-sm font-medium"
             >
-              <div
-                className={`max-w-[75%] rounded-3xl px-4 py-3 ${
-                  message.role === 'user'
-                    ? 'bg-amber-500 text-[#09090b]'
-                    : 'bg-zinc-900 border border-zinc-800 text-zinc-100'
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  {message.type === 'voice' && (
-                    <MdVolumeUp className={`mt-1 ${message.role === 'user' ? 'text-[#09090b]/60' : 'text-amber-500'}`} size={16} />
-                  )}
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+              End Session
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto px-6 py-8">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {messages.length === 0 && (
+            <div className="flex items-center justify-center py-16">
+              <div className="text-center space-y-4 max-w-md">
+                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto shadow-lg">
+                  <MdVolumeUp className="text-white" size={36} />
                 </div>
-                <p className={`text-[10px] mt-2 ${message.role === 'user' ? 'text-[#09090b]/60' : 'text-zinc-500'}`}>
-                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                <h3 className="text-2xl font-bold text-foreground">
+                  Welcome! I'm Echo
+                </h3>
+                <p className="text-muted-foreground">
+                  I'm here to get to know you and understand your goals. You can chat with me using text or voice - whatever feels natural!
                 </p>
+                <div className="pt-4 text-sm text-muted-foreground">
+                  💡 Tip: Click the microphone button below to use voice chat
+                </div>
               </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
-        <div ref={messagesEndRef} />
+            </div>
+          )}
+
+          <AnimatePresence>
+            {messages.map((message) => (
+              <motion.div
+                key={message.id}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
+                <div
+                  className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${
+                    message.role === 'user'
+                      ? 'bg-gradient-to-br from-primary to-accent text-white'
+                      : 'bg-white border border-border text-foreground'
+                  }`}
+                >
+                  <div className="flex items-start gap-2">
+                    {message.type === 'voice' && (
+                      <MdVolumeUp className={`mt-1 flex-shrink-0 ${message.role === 'user' ? 'text-white/80' : 'text-primary'}`} size={16} />
+                    )}
+                    <p className="text-sm leading-relaxed">{message.content}</p>
+                  </div>
+                  <p className={`text-xs mt-2 ${message.role === 'user' ? 'text-white/70' : 'text-muted-foreground'}`}>
+                    {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
       {/* Input Area */}
-      <div className="border-t border-zinc-900 p-4">
-        <div className="flex items-center gap-3">
-          {/* Voice Toggle Button */}
-          <button
-            onClick={toggleVoice}
-            disabled={isProcessing}
-            className={`size-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
-              isVoiceActive && isConnected
-                ? 'bg-green-500 text-white'
-                : isVoiceActive
-                ? 'bg-amber-500/20 text-amber-500 border border-amber-500/30'
-                : 'bg-zinc-900 border border-zinc-800 text-zinc-400 hover:text-zinc-100'
-            }`}
-          >
-            {isVoiceActive && isConnected ? (
-              <MdMic size={24} />
-            ) : (
-              <MdMicOff size={24} />
-            )}
-          </button>
+      <div className="bg-white border-t border-border px-6 py-4">
+        <div className="max-w-4xl mx-auto">
+          {micError && (
+            <div className="mb-3 p-3 bg-red-50 border border-red-200 rounded-xl text-red-600 text-sm">
+              {micError}
+            </div>
+          )}
+          
+          <div className="flex items-center gap-3">
+            {/* Voice Toggle Button */}
+            <button
+              onClick={toggleVoice}
+              disabled={isProcessing}
+              className={`w-12 h-12 rounded-full flex items-center justify-center transition-all flex-shrink-0 ${
+                isVoiceActive && isConnected
+                  ? 'bg-green-500 text-white shadow-lg'
+                  : isVoiceActive
+                  ? 'bg-primary/20 text-primary border-2 border-primary/30'
+                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+              }`}
+            >
+              {isVoiceActive && isConnected ? (
+                <MdMic size={24} />
+              ) : (
+                <MdMicOff size={24} />
+              )}
+            </button>
 
-          {/* Text Input */}
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendTextMessage(inputText);
-              }
-            }}
-            placeholder={isVoiceActive ? "Type a message or speak..." : "Type your message..."}
-            disabled={isProcessing}
-            className="flex-1 px-4 py-3 rounded-2xl bg-zinc-900 border border-zinc-800 text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-amber-500/50 transition-all"
-          />
+            {/* Text Input */}
+            <input
+              ref={inputRef}
+              type="text"
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendTextMessage(inputText);
+                }
+              }}
+              placeholder={isVoiceActive ? "Type a message or speak..." : "Type your message..."}
+              disabled={isProcessing}
+              className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+            />
 
-          {/* Send Button */}
-          <button
-            onClick={() => sendTextMessage(inputText)}
-            disabled={!inputText.trim() || isProcessing}
-            className="size-12 rounded-full bg-amber-500 text-[#09090b] flex items-center justify-center hover:bg-amber-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            <MdSend size={20} />
-          </button>
+            {/* Send Button */}
+            <button
+              onClick={() => sendTextMessage(inputText)}
+              disabled={!inputText.trim() || isProcessing}
+              className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent text-white flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
+            >
+              <MdSend size={20} />
+            </button>
+          </div>
         </div>
-
-        {micError && (
-          <p className="text-xs text-red-500 mt-2 px-2">{micError}</p>
-        )}
       </div>
     </div>
   );
