@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { goalsApi, type Goal, type Commitment } from '@/services/goalsApi';
 import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdEdit, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
+import AppNavbar from '@/components/AppNavbar';
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -58,6 +59,7 @@ export default function GoalsPage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppNavbar />
       {/* Header */}
       <div className="border-b border-border-subtle bg-card-bg">
         <div className="max-w-7xl mx-auto px-6 py-8">

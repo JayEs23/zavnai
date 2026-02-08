@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MdAdd, MdDelete, MdPeople } from 'react-icons/md';
+import { MdAdd, MdDelete, MdPeople, MdLock } from 'react-icons/md';
 
 export interface TribeMember {
   name: string;
@@ -24,7 +24,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
           {
             name: suggestedContact,
             contact: '',
-            platform: 'whatsapp',
+            platform: 'email',
             relationship: 'friend',
           },
         ]
@@ -50,7 +50,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
       {
         name: '',
         contact: '',
-        platform: 'whatsapp',
+        platform: 'email',
         relationship: 'friend',
       },
     ]);
@@ -208,42 +208,53 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
                       Contact Method
                     </label>
                     <div className="flex gap-3">
-                      {(['whatsapp', 'sms', 'email'] as const).map((platform) => (
-                        <button
-                          key={platform}
-                          onClick={() => updateMember(index, 'platform', platform)}
-                          className={`flex-1 py-3 border-2 rounded-xl transition-all text-sm font-medium capitalize ${
-                            member.platform === platform
-                              ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
-                              : 'border-border bg-white text-foreground hover:border-primary/30'
-                          }`}
-                        >
-                          {platform}
-                        </button>
+                      {/* Email - always available */}
+                      <button
+                        onClick={() => updateMember(index, 'platform', 'email')}
+                        className={`flex-1 py-3 border-2 rounded-xl transition-all text-sm font-medium ${
+                          member.platform === 'email'
+                            ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                            : 'border-border bg-white text-foreground hover:border-primary/30'
+                        }`}
+                      >
+                        Email
+                      </button>
+
+                      {/* WhatsApp & SMS - premium, disabled */}
+                      {(['whatsapp', 'sms'] as const).map((platform) => (
+                        <div key={platform} className="relative flex-1">
+                          <button
+                            disabled
+                            className="w-full py-3 border-2 border-border rounded-xl text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed capitalize opacity-60"
+                          >
+                            {platform}
+                          </button>
+                          <span className="absolute -top-2 -right-2 flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full border border-amber-200">
+                            <MdLock size={10} />
+                            PRO
+                          </span>
+                        </div>
                       ))}
                     </div>
+                    <p className="text-xs text-muted-foreground">
+                      WhatsApp and SMS notifications are available with Pro. You can upgrade anytime in Settings.
+                    </p>
                   </div>
 
                   {/* Contact */}
                   <div className="sm:col-span-2 space-y-2">
                     <label className="block text-sm font-medium text-foreground">
-                      {member.platform === 'email' ? 'Email Address' : 'Phone Number'}
+                      Email Address
                     </label>
                     <input
-                      type={member.platform === 'email' ? 'email' : 'tel'}
+                      type="email"
                       value={member.contact}
                       onChange={(e) => updateMember(index, 'contact', e.target.value)}
-                      placeholder={
-                        member.platform === 'email'
-                          ? "email@example.com"
-                          : "+1234567890"
-                      }
+                      placeholder="email@example.com"
                       className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
                     />
                     <p className="text-xs text-muted-foreground">
-                      {member.platform === 'email' 
-                        ? 'Enter a valid email address' 
-                        : 'Use E.164 format (e.g., +1234567890)'}
+                      We&apos;ll send accountability check-ins to this email
                     </p>
                   </div>
                 </div>

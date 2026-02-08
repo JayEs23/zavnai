@@ -63,12 +63,14 @@ export const authOptions: NextAuthOptions = {
             access_token: string;
             user_id: string;
             email: string;
+            full_name?: string;
             onboarding_completed: boolean;
           };
 
           return {
             id: data.user_id,
             email: data.email,
+            name: data.full_name || undefined,
             accessToken: data.access_token,
             onboardingCompleted: data.onboarding_completed,
           };
@@ -143,6 +145,7 @@ export const authOptions: NextAuthOptions = {
             access_token: string;
             user_id: string;
             email: string;
+            full_name?: string;
             onboarding_completed: boolean;
           };
 
@@ -151,6 +154,8 @@ export const authOptions: NextAuthOptions = {
           // Store backend token in user object
           user.accessToken = data.access_token;
           user.id = data.user_id;
+          // Prefer the name from backend (saved full_name), fallback to OAuth provider name
+          if (data.full_name) user.name = data.full_name;
           user.onboardingCompleted = data.onboarding_completed;
 
           return true;
@@ -166,12 +171,18 @@ export const authOptions: NextAuthOptions = {
       // For credentials, user already has accessToken
       return true;
     },
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session: updateData }) {
       if (user) {
         token.accessToken = user.accessToken;
         token.onboardingCompleted = user.onboardingCompleted;
         token.id = user.id;
         token.sub = user.id; // Ensure sub matches user.id for backend consistency
+      }
+      // Handle session update triggers (e.g., after onboarding completes)
+      if (trigger === 'update' && updateData) {
+        if (typeof updateData.onboardingCompleted === 'boolean') {
+          token.onboardingCompleted = updateData.onboardingCompleted;
+        }
       }
       return token;
     },

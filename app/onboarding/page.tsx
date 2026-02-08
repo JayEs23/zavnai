@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -36,7 +36,7 @@ interface InsightsData {
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session, status } = useSession();
+  const { data: session, status, update: updateSession } = useSession();
   const [step, setStep] = useState<OnboardingStep>('voice');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +50,24 @@ export default function OnboardingPage() {
 
   // Get user ID from session
   const userId = (session?.user as { id?: string })?.id || '';
+
+  // Check if user is already onboarded — redirect to dashboard
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const res = await api.get<{ is_onboarded: boolean }>('/api/onboarding/status');
+        if (res.is_onboarded) {
+          router.replace('/dashboard');
+        }
+      } catch {
+        // Continue with onboarding if status check fails
+      }
+    };
+    if (status === 'authenticated') {
+      checkOnboarding();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   // Show loading while session is being fetched
   if (status === 'loading') {
@@ -143,17 +161,33 @@ export default function OnboardingPage() {
     await finalizeOnboarding(members);
   };
 
+  // Default preferences if user somehow bypasses the preferences step
+  const DEFAULT_PREFERENCES: UserPreferences = {
+    call_window_start: '09:00',
+    call_window_end: '21:00',
+    escalation_preference: 'soft',
+    communication_channel: 'email',
+    echo_vibe: 'balanced',
+  };
+
   // Final completion handler
   const finalizeOnboarding = async (finalTribeMembers: TribeMember[]) => {
     setStep('completing');
     setLoading(true);
     
     try {
+      // Use saved preferences or safe defaults (prevents null → 422 error)
+      const safePreferences = preferences || DEFAULT_PREFERENCES;
+
       // 1. Call the new refactored complete endpoint with insights
+      // Ensure title is not empty (handle empty string case)
+      const goalTitle = extractedProfile?.primary_goal?.trim() || "My First Goal";
+      
       await api.post('/api/onboarding/complete', {
         goal: {
-          title: extractedProfile?.primary_goal || "My First Goal",
-          description: extractedProfile?.core_friction || "",
+          title: goalTitle,
+          description: extractedProfile?.core_friction?.trim() || "",
+          deadline_days: 30, // Default 30 days deadline
           category: extractedProfile?.professional_context === 'developer' ? 'work' : 'general'
         },
         tribe_members: finalTribeMembers.map(m => ({
@@ -162,18 +196,44 @@ export default function OnboardingPage() {
           platform: m.platform,
           relationship: m.relationship
         })),
-        preferences: preferences,
+        preferences: safePreferences,
         insights: voiceInsights // Pass Echo insights to be stored in Goal.metadata_json
       });
 
-      // 2. Trigger baseline analysis for RAG
-      await onboardingApi.analyzeBaseline();
+      // 2. Update the NextAuth session to reflect onboarding completion
+      // This ensures the JWT token has onboardingCompleted: true for middleware/guards
+      try {
+        await updateSession({ onboardingCompleted: true });
+      } catch (sessionErr) {
+        console.warn('Session update skipped:', sessionErr);
+      }
 
-      // 3. Redirect to dashboard
-      router.push('/dashboard');
+      // 3. Trigger baseline analysis for RAG (non-critical, don't block onboarding)
+      try {
+        await onboardingApi.analyzeBaseline();
+      } catch (analysisErr) {
+        console.warn('Baseline analysis skipped (non-critical):', analysisErr);
+      }
+
+      // 4. Hard redirect to dashboard to bypass any client-side router cache
+      window.location.href = '/dashboard';
     } catch (err) {
       console.error('Finalization failed:', err);
-      setError('Failed to save your profile. Please try again.');
+      
+      // Extract more specific error message
+      let errorMessage = 'Failed to save your profile. Please try again.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'data' in err) {
+        const apiErr = err as { data?: { detail?: string }; message?: string };
+        if (apiErr.data?.detail) {
+          errorMessage = apiErr.data.detail;
+        } else if (apiErr.message) {
+          errorMessage = apiErr.message;
+        }
+      }
+      
+      setError(errorMessage);
       setStep('tribe');
     } finally {
       setLoading(false);

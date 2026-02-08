@@ -71,6 +71,20 @@ export interface UsernameCheckResponse {
   message: string;
 }
 
+// Echo voice config returned by the backend
+export interface EchoVoiceConfig {
+  onboarding: {
+    model: string;
+    api_version: string;
+    system_instruction: string;
+  };
+  reflection: {
+    model: string;
+    api_version: string;
+    system_instruction: string;
+  };
+}
+
 export const onboardingApi = {
   // Start Session
   startSession: async (): Promise<{ session_id: string; current_step: number }> => {
@@ -105,5 +119,10 @@ export const onboardingApi = {
   // Legacy Status Check (Restored for store compatibility)
   getStatus: async (): Promise<any> => {
     return api.get('/api/onboarding/status');
-  }
+  },
+
+  // Get Echo voice config (model, API version, system instruction) from backend
+  getEchoVoiceConfig: async (): Promise<EchoVoiceConfig> => {
+    return api.get<EchoVoiceConfig>('/api/echo/voice-config');
+  },
 };

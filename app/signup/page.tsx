@@ -31,6 +31,7 @@ export default function SignupPage() {
         body: JSON.stringify({
           email,
           password,
+          full_name: name || undefined,
           auth_provider: "email",
         }),
       });

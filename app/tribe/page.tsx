@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { tribeApi, type TribeMember } from '@/services/tribeApi';
 import { MdAdd, MdCheckCircle, MdPending, MdError, MdPhone, MdEmail, MdPerson, MdDelete, MdRefresh } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
+import AppNavbar from '@/components/AppNavbar';
 
 export default function TribePage() {
   const [members, setMembers] = useState<TribeMember[]>([]);
@@ -61,6 +62,7 @@ export default function TribePage() {
 
   return (
     <div className="min-h-screen bg-background">
+      <AppNavbar />
       {/* Header */}
       <div className="border-b border-border-subtle bg-card-bg">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -371,7 +373,7 @@ function AddMemberModal({ onClose, onSuccess }: AddMemberModalProps) {
   const [formData, setFormData] = useState({
     name: '',
     contact_info: '',
-    platform: 'whatsapp' as 'whatsapp' | 'sms' | 'email' | 'phone',
+    platform: 'in_app' as 'in_app' | 'whatsapp' | 'sms' | 'email' | 'phone',
     relationship: '',
     relationship_tier: '' as '' | 'inner_circle' | 'mentor' | 'professional',
     can_see_private_goals: false,
@@ -450,6 +452,7 @@ function AddMemberModal({ onClose, onSuccess }: AddMemberModalProps) {
               onChange={(e) => setFormData({ ...formData, platform: e.target.value as any })}
               className="w-full px-4 py-3 bg-background border border-border-subtle rounded-lg text-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary"
             >
+              <option value="in_app">In-App (AI Vetting)</option>
               <option value="whatsapp">WhatsApp</option>
               <option value="sms">SMS</option>
               <option value="email">Email</option>
@@ -463,16 +466,24 @@ function AddMemberModal({ onClose, onSuccess }: AddMemberModalProps) {
               Contact Information *
             </label>
             <input
-              type={formData.platform === 'email' ? 'email' : 'tel'}
+              type={formData.platform === 'email' ? 'email' : formData.platform === 'in_app' ? 'text' : 'tel'}
               value={formData.contact_info}
               onChange={(e) => setFormData({ ...formData, contact_info: e.target.value })}
-              placeholder={formData.platform === 'email' ? 'john@example.com' : '+1234567890'}
+              placeholder={
+                formData.platform === 'email'
+                  ? 'john@example.com'
+                  : formData.platform === 'in_app'
+                  ? 'Their name or username'
+                  : '+1234567890'
+              }
               className="w-full px-4 py-3 bg-background border border-border-subtle rounded-lg text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-brand-primary"
               required
             />
             <p className="text-xs text-muted-foreground mt-1">
-              {formData.platform === 'email' 
+              {formData.platform === 'email'
                 ? 'Email address'
+                : formData.platform === 'in_app'
+                ? 'Any identifier — AI will vet them instantly based on relationship context'
                 : 'Phone number in E.164 format (e.g., +1234567890)'}
             </p>
           </div>

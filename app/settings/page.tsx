@@ -7,6 +7,7 @@ import { remindersApi, ReminderSchedule } from '@/services/remindersApi';
 import { integrationApi, Integration } from '@/services/integrationApi';
 import { dashboardApi } from '@/services/dashboardApi';
 import { MdNotifications, MdSchedule, MdLink, MdPerson, MdSave, MdAdd } from 'react-icons/md';
+import AppNavbar from '@/components/AppNavbar';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -73,15 +74,20 @@ export default function SettingsPage() {
         setSettings({ ...settings, reminder_preferences: updated });
     };
 
-    if (loading) return <div className="min-h-screen bg-[var(--background)] p-10 flex items-center justify-center">
-        <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
-            <p className="text-[var(--muted-foreground)]">Loading settings...</p>
+    if (loading) return <div className="min-h-screen bg-[var(--background)]">
+        <AppNavbar />
+        <div className="p-10 flex items-center justify-center min-h-[80vh]">
+            <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
+                <p className="text-[var(--muted-foreground)]">Loading settings...</p>
+            </div>
         </div>
     </div>;
 
     return (
-        <div className="min-h-screen bg-[var(--background)] p-8">
+        <div className="min-h-screen bg-[var(--background)]">
+            <AppNavbar />
+            <div className="p-8">
             <header className="mb-8">
                 <h1 className="text-3xl font-bold">Settings</h1>
                 <p className="text-[var(--muted-foreground)]">Manage your preferences and connections.</p>
@@ -496,6 +502,7 @@ export default function SettingsPage() {
                         </section>
                     )}
                 </main>
+            </div>
             </div>
         </div>
     );

@@ -3,63 +3,71 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 /**
- * Proxy - Verification Gate
- * Users MUST be verified to access inner pages (dashboard, doyn, goals, etc.)
- * Unverified users are redirected to /onboarding
+ * Proxy – Auth & Onboarding Gate (Next.js 16)
+ *
+ * 1. Public routes → pass through (no auth needed)
+ * 2. Unauthenticated users on protected routes → redirect to /login
+ * 3. Authenticated but NOT onboarded → redirect to /onboarding
+ * 4. Authenticated + onboarded → allow access
+ *
+ * The JWT token shape (from NextAuth callbacks):
+ *   token.accessToken        – backend JWT
+ *   token.onboardingCompleted – boolean from backend login response
+ *   token.id / token.sub     – user id
  */
 export async function proxy(request: NextRequest) {
-    const token = await getToken({ 
-        req: request, 
-        secret: process.env.JWT_SECRET_KEY || process.env.NEXTAUTH_SECRET 
+    const token = await getToken({
+        req: request,
+        secret: process.env.JWT_SECRET_KEY || process.env.NEXTAUTH_SECRET,
     });
-    
-    // Allow public routes
+
+    const { pathname } = request.nextUrl;
+
+    // ── 1. Public routes (no auth required) ──────────────────────────
     const publicRoutes = [
-        '/login', 
-        '/signup', 
-        '/', 
-        '/api', 
+        '/login',
+        '/signup',
+        '/',
+        '/api',              // all API routes (NextAuth, echo, opik, etc.)
         '/verify',
-        '/privacy', 
-        '/terms', 
-        '/contact', 
-        '/blog', 
+        '/privacy',
+        '/terms',
+        '/contact',
+        '/blog',
         '/science',
         '/agents',
-        '/test-ai'  // AI test page (no auth required)
+        '/test-ai',
+        '/tribe/verify',     // external tribe-member verification links (no account needed)
     ];
-    const isPublicRoute = publicRoutes.some(route => 
-        request.nextUrl.pathname.startsWith(route)
+
+    // Exact match for "/" but startsWith for everything else
+    const isPublicRoute = publicRoutes.some((route) =>
+        route === '/' ? pathname === '/' : pathname.startsWith(route)
     );
-    
+
     if (isPublicRoute) {
         return NextResponse.next();
     }
-    
-    // If not authenticated, redirect to login
+
+    // ── 2. Unauthenticated → redirect to /login ─────────────────────
     if (!token) {
-        if (request.nextUrl.pathname !== '/login' && request.nextUrl.pathname !== '/signup') {
-            const loginUrl = new URL('/login', request.url);
-            loginUrl.searchParams.set('callbackUrl', request.nextUrl.pathname);
-            return NextResponse.redirect(loginUrl);
-        }
+        const loginUrl = new URL('/login', request.url);
+        loginUrl.searchParams.set('callbackUrl', pathname);
+        return NextResponse.redirect(loginUrl);
+    }
+
+    // ── 3. Authenticated – allow onboarding & echo unconditionally ──
+    if (pathname.startsWith('/onboarding') || pathname.startsWith('/echo')) {
         return NextResponse.next();
     }
-    
-    // User is authenticated
-    const user = token.user as { is_verified?: boolean; [key: string]: unknown };
-    
-    // Allow access to onboarding and echo for authenticated users
-    if (request.nextUrl.pathname.startsWith('/onboarding') || 
-        request.nextUrl.pathname.startsWith('/echo')) {
-        return NextResponse.next();
-    }
-    
-    // For all other protected routes, require phone verification (THE GATE)
-    if (!user?.is_verified) {
+
+    // ── 4. Onboarding gate — redirect to /onboarding if not complete ─
+    //    token.onboardingCompleted is set by the NextAuth jwt() callback
+    if (!token.onboardingCompleted) {
         return NextResponse.redirect(new URL('/onboarding', request.url));
     }
-    
+
+    // ── 5. Fully authenticated + onboarded → allow ──────────────────
     return NextResponse.next();
 }
 

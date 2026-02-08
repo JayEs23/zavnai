@@ -1,52 +1,40 @@
-export type CapacityLevel = 'high' | 'moderate' | 'restricted' | 'none';
-
-export interface OnboardingProfile {
-  firstName: string;
-  middleName: string;
-  lastName: string;
-  pronouns: string;
-  username: string;
-  goal: string;
-  successCriteria: string;
-  targetDate: string;
-  patterns: string[];
-  tribe: TribeMember[];
-  capacity: Record<string, CapacityLevel>;
-  verification: string[];
-  subscriptionSelected: boolean;
-  interactionMode: 'voice' | 'text';
+export interface EchoAgentConfig {
+  model: string;
+  api_version: string;
+  system_instruction: string;
 }
 
-export interface TribeMember {
-  name: string;
-  relationship: 'Friend' | 'Colleague' | 'Partner';
-  contact: string;
+export interface EchoAPIResponse {
+  onboarding: EchoAgentConfig;
+  reflection: EchoAgentConfig;
 }
 
-export interface OnboardingStepProps {
-  profile: OnboardingProfile;
-  setProfile: React.Dispatch<React.SetStateAction<OnboardingProfile>>;
-  onNext: () => void;
-  onPrev: () => void;
+export interface UserProfile {
+  gap?: string;
+  friction?: string;
+  rhythm?: string;
+  persona?: string;
+  supportSystem?: string;
+  completed?: boolean;
+  whatWorked?: string;
+  blocker?: string;
+  nextStep?: string;
 }
 
-/**
- * Structured onboarding response with full context for AI models
- */
-export interface StructuredOnboardingResponse {
-  step: number;
-  stepName: string;
-  stepTitle: string;
-  question: string;
-  questionContext?: string;
-  responseType: 'single_choice' | 'multiple_choice' | 'text' | 'date' | 'grid' | 'list' | 'boolean';
-  response: any;
-  responseMetadata?: {
-    options?: string[];
-    labels?: Record<string, string>;
-    units?: string | Record<string, string>;
-    format?: string;
-  };
-  timestamp: string;
-  additionalContext?: Record<string, any>;
+export enum ConnectionStatus {
+  DISCONNECTED = 'disconnected',
+  CONNECTING = 'connecting',
+  CONNECTED = 'connected',
+  ERROR = 'error',
+}
+
+export enum SessionState {
+  ACTIVE = 'active',
+  COMPLETED = 'completed',
+}
+
+export interface Message {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
 }

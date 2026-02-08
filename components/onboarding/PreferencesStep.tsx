@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { MdSchedule, MdPhone, MdEmail, MdNotifications, MdCheckCircle } from 'react-icons/md';
+import { MdSchedule, MdPhone, MdEmail, MdNotifications, MdCheckCircle, MdLock } from 'react-icons/md';
 import { ExtractedProfile } from '@/services/entityExtraction';
 
 interface PreferencesStepProps {
@@ -35,9 +35,12 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
     call_window_start: defaults.start,
     call_window_end: defaults.end,
     escalation_preference: extractedProfile.vibe_score >= 7 ? 'hard' : 'soft',
-    communication_channel: 'call',
+    communication_channel: 'email',
     echo_vibe: 'balanced',
   });
+
+  // Premium channels require phone verification + subscription
+  const premiumChannels = ['call', 'sms', 'whatsapp'] as const;
 
   const handleSubmit = () => {
     onComplete(preferences);
@@ -158,24 +161,42 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
               </div>
               <div>
                 <h3 className="text-lg font-semibold text-foreground">Preferred Channel</h3>
-                <p className="text-sm text-muted-foreground">How would you like us to contact you?</p>
+                <p className="text-sm text-muted-foreground">How would you like us to notify you about your commitments?</p>
               </div>
             </div>
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-12">
-              {(['call', 'sms', 'whatsapp', 'email'] as const).map((channel) => (
-                <button
-                  key={channel}
-                  onClick={() => setPreferences({ ...preferences, communication_channel: channel })}
-                  className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all capitalize ${
-                    preferences.communication_channel === channel
-                      ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
-                      : 'border-border bg-white text-foreground hover:border-primary/30'
-                  }`}
-                >
-                  {channel}
-                </button>
+              {/* Email - free, always available */}
+              <button
+                onClick={() => setPreferences({ ...preferences, communication_channel: 'email' })}
+                className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all ${
+                  preferences.communication_channel === 'email'
+                    ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                    : 'border-border bg-white text-foreground hover:border-primary/30'
+                }`}
+              >
+                Email
+              </button>
+
+              {/* Premium channels - call, sms, whatsapp */}
+              {(['call', 'sms', 'whatsapp'] as const).map((channel) => (
+                <div key={channel} className="relative">
+                  <button
+                    disabled
+                    className="w-full py-3 px-4 border-2 border-border rounded-xl text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed capitalize opacity-60"
+                  >
+                    {channel}
+                  </button>
+                  <span className="absolute -top-2 -right-2 flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full border border-amber-200">
+                    <MdLock size={10} />
+                    PRO
+                  </span>
+                </div>
               ))}
             </div>
+            <p className="text-xs text-muted-foreground pl-12">
+              📱 Phone calls, SMS, and WhatsApp notifications are available with a Pro subscription. 
+              You can enable them anytime in <strong>Settings → Notifications</strong> after verifying your phone number.
+            </p>
           </div>
 
           {/* Echo Vibe */}
