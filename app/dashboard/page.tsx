@@ -13,12 +13,16 @@ import {
   MdEmojiEvents,
   MdFavorite,
   MdPeople,
+  MdSmartToy,
+  MdClose,
 } from 'react-icons/md';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DoynChat } from '@/components/dashboard/DoynChat';
+import { CommitmentsSidebar } from '@/components/dashboard/CommitmentsSidebar';
 
 interface GrowthMetrics {
   streak_days: number;
@@ -45,6 +49,8 @@ export default function DashboardPage() {
     recent_insight: null,
   });
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showDoynChat, setShowDoynChat] = useState(false);
+  const [commitmentRefresh, setCommitmentRefresh] = useState(0);
 
   // Check onboarding status — redirect if not onboarded
   useEffect(() => {
@@ -328,29 +334,48 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {todaysCommitments.map((commitment) => (
-                <Link
-                  key={commitment.id}
-                  href={`/echo/reflect/${commitment.id}`}
-                  className="block bg-white rounded-2xl border border-border p-5 hover:shadow-md transition-all"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-1.5">
-                        <span className={`px-3 py-0.5 rounded-full text-xs font-medium ${getCommitmentStatusColor(commitment.status)}`}>
-                          {commitment.status}
-                        </span>
-                        <span className="text-sm text-muted-foreground">{commitment.goal_title}</span>
+              {todaysCommitments.map((commitment) => {
+                const dueDate = new Date(commitment.due_at);
+                const hoursLeft = (dueDate.getTime() - Date.now()) / (1000 * 60 * 60);
+                const isUrgent = hoursLeft > 0 && hoursLeft < 2;
+                const isOverdue = hoursLeft <= 0 && commitment.status === 'pending';
+
+                return (
+                  <Link
+                    key={commitment.id}
+                    href={`/doyn/${commitment.goal_id}`}
+                    className={`block bg-white rounded-2xl border p-5 hover:shadow-md transition-all ${
+                      isOverdue ? 'border-red-300 bg-red-50/30' : isUrgent ? 'border-amber-300 bg-amber-50/30' : 'border-border'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-3 mb-1.5">
+                          <span className={`px-3 py-0.5 rounded-full text-xs font-medium ${getCommitmentStatusColor(commitment.status)}`}>
+                            {commitment.status}
+                          </span>
+                          <span className="text-sm text-muted-foreground">{commitment.goal_title}</span>
+                          {isOverdue && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 animate-pulse">
+                              OVERDUE
+                            </span>
+                          )}
+                          {isUrgent && !isOverdue && (
+                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-600">
+                              DUE SOON
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-base font-semibold text-foreground mb-1">{commitment.task_detail}</h3>
+                        <p className="text-sm text-muted-foreground">
+                          Due: {dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </p>
                       </div>
-                      <h3 className="text-base font-semibold text-foreground mb-1">{commitment.task_detail}</h3>
-                      <p className="text-sm text-muted-foreground">
-                        Due: {new Date(commitment.due_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </p>
+                      <span className="text-sm text-primary font-medium whitespace-nowrap ml-4">Chat with Doyn →</span>
                     </div>
-                    <span className="text-sm text-primary font-medium whitespace-nowrap ml-4">Reflect →</span>
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>
@@ -427,6 +452,23 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
+        </section>
+
+        {/* Doyn Chat + Commitments Side-by-Side */}
+        <section>
+          <h2 className="text-xl font-bold text-foreground mb-4">Doyn &amp; Commitments</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+            {/* Doyn Chat — takes 3 cols */}
+            <div className="lg:col-span-3 bg-white rounded-2xl border border-border shadow-sm overflow-hidden" style={{ height: '520px' }}>
+              <DoynChat
+                onCommitmentUpdate={() => setCommitmentRefresh((n) => n + 1)}
+              />
+            </div>
+            {/* Commitments Sidebar — takes 2 cols */}
+            <div className="lg:col-span-2 bg-white rounded-2xl border border-border shadow-sm overflow-hidden" style={{ height: '520px' }}>
+              <CommitmentsSidebar refreshTrigger={commitmentRefresh} />
+            </div>
+          </div>
         </section>
 
         {/* Quick Actions / Learning Section */}

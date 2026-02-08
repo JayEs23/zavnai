@@ -10,6 +10,7 @@ import TribeForm, { TribeMember } from '@/components/onboarding/TribeForm';
 import PreferencesStep, { UserPreferences } from '@/components/onboarding/PreferencesStep';
 import { onboardingApi } from '@/services/onboardingApi';
 import { api } from '@/lib/api';
+import { goalsApi } from '@/services/goalsApi';
 import { getAgentMonitor } from '@/lib/opik/agent-monitor';
 import { opikTracker } from '@/lib/opik/client-tracker';
 import { ExtractedProfile } from '@/services/entityExtraction';
@@ -183,7 +184,7 @@ export default function OnboardingPage() {
       // Ensure title is not empty (handle empty string case)
       const goalTitle = extractedProfile?.primary_goal?.trim() || "My First Goal";
       
-      await api.post('/api/onboarding/complete', {
+      const onboardingResult = await api.post<{ status: string; goal_id: string }>('/api/onboarding/complete', {
         goal: {
           title: goalTitle,
           description: extractedProfile?.core_friction?.trim() || "",
@@ -199,6 +200,16 @@ export default function OnboardingPage() {
         preferences: safePreferences,
         insights: voiceInsights // Pass Echo insights to be stored in Goal.metadata_json
       });
+
+      // 1b. Auto-generate initial commitments so the dashboard isn't empty
+      if (onboardingResult.goal_id) {
+        try {
+          await goalsApi.generateCommitments(onboardingResult.goal_id, 3);
+          console.log('✓ Initial commitments generated for goal', onboardingResult.goal_id);
+        } catch (commitErr) {
+          console.warn('Initial commitment generation skipped (non-critical):', commitErr);
+        }
+      }
 
       // 2. Update the NextAuth session to reflect onboarding completion
       // This ensures the JWT token has onboardingCompleted: true for middleware/guards

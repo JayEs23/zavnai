@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { goalsApi, type Goal, type Commitment } from '@/services/goalsApi';
-import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdEdit, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
+import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import AppNavbar from '@/components/AppNavbar';
 
@@ -21,8 +21,8 @@ export default function GoalsPage() {
       setLoading(true);
       const data = await goalsApi.getGoals();
       setGoals(data);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load goals');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to load goals');
     } finally {
       setLoading(false);
     }
@@ -40,8 +40,8 @@ export default function GoalsPage() {
       await goalsApi.archiveGoal(goalId);
       toast.success('Goal archived successfully');
       loadGoals();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to archive goal');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to archive goal');
     }
   };
 
@@ -52,8 +52,25 @@ export default function GoalsPage() {
       await goalsApi.completeGoal(goalId);
       toast.success('🎉 Goal completed! Stake returned.');
       loadGoals();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to complete goal');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to complete goal');
+    }
+  };
+
+  const handleStakeGoal = async (goalId: string) => {
+    const input = prompt('How much do you want to stake? ($5 – $10,000)');
+    if (!input) return;
+    const amount = parseFloat(input);
+    if (isNaN(amount) || amount < 5 || amount > 10000) {
+      toast.error('Stake must be between $5 and $10,000');
+      return;
+    }
+    try {
+      await goalsApi.stakeGoal(goalId, amount);
+      toast.success(`$${amount.toFixed(2)} staked! The Vault is active.`);
+      loadGoals();
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to stake goal');
     }
   };
 
@@ -131,6 +148,7 @@ export default function GoalsPage() {
                 goal={goal}
                 onArchive={handleArchiveGoal}
                 onComplete={handleCompleteGoal}
+                onStake={handleStakeGoal}
                 onRefresh={loadGoals}
               />
             ))}
@@ -160,10 +178,11 @@ interface GoalCardProps {
   goal: Goal;
   onArchive: (goalId: string) => void;
   onComplete: (goalId: string) => void;
+  onStake: (goalId: string) => void;
   onRefresh: () => void;
 }
 
-function GoalCard({ goal, onArchive, onComplete, onRefresh }: GoalCardProps) {
+function GoalCard({ goal, onArchive, onComplete, onStake, onRefresh: _onRefresh }: GoalCardProps) {
   const [showDetails, setShowDetails] = useState(false);
   const [commitments, setCommitments] = useState<Commitment[]>([]);
   const [loadingCommitments, setLoadingCommitments] = useState(false);
@@ -274,6 +293,15 @@ function GoalCard({ goal, onArchive, onComplete, onRefresh }: GoalCardProps) {
         
         {goal.status === 'active' && (
           <>
+            {!goal.is_staked && (
+              <button
+                onClick={() => onStake(goal.id)}
+                className="px-3 py-2 text-sm font-medium text-amber-500 hover:bg-amber-500/10 rounded transition-colors"
+                title="Add financial stake"
+              >
+                <MdAttachMoney size={20} />
+              </button>
+            )}
             <button
               onClick={() => onComplete(goal.id)}
               className="px-3 py-2 text-sm font-medium text-green-500 hover:bg-green-500/10 rounded transition-colors"
@@ -374,16 +402,27 @@ function CreateGoalModal({ onClose, onSuccess }: CreateGoalModalProps) {
 
     try {
       setLoading(true);
-      await goalsApi.createGoal({
+      const result = await goalsApi.createGoal({
         goal: formData.goal,
         deadline: new Date(formData.deadline).toISOString(),
         financial_stake: formData.financial_stake,
         common_excuses: validExcuses,
       });
-      toast.success('Goal created successfully!');
+
+      // Auto-generate initial commitments so the goal isn't empty
+      if (result.goal_id) {
+        try {
+          await goalsApi.generateCommitments(result.goal_id, 3);
+          toast.success('Goal created with initial commitments!');
+        } catch {
+          toast.success('Goal created! Chat with Doyn to add commitments.');
+        }
+      } else {
+        toast.success('Goal created successfully!');
+      }
       onSuccess();
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to create goal');
+    } catch (error: unknown) {
+      toast.error(error instanceof Error ? error.message : 'Failed to create goal');
     } finally {
       setLoading(false);
     }

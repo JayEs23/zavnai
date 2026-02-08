@@ -117,4 +117,19 @@ export const goalsApi = {
   async completeGoal(goalId: string): Promise<{ success: boolean; message: string }> {
     return api.put(`/api/v1/goals/${goalId}/complete`);
   },
+
+  /** Auto-generate commitments for a goal using Doyn AI */
+  async generateCommitments(goalId: string, count = 3): Promise<{
+    success: boolean;
+    goal_id: string;
+    commitments_created: number;
+    commitments: { id: string; task_detail: string; due_at: string }[];
+  }> {
+    return api.post(`/api/v1/goals/${goalId}/generate-commitments`, { count });
+  },
+
+  /** Add a financial stake to an existing goal */
+  async stakeGoal(goalId: string, amount: number): Promise<{ success: boolean; message: string; payment_intent_id?: string }> {
+    return api.post(`/api/v1/goals/${goalId}/stake`, { amount });
+  },
 };
