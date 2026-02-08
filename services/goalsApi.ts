@@ -1,5 +1,15 @@
 import { api } from '@/lib/api';
 
+// ── Types ──────────────────────────────────────────────────────────────
+
+export interface GoalInsights {
+  goals?: string[];
+  motivation?: string;
+  implementation_style?: string;
+  blockers?: string[];
+  common_excuses?: string[];
+}
+
 export interface GoalSummary {
   id: string;
   title: string;
@@ -8,13 +18,36 @@ export interface GoalSummary {
   status: string;
   stake_amount: number;
   created_at: string;
-  insights?: {
-    goals?: string[];
-    motivation?: string;
-    implementation_style?: string;
-    blockers?: string[];
-    common_excuses?: string[];
-  };
+  insights?: GoalInsights;
+}
+
+/** Extended Goal type used by the goals management page */
+export interface Goal {
+  id: string;
+  title: string;
+  description?: string;
+  deadline: string;
+  status: 'active' | 'completed' | 'failed' | 'paused' | 'archived';
+  is_staked: boolean;
+  stake_amount: number;
+  stake_currency: string;
+  vault_status: string;
+  created_at: string;
+  insights?: GoalInsights;
+}
+
+export interface Commitment {
+  id: string;
+  goal_id: string;
+  task_detail: string;
+  due_at: string;
+  status: 'pending' | 'verified' | 'escalated' | 'failed' | 'missed';
+  escalation_level?: number;
+  verification_score?: number;
+  proof_url?: string;
+  proof_text?: string;
+  created_at: string;
+  verified_at?: string;
 }
 
 export interface CommitmentSummary {
@@ -24,27 +57,64 @@ export interface CommitmentSummary {
   task_detail: string;
   due_at: string;
   status: string;
+  escalation_level: number;
+  verification_score?: number;
   created_at: string;
 }
 
+export interface CreateGoalRequest {
+  goal: string;
+  deadline: string;
+  financial_stake: number;
+  common_excuses: string[];
+  transcript?: string;
+}
+
+// ── API ────────────────────────────────────────────────────────────────
+
 export const goalsApi = {
+  /** List all goals (lightweight summary for dashboard) */
   async list(): Promise<GoalSummary[]> {
-    const response = await api.get<GoalSummary[]>('/api/v1/goals/list');
-    return response;
+    return api.get<GoalSummary[]>('/api/v1/goals/list');
   },
 
+  /** Get a single goal by ID */
   async get(goalId: string): Promise<GoalSummary> {
-    const response = await api.get<GoalSummary>(`/api/v1/goals/${goalId}`);
-    return response;
+    return api.get<GoalSummary>(`/api/v1/goals/${goalId}`);
   },
 
+  /** List all goals (full Goal type for goals page) */
+  async getGoals(): Promise<Goal[]> {
+    return api.get<Goal[]>('/api/v1/goals/list');
+  },
+
+  /** Get commitments for a specific goal */
   async getCommitments(goalId: string): Promise<CommitmentSummary[]> {
-    const response = await api.get<CommitmentSummary[]>(`/api/v1/goals/${goalId}/commitments`);
-    return response;
+    return api.get<CommitmentSummary[]>(`/api/v1/goals/${goalId}/commitments`);
   },
 
+  /** Alias used by goals page */
+  async getGoalCommitments(goalId: string): Promise<Commitment[]> {
+    return api.get<Commitment[]>(`/api/v1/goals/${goalId}/commitments`);
+  },
+
+  /** Get today's commitments across all goals */
   async getTodaysCommitments(): Promise<CommitmentSummary[]> {
-    const response = await api.get<CommitmentSummary[]>('/api/v1/goals/commitments/today');
-    return response;
+    return api.get<CommitmentSummary[]>('/api/v1/goals/commitments/today');
+  },
+
+  /** Create a new goal (via Echo contract ingestion) */
+  async createGoal(data: CreateGoalRequest): Promise<{ success: boolean; goal_id: string; message: string }> {
+    return api.post('/api/v1/goals/ingest-contract', data);
+  },
+
+  /** Archive a goal */
+  async archiveGoal(goalId: string): Promise<{ success: boolean; message: string }> {
+    return api.put(`/api/v1/goals/${goalId}/archive`);
+  },
+
+  /** Mark a goal as completed */
+  async completeGoal(goalId: string): Promise<{ success: boolean; message: string }> {
+    return api.put(`/api/v1/goals/${goalId}/complete`);
   },
 };

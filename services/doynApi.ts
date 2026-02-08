@@ -2,7 +2,6 @@
  * Doyn API - Chat-based negotiation and commitment management
  */
 
-import axios from 'axios';
 import axiosInstance, { getApiErrorMessage } from '@/lib/axios';
 
 export interface Commitment {
@@ -58,11 +57,11 @@ export interface NegotiationResponse {
 class DoynApi {
 
   /**
-   * Get all active commitments for the user
+   * Get all active commitments for the user (via goals endpoint)
    */
   async getCommitments(): Promise<Commitment[]> {
     try {
-      const response = await axiosInstance.get('/api/commitments');
+      const response = await axiosInstance.get('/api/v1/goals/commitments/today');
       return response.data;
     } catch (error) {
       console.error('[DoynApi] Error fetching commitments:', error);
@@ -75,7 +74,7 @@ class DoynApi {
    */
   async getGoals(): Promise<Goal[]> {
     try {
-      const response = await axiosInstance.get('/api/goals');
+      const response = await axiosInstance.get('/api/v1/goals/list');
       return response.data;
     } catch (error) {
       console.error('[DoynApi] Error fetching goals:', error);
@@ -91,7 +90,7 @@ class DoynApi {
     context?: Record<string, unknown>
   ): Promise<DoynMessage> {
     try {
-      const response = await axiosInstance.post('/api/doyn/chat', {
+      const response = await axiosInstance.post('/api/agents/doyn/chat', {
         message,
         context,
       });
@@ -107,7 +106,7 @@ class DoynApi {
    */
   async negotiateCommitment(request: NegotiationRequest): Promise<NegotiationResponse> {
     try {
-      const response = await axiosInstance.post('/api/doyn/negotiate', request);
+      const response = await axiosInstance.post('/api/agents/doyn/negotiate', request);
       return response.data;
     } catch (error) {
       console.error('[DoynApi] Error negotiating commitment:', error);
@@ -120,8 +119,8 @@ class DoynApi {
    */
   async completeCommitment(commitmentId: string, proofText?: string): Promise<void> {
     try {
-      await axiosInstance.post(`/api/commitments/${commitmentId}/complete`, { 
-        proof_text: proofText 
+      await axiosInstance.post(`/api/v1/goals/commitments/${commitmentId}/complete`, {
+        proof_text: proofText,
       });
     } catch (error) {
       console.error('[DoynApi] Error completing commitment:', error);
@@ -134,14 +133,26 @@ class DoynApi {
    */
   async getChatHistory(limit: number = 50): Promise<DoynMessage[]> {
     try {
-      const response = await axiosInstance.get(`/api/doyn/history?limit=${limit}`);
+      const response = await axiosInstance.get(`/api/agents/doyn/history?limit=${limit}`);
       return response.data;
     } catch (error) {
       console.error('[DoynApi] Error fetching chat history:', error);
       return [];
     }
   }
+
+  /**
+   * Get chat history for a specific goal
+   */
+  async getGoalChatHistory(goalId: string, limit: number = 20): Promise<DoynMessage[]> {
+    try {
+      const response = await axiosInstance.get(`/api/agents/doyn/history/${goalId}?limit=${limit}`);
+      return response.data;
+    } catch (error) {
+      console.error('[DoynApi] Error fetching goal chat history:', error);
+      return [];
+    }
+  }
 }
 
 export const doynApi = new DoynApi();
-
