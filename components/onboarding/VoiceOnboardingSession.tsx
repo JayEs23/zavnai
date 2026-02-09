@@ -18,6 +18,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { GoogleGenAI, Modality, Type } from '@google/genai';
+import type { FunctionDeclaration, Schema, Session } from '@google/genai';
 import { MdMic, MdMicOff, MdSend, MdVolumeUp, MdKeyboard } from 'react-icons/md';
 import { useSession } from 'next-auth/react';
 import { onboardingApi, EchoVoiceConfig } from '@/services/onboardingApi';
@@ -34,7 +35,7 @@ interface VoiceOnboardingSessionProps {
 
 // ─── Tool declarations for Echo profile extraction ───────────────────────────
 
-const ECHO_TOOLS = [
+const ECHO_TOOLS: FunctionDeclaration[] = [
   {
     name: 'update_session_data',
     description:
@@ -47,14 +48,14 @@ const ECHO_TOOLS = [
         rhythm: { type: Type.STRING, description: 'Inferred energy pattern (e.g. "morning fatigue", "night owl")' },
         persona: { type: Type.STRING, description: 'Professional context (developer, executive, student, etc.)' },
         supportSystem: { type: Type.STRING, description: 'Their accountability person or system' },
-      },
+      } as Record<string, Schema>,
     },
   },
   {
     name: 'complete_session',
     description:
       'Call this when you have gathered enough information and the conversation is wrapping up naturally. This ends the onboarding session.',
-    parameters: { type: Type.OBJECT, properties: {} },
+    parameters: { type: Type.OBJECT, properties: {} as Record<string, Schema> },
   },
 ];
 
@@ -109,9 +110,9 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
   const transcriptRef = useRef<{ user: string; assistant: string }>({ user: '', assistant: '' });
 
   // Live session ref
-  const liveSessionRef = useRef<ReturnType<typeof Promise.resolve> | null>(null);
+  const liveSessionRef = useRef<Session | null>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const sessionPromiseRef = useRef<Promise<any> | null>(null);
+  const sessionPromiseRef = useRef<Promise<Session> | null>(null);
 
   // ─── Audio helpers ────────────────────────────────────────────────────────
 

@@ -38,7 +38,7 @@ export async function POST(req: NextRequest) {
 
     // Import Opik only on server side
     try {
-      const { default: Opik } = await import('opik');
+      const { Opik } = await import('opik');
       
       const client = new Opik({
         apiKey: process.env.OPIK_API_KEY,

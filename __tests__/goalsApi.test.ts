@@ -14,7 +14,7 @@ describe('Goals API', () => {
     (fetch as jest.Mock).mockClear();
   });
 
-  describe('fetchGoals', () => {
+  describe('getGoals', () => {
     it('should fetch goals successfully', async () => {
       const mockGoals = [
         {
@@ -29,10 +29,10 @@ describe('Goals API', () => {
         json: async () => mockGoals,
       });
 
-      const result = await goalsApi.fetchGoals();
+      const result = await goalsApi.getGoals();
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/goals'),
+        expect.stringContaining('/api/v1/goals/list'),
         expect.objectContaining({
           method: 'GET',
         })
@@ -46,7 +46,7 @@ describe('Goals API', () => {
         statusText: 'Internal Server Error',
       });
 
-      await expect(goalsApi.fetchGoals()).rejects.toThrow();
+      await expect(goalsApi.getGoals()).rejects.toThrow();
     });
   });
 
@@ -99,14 +99,12 @@ describe('Goals API', () => {
     });
   });
 
-  describe('updateGoal', () => {
-    it('should update goal successfully', async () => {
+  describe('completeGoal', () => {
+    it('should mark goal as completed successfully', async () => {
       const goalId = '123';
-      const updates = { status: 'completed' };
-
       const mockResponse = {
-        id: goalId,
-        status: 'completed',
+        success: true,
+        message: 'Goal completed',
       };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
@@ -114,21 +112,20 @@ describe('Goals API', () => {
         json: async () => mockResponse,
       });
 
-      const result = await goalsApi.updateGoal(goalId, updates);
+      const result = await goalsApi.completeGoal(goalId);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/goals/${goalId}`),
+        expect.stringContaining(`/api/v1/goals/${goalId}/complete`),
         expect.objectContaining({
-          method: 'PATCH',
-          body: JSON.stringify(updates),
+          method: 'PUT',
         })
       );
       expect(result).toEqual(mockResponse);
     });
   });
 
-  describe('deleteGoal', () => {
-    it('should delete goal successfully', async () => {
+  describe('archiveGoal', () => {
+    it('should archive goal successfully', async () => {
       const goalId = '123';
 
       (fetch as jest.Mock).mockResolvedValueOnce({
@@ -136,18 +133,18 @@ describe('Goals API', () => {
         json: async () => ({ success: true }),
       });
 
-      await goalsApi.deleteGoal(goalId);
+      await goalsApi.archiveGoal(goalId);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/goals/${goalId}`),
+        expect.stringContaining(`/api/v1/goals/${goalId}/archive`),
         expect.objectContaining({
-          method: 'DELETE',
+          method: 'PUT',
         })
       );
     });
   });
 
-  describe('fetchCommitments', () => {
+  describe('getCommitments', () => {
     it('should fetch commitments for goal', async () => {
       const goalId = '123';
       const mockCommitments = [
@@ -163,27 +160,27 @@ describe('Goals API', () => {
         json: async () => mockCommitments,
       });
 
-      const result = await goalsApi.fetchCommitments(goalId);
+      const result = await goalsApi.getCommitments(goalId);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/goals/${goalId}/commitments`),
+        expect.stringContaining(`/api/v1/goals/${goalId}/commitments`),
         expect.any(Object)
       );
       expect(result).toEqual(mockCommitments);
     });
   });
 
-  describe('createCommitment', () => {
-    it('should create commitment successfully', async () => {
+  describe('generateCommitments', () => {
+    it('should generate commitments successfully', async () => {
       const goalId = '123';
-      const commitmentData = {
-        task_detail: 'Complete first draft',
-        due_at: '2026-03-01T10:00:00Z',
-      };
-
       const mockResponse = {
-        id: 'c1',
-        ...commitmentData,
+        success: true,
+        goal_id: goalId,
+        commitments_created: 2,
+        commitments: [
+          { id: 'c1', task_detail: 'Complete first draft', due_at: '2026-03-01T10:00:00Z' },
+          { id: 'c2', task_detail: 'Review and edit', due_at: '2026-03-05T10:00:00Z' },
+        ],
       };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
@@ -191,12 +188,13 @@ describe('Goals API', () => {
         json: async () => mockResponse,
       });
 
-      const result = await goalsApi.createCommitment(goalId, commitmentData);
+      const result = await goalsApi.generateCommitments(goalId, 2);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/goals/${goalId}/commitments`),
+        expect.stringContaining(`/api/v1/goals/${goalId}/generate-commitments`),
         expect.objectContaining({
           method: 'POST',
+          body: JSON.stringify({ count: 2 }),
         })
       );
       expect(result).toEqual(mockResponse);

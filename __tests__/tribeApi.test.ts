@@ -4,7 +4,7 @@
  * Tests all API calls related to tribe member management.
  */
 
-import { tribeApi } from '@/services/tribeApi';
+import { tribeApi, type CreateTribeMemberRequest } from '@/services/tribeApi';
 
 // Mock fetch
 global.fetch = jest.fn();
@@ -14,7 +14,7 @@ describe('Tribe API', () => {
     (fetch as jest.Mock).mockClear();
   });
 
-  describe('fetchTribeMembers', () => {
+  describe('getTribeMembers', () => {
     it('should fetch tribe members successfully', async () => {
       const mockMembers = [
         {
@@ -30,10 +30,10 @@ describe('Tribe API', () => {
         json: async () => mockMembers,
       });
 
-      const result = await tribeApi.fetchTribeMembers();
+      const result = await tribeApi.getTribeMembers();
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/tribe'),
+        expect.stringContaining('/api/tribe'),
         expect.objectContaining({
           method: 'GET',
         })
@@ -47,13 +47,13 @@ describe('Tribe API', () => {
         statusText: 'Internal Server Error',
       });
 
-      await expect(tribeApi.fetchTribeMembers()).rejects.toThrow();
+      await expect(tribeApi.getTribeMembers()).rejects.toThrow();
     });
   });
 
   describe('addTribeMember', () => {
     it('should add tribe member successfully', async () => {
-      const memberData = {
+      const memberData: CreateTribeMemberRequest = {
         name: 'Jane Smith',
         contact_info: '+11234567890',
         platform: 'whatsapp',
@@ -74,7 +74,7 @@ describe('Tribe API', () => {
       const result = await tribeApi.addTribeMember(memberData);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining('/tribe'),
+        expect.stringContaining('/api/tribe'),
         expect.objectContaining({
           method: 'POST',
           body: JSON.stringify(memberData),
@@ -84,7 +84,7 @@ describe('Tribe API', () => {
     });
 
     it('should handle duplicate member error', async () => {
-      const memberData = {
+      const memberData: CreateTribeMemberRequest = {
         name: 'Existing Member',
         contact_info: '+11234567890',
         platform: 'whatsapp',
@@ -119,9 +119,9 @@ describe('Tribe API', () => {
       const result = await tribeApi.updateTribeMember(memberId, updates);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/tribe/${memberId}`),
+        expect.stringContaining(`/api/tribe/${memberId}`),
         expect.objectContaining({
-          method: 'PATCH',
+          method: 'PUT',
           body: JSON.stringify(updates),
         })
       );
@@ -141,7 +141,7 @@ describe('Tribe API', () => {
       await tribeApi.removeTribeMember(memberId);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/tribe/${memberId}`),
+        expect.stringContaining(`/api/tribe/${memberId}`),
         expect.objectContaining({
           method: 'DELETE',
         })
@@ -149,16 +149,18 @@ describe('Tribe API', () => {
     });
   });
 
-  describe('updateVettingStatus', () => {
-    it('should update vetting status successfully', async () => {
+  describe('updateTrustScore', () => {
+    it('should update trust score successfully', async () => {
       const memberId = '123';
-      const status = 'approved';
-      const trustScore = 90;
+      const update = {
+        interaction_type: 'message_sent',
+        interaction_outcome: 'positive',
+      };
 
       const mockResponse = {
         id: memberId,
-        vetting_status: status,
-        trust_score: trustScore,
+        vetting_status: 'verified',
+        vetting_score: 90,
       };
 
       (fetch as jest.Mock).mockResolvedValueOnce({
@@ -166,16 +168,13 @@ describe('Tribe API', () => {
         json: async () => mockResponse,
       });
 
-      const result = await tribeApi.updateVettingStatus(
-        memberId,
-        status,
-        trustScore
-      );
+      const result = await tribeApi.updateTrustScore(memberId, update);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/tribe/${memberId}/vetting-status`),
+        expect.stringContaining(`/api/tribe/${memberId}/trust-score`),
         expect.objectContaining({
-          method: 'PATCH',
+          method: 'POST',
+          body: JSON.stringify(update),
         })
       );
       expect(result).toEqual(mockResponse);
@@ -194,7 +193,7 @@ describe('Tribe API', () => {
       const result = await tribeApi.resendVetting(memberId);
 
       expect(fetch).toHaveBeenCalledWith(
-        expect.stringContaining(`/tribe/${memberId}/resend-vetting`),
+        expect.stringContaining(`/api/tribe/${memberId}/resend-vetting`),
         expect.objectContaining({
           method: 'POST',
         })

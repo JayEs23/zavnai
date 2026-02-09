@@ -12,8 +12,8 @@ interface VoicePulseProps {
 
 export function VoicePulse({ analyser, isActive, hasContradiction = false, className = '' }: VoicePulseProps) {
   const [audioLevel, setAudioLevel] = useState(0);
-  const animationFrameRef = useRef<number>();
-  const dataArrayRef = useRef<Uint8Array>();
+  const animationFrameRef = useRef<number | null>(null);
+  const dataArrayRef = useRef<Uint8Array<ArrayBuffer> | null>(null);
 
   // Smooth spring animation for the breathing effect
   const scale = useMotionValue(1);
@@ -34,7 +34,7 @@ export function VoicePulse({ analyser, isActive, hasContradiction = false, class
 
     const bufferLength = analyser.frequencyBinCount;
     if (!dataArrayRef.current) {
-      dataArrayRef.current = new Uint8Array(bufferLength);
+      dataArrayRef.current = new Uint8Array(bufferLength) as Uint8Array<ArrayBuffer>;
     }
 
     const updateAudioLevel = () => {

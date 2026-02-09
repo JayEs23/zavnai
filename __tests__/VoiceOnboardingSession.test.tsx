@@ -6,7 +6,6 @@
 
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { useSession } from 'next-auth/react';
 import VoiceOnboardingSession from '@/components/onboarding/VoiceOnboardingSession';
 
@@ -90,7 +89,6 @@ describe('VoiceOnboardingSession', () => {
 
   describe('Text Message Flow', () => {
     it('should send text message to backend and display response', async () => {
-      const user = userEvent.setup();
 
       // Mock successful API response
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -112,8 +110,8 @@ describe('VoiceOnboardingSession', () => {
       const sendButton = screen.getByRole('button', { name: /send/i });
 
       // Type and send message
-      await user.type(input, 'I want to launch my startup');
-      await user.click(sendButton);
+      fireEvent.change(input, { target: { value: 'I want to launch my startup' } });
+      fireEvent.click(sendButton);
 
       // Should display user message
       await waitFor(() => {
@@ -142,7 +140,6 @@ describe('VoiceOnboardingSession', () => {
     });
 
     it('should build conversation history correctly', async () => {
-      const user = userEvent.setup();
 
       // Mock multiple responses
       (global.fetch as jest.Mock)
@@ -171,17 +168,17 @@ describe('VoiceOnboardingSession', () => {
       const input = screen.getByPlaceholderText(/Type your message/i);
 
       // First message
-      await user.type(input, 'I want to launch a startup');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: 'I want to launch a startup' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       await waitFor(() => {
         expect(screen.getByText('I want to launch a startup')).toBeInTheDocument();
       });
 
       // Second message
-      await user.clear(input);
-      await user.type(input, 'A SaaS for developers');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: '' } });
+      fireEvent.change(input, { target: { value: 'A SaaS for developers' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       // Verify history was sent in second request
       await waitFor(() => {
@@ -196,7 +193,6 @@ describe('VoiceOnboardingSession', () => {
     });
 
     it('should handle API errors gracefully', async () => {
-      const user = userEvent.setup();
 
       // Mock API error
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -214,8 +210,8 @@ describe('VoiceOnboardingSession', () => {
 
       const input = screen.getByPlaceholderText(/Type your message/i);
       
-      await user.type(input, 'Hello');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       // Should call error handler
       await waitFor(() => {
@@ -224,7 +220,6 @@ describe('VoiceOnboardingSession', () => {
     });
 
     it('should not send empty messages', async () => {
-      const user = userEvent.setup();
 
       render(
         <VoiceOnboardingSession
@@ -235,14 +230,13 @@ describe('VoiceOnboardingSession', () => {
 
       const sendButton = screen.getByRole('button', { name: /send/i });
       
-      await user.click(sendButton);
+      fireEvent.click(sendButton);
 
       // Should not call API
       expect(global.fetch).not.toHaveBeenCalled();
     });
 
     it('should disable input while processing', async () => {
-      const user = userEvent.setup();
 
       // Mock slow API response
       (global.fetch as jest.Mock).mockImplementation(
@@ -261,8 +255,8 @@ describe('VoiceOnboardingSession', () => {
 
       const input = screen.getByPlaceholderText(/Type your message/i);
       
-      await user.type(input, 'Hello');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       // Input should be disabled while processing
       // (Note: You'd need to check the actual disabled state in your implementation)
@@ -272,7 +266,6 @@ describe('VoiceOnboardingSession', () => {
 
   describe('Session Completion', () => {
     it('should complete session when End Session clicked', async () => {
-      const user = userEvent.setup();
 
       // Mock complete-echo endpoint
       (global.fetch as jest.Mock).mockResolvedValueOnce({
@@ -288,7 +281,7 @@ describe('VoiceOnboardingSession', () => {
       );
 
       const endButton = screen.getByText(/End Session/i);
-      await user.click(endButton);
+      fireEvent.click(endButton);
 
       // Should call complete endpoint
       await waitFor(() => {
@@ -307,7 +300,6 @@ describe('VoiceOnboardingSession', () => {
     });
 
     it('should pass transcript and insights to onComplete', async () => {
-      const user = userEvent.setup();
 
       // Send a message first
       (global.fetch as jest.Mock)
@@ -329,8 +321,8 @@ describe('VoiceOnboardingSession', () => {
 
       const input = screen.getByPlaceholderText(/Type your message/i);
       
-      await user.type(input, 'Test message');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: 'Test message' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       await waitFor(() => {
         expect(screen.getByText('Test message')).toBeInTheDocument();
@@ -338,7 +330,7 @@ describe('VoiceOnboardingSession', () => {
 
       // End session
       const endButton = screen.getByText(/End Session/i);
-      await user.click(endButton);
+      fireEvent.click(endButton);
 
       // Should call onComplete with transcript and insights
       await waitFor(() => {
@@ -352,7 +344,6 @@ describe('VoiceOnboardingSession', () => {
 
   describe('Authentication', () => {
     it('should include auth token in API requests', async () => {
-      const user = userEvent.setup();
 
       (global.fetch as jest.Mock).mockResolvedValueOnce({
         ok: true,
@@ -368,8 +359,8 @@ describe('VoiceOnboardingSession', () => {
 
       const input = screen.getByPlaceholderText(/Type your message/i);
       
-      await user.type(input, 'Hello');
-      await user.click(screen.getByRole('button', { name: /send/i }));
+      fireEvent.change(input, { target: { value: 'Hello' } });
+      fireEvent.click(screen.getByRole('button', { name: /send/i }));
 
       await waitFor(() => {
         expect(global.fetch).toHaveBeenCalledWith(

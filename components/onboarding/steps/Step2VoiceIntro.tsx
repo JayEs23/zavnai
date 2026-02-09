@@ -1,6 +1,6 @@
 import React from 'react';
 import { MdPlayArrow, MdPause, MdChat, MdMic } from 'react-icons/md';
-import { OnboardingStepProps } from '../types';
+import { OnboardingStepProps, InteractionMode } from '../types';
 import { useTTS } from '../hooks/useTTS';
 import { NavigationButtons } from '../shared/NavigationButtons';
 
@@ -51,13 +51,13 @@ export function Step2VoiceIntro({ profile, setProfile, onNext, onPrev }: Onboard
         </div>
       </div>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-2xl mx-auto">
-        {[
+        {([
           { id: 'voice', icon: MdMic, title: 'Voice First', description: 'Real-time calibration via natural dialogue. Echo as a living mirror.' },
           { id: 'text', icon: MdChat, title: 'Text Focused', description: 'Traditional chat-based reflection. Precise, quiet, and deliberate.' }
-        ].map((mode) => (
+        ] as const).map((mode) => (
           <button
             key={mode.id}
-            onClick={() => setProfile(prev => ({ ...prev, interactionMode: mode.id as any }))}
+            onClick={() => setProfile(prev => ({ ...prev, interactionMode: mode.id as InteractionMode }))}
             className={`flex flex-col items-center p-8 rounded-[2rem] border-2 transition-all group ${profile.interactionMode === mode.id
               ? 'bg-[var(--primary)]/5 border-[var(--primary)] shadow-xl shadow-[var(--primary)]/10'
               : 'bg-[var(--card-bg)] border-[var(--border-subtle)] hover:border-[var(--primary)]/40'

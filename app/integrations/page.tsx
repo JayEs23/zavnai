@@ -163,7 +163,7 @@ export default function IntegrationsPage() {
                   title="GitHub"
                   description="Verify code commitments with GitHub activity"
                   connected={false}
-                  onConnect={() => toast.info('GitHub integration coming soon!')}
+                  onConnect={() => toast('GitHub integration coming soon!')}
                   iconColor="text-gray-900 dark:text-white"
                   comingSoon
                 />

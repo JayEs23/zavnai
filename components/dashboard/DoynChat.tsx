@@ -220,6 +220,7 @@ export function DoynChat({ onCommitmentUpdate }: DoynChatProps) {
           <button
             onClick={sendMessage}
             disabled={!input.trim() || loading}
+            aria-label="Send message"
             className="bg-primary text-white rounded-2xl px-6 py-3 font-medium hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
           >
             <MdSend />
