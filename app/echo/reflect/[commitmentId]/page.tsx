@@ -40,7 +40,7 @@ export default function EchoReflectPage() {
   const loadCommitment = async () => {
     try {
       setLoading(true);
-      const response = await api.get<Commitment>(`/api/v1/commitments/${commitmentId}`);
+      const response = await api.get<Commitment>(`/api/v1/goals/commitments/${commitmentId}`);
       setCommitment(response);
     } catch (error) {
       console.error('Error loading commitment:', error);
@@ -69,7 +69,7 @@ export default function EchoReflectPage() {
         payload.proof_url = proofUrl;
       }
 
-      await api.post('/api/echo/reflect', payload);
+      await api.post('/api/echo/chat', payload);
 
       // Success - redirect to dashboard
       router.push('/dashboard');

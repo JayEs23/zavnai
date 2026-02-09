@@ -16,7 +16,10 @@ export interface GoalSummary {
   description?: string;
   deadline: string;
   status: string;
+  is_staked: boolean;
   stake_amount: number;
+  stake_currency: string;
+  vault_status: string;
   created_at: string;
   insights?: GoalInsights;
 }
@@ -129,7 +132,10 @@ export const goalsApi = {
   },
 
   /** Add a financial stake to an existing goal */
-  async stakeGoal(goalId: string, amount: number): Promise<{ success: boolean; message: string; payment_intent_id?: string }> {
-    return api.post(`/api/v1/goals/${goalId}/stake`, { amount });
+  async stakeGoal(goalId: string, stakeAmount: number, antiCharityId?: string): Promise<{ success: boolean; message: string; payment_intent_id?: string }> {
+    return api.post(`/api/v1/goals/${goalId}/stake`, {
+      stake_amount: stakeAmount,
+      anti_charity_id: antiCharityId,
+    });
   },
 };

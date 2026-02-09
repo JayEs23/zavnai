@@ -81,7 +81,9 @@ export function DoynChat({ onCommitmentUpdate }: DoynChatProps) {
 
       // Check if Doyn created/updated a commitment
       if (response.action === 'commitment_created' || response.action === 'commitment_updated') {
-        onCommitmentUpdate?.(response.metadata?.commitment);
+        if (response.metadata?.commitment) {
+          onCommitmentUpdate?.(response.metadata.commitment as Commitment);
+        }
       }
     } catch (error: any) {
       console.error('Error sending message:', error);
@@ -209,7 +211,7 @@ export function DoynChat({ onCommitmentUpdate }: DoynChatProps) {
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             placeholder="Tell Doyn what you need to do..."
             className="flex-1 resize-none border border-border-subtle rounded-2xl px-4 py-3 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
             rows={1}

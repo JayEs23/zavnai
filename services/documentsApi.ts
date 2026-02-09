@@ -1,6 +1,6 @@
 /**
  * Documents API Service
- * 
+ *
  * Handles document upload and verification for commitments
  * Supports images, PDFs, and other proof of completion
  */
@@ -14,24 +14,24 @@ import { api } from '@/lib/api';
 export interface Document {
   id: string;
   filename: string;
-  file_type: string; // 'image' | 'pdf' | 'document'
-  file_size: number; // bytes
+  file_type: string;
+  file_size: number;
   mime_type: string;
-  url: string; // Signed URL for download/preview
-  thumbnail_url?: string; // For images
-  
+  url: string;
+  thumbnail_url?: string;
+
   // Metadata
   commitment_id?: string;
   goal_id?: string;
   description?: string;
   tags?: string[];
-  
+
   // Verification
   verified: boolean;
   verification_status: 'pending' | 'approved' | 'rejected';
   verification_notes?: string;
   verified_at?: string;
-  
+
   // Timestamps
   uploaded_at: string;
   created_by: string;
@@ -79,7 +79,6 @@ export const documentsApi = {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
 
-      // Track upload progress
       xhr.upload.addEventListener('progress', (e) => {
         if (e.lengthComputable && onProgress) {
           onProgress({
@@ -90,13 +89,12 @@ export const documentsApi = {
         }
       });
 
-      // Handle completion
       xhr.addEventListener('load', () => {
         if (xhr.status >= 200 && xhr.status < 300) {
           try {
             const response = JSON.parse(xhr.responseText);
             resolve(response);
-          } catch (error) {
+          } catch {
             reject(new Error('Invalid response from server'));
           }
         } else {
@@ -109,7 +107,6 @@ export const documentsApi = {
         }
       });
 
-      // Handle errors
       xhr.addEventListener('error', () => {
         reject(new Error('Network error during upload'));
       });
@@ -118,11 +115,9 @@ export const documentsApi = {
         reject(new Error('Upload cancelled'));
       });
 
-      // Send request
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
       xhr.open('POST', `${apiUrl}/api/documents/upload`);
-      
-      // Add auth token
+
       const token = localStorage.getItem('auth_token');
       if (token) {
         xhr.setRequestHeader('Authorization', `Bearer ${token}`);
@@ -132,9 +127,7 @@ export const documentsApi = {
     });
   },
 
-  /**
-   * Get all documents for the current user
-   */
+  /** Get all documents for the current user */
   getDocuments: async (params?: {
     commitment_id?: string;
     goal_id?: string;
@@ -146,27 +139,21 @@ export const documentsApi = {
     if (params?.goal_id) searchParams.append('goal_id', params.goal_id);
     if (params?.file_type) searchParams.append('file_type', params.file_type);
     if (params?.verified !== undefined) searchParams.append('verified', String(params.verified));
-    
-    return api.get<Document[]>(`/documents?${searchParams}`);
+
+    return api.get<Document[]>(`/api/documents?${searchParams}`);
   },
 
-  /**
-   * Get a specific document
-   */
+  /** Get a specific document */
   getDocument: async (documentId: string): Promise<Document> => {
-    return api.get<Document>(`/documents/${documentId}`);
+    return api.get<Document>(`/api/documents/${documentId}`);
   },
 
-  /**
-   * Delete a document
-   */
+  /** Delete a document */
   deleteDocument: async (documentId: string): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>(`/documents/${documentId}`);
+    return api.delete<{ success: boolean }>(`/api/documents/${documentId}`);
   },
 
-  /**
-   * Update document metadata
-   */
+  /** Update document metadata */
   updateDocument: async (
     documentId: string,
     updates: {
@@ -174,17 +161,15 @@ export const documentsApi = {
       tags?: string[];
     }
   ): Promise<Document> => {
-    return api.patch<Document>(`/documents/${documentId}`, updates);
+    return api.patch<Document>(`/api/documents/${documentId}`, updates);
   },
 
-  /**
-   * Verify a document (approve/reject)
-   */
+  /** Verify a document (approve/reject) */
   verifyDocument: async (
     request: DocumentVerificationRequest
   ): Promise<Document> => {
     return api.post<Document>(
-      `/documents/${request.document_id}/verify`,
+      `/api/documents/${request.document_id}/verify`,
       {
         status: request.status,
         notes: request.notes,
@@ -192,58 +177,44 @@ export const documentsApi = {
     );
   },
 
-  /**
-   * Get download URL for a document
-   */
+  /** Get download URL for a document */
   getDownloadUrl: async (documentId: string): Promise<{ url: string }> => {
-    return api.get<{ url: string }>(`/documents/${documentId}/download`);
+    return api.get<{ url: string }>(`/api/documents/${documentId}/download`);
   },
 
-  /**
-   * Get documents for a specific commitment
-   */
+  /** Get documents for a specific commitment */
   getCommitmentDocuments: async (commitmentId: string): Promise<Document[]> => {
     return documentsApi.getDocuments({ commitment_id: commitmentId });
   },
 
-  /**
-   * Get documents for a specific goal
-   */
+  /** Get documents for a specific goal */
   getGoalDocuments: async (goalId: string): Promise<Document[]> => {
     return documentsApi.getDocuments({ goal_id: goalId });
   },
 
-  /**
-   * Check if file type is supported
-   */
+  /** Check if file type is supported */
   isSupportedFileType: (file: File): boolean => {
     const supportedTypes = [
-      // Images
       'image/jpeg',
       'image/jpg',
       'image/png',
       'image/gif',
       'image/webp',
-      // Documents
       'application/pdf',
       'application/msword',
       'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-      // Spreadsheets (for data-based goals)
       'application/vnd.ms-excel',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     ];
     return supportedTypes.includes(file.type);
   },
 
-  /**
-   * Get human-readable file size
-   */
+  /** Get human-readable file size */
   formatFileSize: (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
     const sizes = ['Bytes', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
   },
 };
-

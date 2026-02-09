@@ -1,6 +1,6 @@
 /**
  * GitHub API Service
- * 
+ *
  * Handles GitHub integration for code commitment verification
  * Tracks commits, pull requests, and repository activity
  */
@@ -29,7 +29,7 @@ export interface GitHubRepository {
   private: boolean;
   language?: string;
   updated_at: string;
-  tracked: boolean; // Whether we're tracking this repo for commitments
+  tracked: boolean;
 }
 
 export interface GitHubCommit {
@@ -65,75 +65,59 @@ export interface CommitmentVerification {
 }
 
 // ============================================================================
-// API METHODS
+// API METHODS — all paths hit /api/integrations (backend prefix)
 // ============================================================================
 
 export const githubApi = {
-  /**
-   * Get GitHub connection status
-   */
+  /** Get GitHub connection status */
   getConnection: async (): Promise<GitHubConnection> => {
-    return api.get<GitHubConnection>('/integrations/github');
+    return api.get<GitHubConnection>('/api/integrations/github');
   },
 
-  /**
-   * Get OAuth authorization URL for GitHub
-   */
+  /** Get OAuth authorization URL for GitHub */
   getAuthUrl: async (redirectUri: string): Promise<GitHubAuthUrl> => {
-    return api.post<GitHubAuthUrl>('/integrations/github/auth', {
+    return api.post<GitHubAuthUrl>('/api/integrations/github/auth', {
       redirect_uri: redirectUri,
     });
   },
 
-  /**
-   * Complete OAuth flow and save tokens
-   */
+  /** Complete OAuth flow and save tokens */
   connectGitHub: async (code: string, state: string): Promise<GitHubConnection> => {
-    return api.post<GitHubConnection>('/integrations/github/callback', {
+    return api.post<GitHubConnection>('/api/integrations/github/callback', {
       code,
       state,
     });
   },
 
-  /**
-   * Disconnect GitHub
-   */
+  /** Disconnect GitHub */
   disconnectGitHub: async (): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>('/integrations/github');
+    return api.delete<{ success: boolean }>('/api/integrations/github');
   },
 
-  /**
-   * Enable/disable GitHub sync
-   */
+  /** Enable/disable GitHub sync */
   toggleSync: async (enabled: boolean): Promise<GitHubConnection> => {
-    return api.patch<GitHubConnection>('/integrations/github', {
+    return api.patch<GitHubConnection>('/api/integrations/github', {
       sync_enabled: enabled,
     });
   },
 
-  /**
-   * Get user's GitHub repositories
-   */
+  /** Get user's GitHub repositories */
   getRepositories: async (): Promise<GitHubRepository[]> => {
-    return api.get<GitHubRepository[]>('/integrations/github/repositories');
+    return api.get<GitHubRepository[]>('/api/integrations/github/repositories');
   },
 
-  /**
-   * Track/untrack a repository
-   */
+  /** Track/untrack a repository */
   toggleRepositoryTracking: async (
     repoId: number,
     tracked: boolean
   ): Promise<GitHubRepository> => {
     return api.patch<GitHubRepository>(
-      `/integrations/github/repositories/${repoId}`,
+      `/api/integrations/github/repositories/${repoId}`,
       { tracked }
     );
   },
 
-  /**
-   * Get recent commits across tracked repositories
-   */
+  /** Get recent commits across tracked repositories */
   getCommits: async (
     since?: string,
     until?: string
@@ -142,48 +126,40 @@ export const githubApi = {
     if (since) params.append('since', since);
     if (until) params.append('until', until);
     return api.get<GitHubCommit[]>(
-      `/integrations/github/commits?${params}`
+      `/api/integrations/github/commits?${params}`
     );
   },
 
-  /**
-   * Get GitHub activity stats
-   */
+  /** Get GitHub activity stats */
   getStats: async (): Promise<GitHubStats> => {
-    return api.get<GitHubStats>('/integrations/github/stats');
+    return api.get<GitHubStats>('/api/integrations/github/stats');
   },
 
-  /**
-   * Manually trigger GitHub sync
-   */
+  /** Manually trigger GitHub sync */
   syncGitHub: async (): Promise<{ synced_commits: number }> => {
     return api.post<{ synced_commits: number }>(
-      '/integrations/github/sync',
+      '/api/integrations/github/sync',
       {}
     );
   },
 
-  /**
-   * Verify a code-based commitment using GitHub commits
-   */
+  /** Verify a code-based commitment using GitHub commits */
   verifyCommitment: async (
     commitmentId: string
   ): Promise<CommitmentVerification> => {
     return api.post<CommitmentVerification>(
-      `/integrations/github/verify/${commitmentId}`,
+      `/api/integrations/github/verify/${commitmentId}`,
       {}
     );
   },
 
-  /**
-   * Link GitHub commit to commitment
-   */
+  /** Link GitHub commit to commitment */
   linkCommitToCommitment: async (
     commitmentId: string,
     commitSha: string
   ): Promise<{ success: boolean }> => {
     return api.post<{ success: boolean }>(
-      `/integrations/github/link-commit`,
+      `/api/integrations/github/link-commit`,
       {
         commitment_id: commitmentId,
         commit_sha: commitSha,
@@ -191,4 +167,3 @@ export const githubApi = {
     );
   },
 };
-

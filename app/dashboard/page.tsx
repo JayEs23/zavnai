@@ -13,8 +13,6 @@ import {
   MdEmojiEvents,
   MdFavorite,
   MdPeople,
-  MdSmartToy,
-  MdClose,
 } from 'react-icons/md';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -49,7 +47,6 @@ export default function DashboardPage() {
     recent_insight: null,
   });
   const [showCelebration, setShowCelebration] = useState(false);
-  const [showDoynChat, setShowDoynChat] = useState(false);
   const [commitmentRefresh, setCommitmentRefresh] = useState(0);
 
   // Check onboarding status — redirect if not onboarded

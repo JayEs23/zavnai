@@ -18,8 +18,9 @@ export default function ThrivePage() {
       setLoading(true);
       const data = await thriveApi.getScore();
       setScore(data);
-    } catch (error: any) {
-      toast.error(error.message || 'Failed to load Thrive score');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Failed to load Thrive score';
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
