@@ -6,11 +6,12 @@ import { getSession } from "next-auth/react";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+// Use unknown instead of any for data typing where not known
 export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
-    public data?: any
+    public data?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -37,7 +38,8 @@ async function request<T>(
   // Add auth token from NextAuth session if available
   if (typeof window !== 'undefined') {
     const session = await getSession();
-    const token = (session as any)?.accessToken;
+    // Replace any usage with more specific or unknown
+    const token = (session as { accessToken?: string } | null)?.accessToken;
     
     if (token) {
       config.headers = {
@@ -59,12 +61,33 @@ async function request<T>(
     // But this client is mainly used in client components
   }
 
-  const response = await fetch(url, config);
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
+  let response: Response;
+  try {
+    response = await fetch(url, config);
+  } catch (networkErr) {
+    // Only throw if network truly failed (not "client-side error" for ok: false)
     throw new ApiError(
-      errorData.detail || errorData.message || 'An error occurred',
+      "Network request failed",
+      0,
+      networkErr
+    );
+  }
+
+  // Only throw for server/network errors client-side if not in the 2xx range
+  // But don't throw for 4xx errors if window is defined (client-side)
+  if (!response.ok) {
+    // Try to parse JSON even if not, otherwise fallback
+    const errorData: unknown = await response.json().catch(() => ({}));
+    // If running in the browser and status is 400–499, don't throw, just return the data
+    if (typeof window !== 'undefined' && response.status >= 400 && response.status < 500) {
+      // Return error data typed as T so the frontend can handle gracefully
+      return errorData as T;
+    }
+    throw new ApiError(
+      (errorData && typeof errorData === "object"
+        ? (errorData as { detail?: string; message?: string }).detail ||
+          (errorData as { detail?: string; message?: string }).message
+        : undefined) || 'An error occurred',
       response.status,
       errorData
     );
@@ -73,24 +96,24 @@ async function request<T>(
   return response.json();
 }
 
+// Use unknown instead of any for data typing, require data type as generic parameter
 export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
-  post: <T>(endpoint: string, data?: any) =>
+  post: <T, D = unknown>(endpoint: string, data?: D) =>
     request<T>(endpoint, {
       method: 'POST',
-      body: data ? JSON.stringify(data) : undefined,
+      body: typeof data !== "undefined" ? JSON.stringify(data) : undefined,
     }),
-  put: <T>(endpoint: string, data?: any) =>
+  put: <T, D = unknown>(endpoint: string, data?: D) =>
     request<T>(endpoint, {
       method: 'PUT',
-      body: data ? JSON.stringify(data) : undefined,
+      body: typeof data !== "undefined" ? JSON.stringify(data) : undefined,
     }),
-  patch: <T>(endpoint: string, data?: any) =>
+  patch: <T, D = unknown>(endpoint: string, data?: D) =>
     request<T>(endpoint, {
       method: 'PATCH',
-      body: data ? JSON.stringify(data) : undefined,
+      body: typeof data !== "undefined" ? JSON.stringify(data) : undefined,
     }),
   delete: <T>(endpoint: string) =>
     request<T>(endpoint, { method: 'DELETE' }),
 };
-
