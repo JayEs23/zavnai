@@ -1,13 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 
-export default function LoginPage() {
+
+const Login = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
@@ -280,4 +281,11 @@ export default function LoginPage() {
       </div>
     </div>
   );
+}
+
+
+export default function LoginPage() {
+  <Suspense>
+    <Login />
+  </Suspense>
 }

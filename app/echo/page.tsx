@@ -5,7 +5,7 @@
  * Fixed for Gemini 2.0 Flash Live API
  */
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSession } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -39,7 +39,8 @@ type SpeechRecognitionWindow = Window & {
 };
 // --- Types & Constants ---
 
-export default function EchoPage() {
+// Make a wrapper component to use useSearchParams inside Suspense
+function EchoApp() {
     const { data: session } = useSession();
     const router = useRouter();
     const searchParams = useSearchParams();
@@ -367,5 +368,14 @@ export default function EchoPage() {
             </AnimatePresence>
 
         </div>
+    );
+}
+
+export default function EchoPage() {
+    // Wrap the main EchoApp in Suspense to allow useSearchParams to work correctly
+    return (
+        <Suspense>
+            <EchoApp />
+        </Suspense>
     );
 }

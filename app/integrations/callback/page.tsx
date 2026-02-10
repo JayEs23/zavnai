@@ -1,19 +1,17 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { calendarApi } from '@/services/calendarApi';
 import { MdCheckCircle, MdError } from 'react-icons/md';
 
-export default function IntegrationsCallbackPage() {
+function IntegrationsCallbackApp() {  
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('Connecting your calendar...');
 
-  useEffect(() => {
-    handleCallback();
-  }, []);
 
   const handleCallback = async () => {
     try {
@@ -59,6 +57,15 @@ export default function IntegrationsCallbackPage() {
     }
   };
 
+  useEffect(() => {
+    // Don't call async directly in effect; define inner async and call
+    const run = async () => {
+      await handleCallback();
+    };
+    run();
+
+  }, []);
+
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="max-w-md w-full bg-card-bg border border-border-subtle rounded-lg p-8 text-center">
@@ -97,6 +104,13 @@ export default function IntegrationsCallbackPage() {
         )}
       </div>
     </div>
+  );
+}
+export default function IntegrationsCallbackPage() {
+  return (
+    <Suspense>
+      <IntegrationsCallbackApp />
+    </Suspense>
   );
 }
 
