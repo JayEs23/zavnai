@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { doynApi, Commitment } from '@/services/doynApi';
+import { CommitmentVerification } from '@/components/core-loop/CommitmentVerification';
 import {
   MdCheckCircle,
   MdPending,
@@ -172,9 +173,7 @@ function CommitmentCard({
   isOverdue: boolean;
   onCompleted: () => void;
 }) {
-  const [confirming, setConfirming] = useState(false);
-  const [proofText, setProofText] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [showVerification, setShowVerification] = useState(false);
 
   const getStatusIcon = () => {
     if (commitment.status === 'verified') return <MdCheckCircle className="text-success" />;
@@ -192,18 +191,9 @@ function CommitmentCard({
     return 'border-border-subtle bg-card-bg';
   };
 
-  const handleMarkDone = async () => {
-    try {
-      setSubmitting(true);
-      await doynApi.completeCommitment(commitment.id, proofText || undefined);
-      setConfirming(false);
-      setProofText('');
-      onCompleted();
-    } catch (err) {
-      console.error('Failed to complete commitment:', err);
-    } finally {
-      setSubmitting(false);
-    }
+  const handleVerificationComplete = () => {
+    setShowVerification(false);
+    onCompleted();
   };
 
   return (
@@ -248,42 +238,24 @@ function CommitmentCard({
           )}
 
           {/* Mark Done button */}
-          {commitment.status === 'pending' && !confirming && (
+          {commitment.status === 'pending' && (
             <button
-              onClick={() => setConfirming(true)}
+              onClick={() => setShowVerification(true)}
               className="mt-3 w-full flex items-center justify-center gap-1.5 px-3 py-2 bg-success/10 text-success hover:bg-success/20 rounded-xl text-xs font-semibold transition-colors"
             >
               <MdDone size={16} />
-              Mark Done
+              Verify Completion
             </button>
           )}
 
-          {/* Inline proof + confirm */}
-          {confirming && (
-            <div className="mt-3 space-y-2">
-              <input
-                type="text"
-                value={proofText}
-                onChange={(e) => setProofText(e.target.value)}
-                placeholder="Quick proof (optional)..."
-                className="w-full px-3 py-2 bg-background border border-border-subtle rounded-lg text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-success"
-              />
-              <div className="flex gap-2">
-                <button
-                  onClick={handleMarkDone}
-                  disabled={submitting}
-                  className="flex-1 px-3 py-2 bg-success text-white rounded-lg text-xs font-semibold hover:bg-success/90 disabled:opacity-50 transition-colors"
-                >
-                  {submitting ? 'Saving...' : 'Confirm Done'}
-                </button>
-                <button
-                  onClick={() => { setConfirming(false); setProofText(''); }}
-                  className="px-3 py-2 bg-muted text-muted-foreground rounded-lg text-xs font-medium hover:bg-muted/80 transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
+          {/* Verification Modal */}
+          {showVerification && (
+            <CommitmentVerification
+              commitmentId={commitment.id}
+              commitmentTask={commitment.task_detail}
+              onVerified={handleVerificationComplete}
+              onCancel={() => setShowVerification(false)}
+            />
           )}
         </div>
       </div>
