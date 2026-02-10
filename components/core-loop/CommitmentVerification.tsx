@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { api } from '@/lib/api';
+import { api, ApiError } from '@/lib/api';
 import {
   MdCheckCircle,
   MdPhotoCamera,
@@ -86,20 +86,14 @@ export function CommitmentVerification({
         formData.append('commitment_id', commitmentId);
         formData.append('photo', photoFile);
 
-        await api.post('/api/verify/photo', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        });
+        await api.post('/api/verify/photo', formData);
+      
+        // Success - trigger reflection
+        onVerified();
       }
-
-      // Success - trigger reflection
-      onVerified();
-    } catch (err: any) {
+    } catch (err) {
       console.error('Verification error:', err);
-      setError(err.response?.data?.detail || 'Failed to verify commitment. Please try again.');
-    } finally {
-      setSubmitting(false);
+      setError((err as ApiError)?.message || 'Failed to verify commitment. Please try again.');
     }
   };
 
