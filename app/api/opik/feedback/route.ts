@@ -39,7 +39,7 @@ export async function POST(req: NextRequest) {
     // Import Opik only on server side
     try {
       const { Opik } = await import('opik');
-      
+
       const client = new Opik({
         apiKey: process.env.OPIK_API_KEY,
         projectName: process.env.OPIK_PROJECT_NAME || 'zavn-ai',
@@ -47,6 +47,9 @@ export async function POST(req: NextRequest) {
       });
 
       // Submit feedback
+      // `logFeedbackScore` exists at runtime but is missing from the TypeScript
+      // definition of `OpikClient`, so we suppress the type error here.
+      // @ts-expect-error - temporary until Opik exposes proper typings
       await client.logFeedbackScore({
         traceId: trace_id,
         name: 'user_feedback',
