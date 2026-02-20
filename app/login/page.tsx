@@ -285,7 +285,9 @@ const Login = () => {
 
 
 export default function LoginPage() {
-  <Suspense>
-    <Login />
-  </Suspense>
+  return (
+    <Suspense>
+      <Login />
+    </Suspense>
+  );
 }
