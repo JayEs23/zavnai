@@ -145,17 +145,41 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <>
-          {/* Backdrop */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onClose}
-            className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
-          />
+    <>
+      {/* ZAVN AI Chat Offcanvas - Separate from modal */}
+      <AnimatePresence>
+        {showEchoChat && (
+          <>
+            {/* Backdrop for chat */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowEchoChat(false)}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-[65]"
+            />
+            <WaitlistEchoChat
+              onClose={() => setShowEchoChat(false)}
+              userGoals={formData.goals}
+              userInterests={formData.interests}
+              focusAreas={formData.focusAreas}
+            />
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* Main Waitlist Modal */}
+      <AnimatePresence>
+        {isOpen && (
+          <>
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={onClose}
+              className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+            />
 
           {/* Modal */}
           <motion.div
@@ -163,20 +187,16 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ duration: 0.2 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"
           >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden relative">
-              {/* Echo Chat Overlay */}
-              {showEchoChat ? (
-                <WaitlistEchoChat
-                  onClose={() => setShowEchoChat(false)}
-                  userGoals={formData.goals}
-                  userInterests={formData.interests}
-                  focusAreas={formData.focusAreas}
-                />
-              ) : (
-                <div className="flex flex-col h-full min-h-0">
+            <div 
+              className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden relative pointer-events-auto"
+              style={{ minHeight: '400px' }}
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Echo Chat Offcanvas - Rendered outside modal */}
+              {!showEchoChat && (
+                <div className="flex flex-col h-full min-h-0 w-full">
                     {/* Header - Fixed */}
                     <div className="flex-shrink-0 bg-white border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
                       <div className="flex items-center gap-3">
@@ -302,14 +322,14 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
                         <p className="text-xs text-muted-foreground mt-1">{formData.interests.length}/1000 characters</p>
                       </div>
 
-                      {/* Chat with Echo Button */}
+                      {/* Chat with ZAVN AI Button */}
                       <button
                         type="button"
                         onClick={() => setShowEchoChat(true)}
                         className="w-full px-4 py-3 bg-gradient-to-r from-primary/10 to-teal-600/10 border-2 border-primary/20 rounded-xl font-semibold text-primary hover:border-primary/40 hover:bg-primary/15 transition-all flex items-center justify-center gap-2"
                       >
                         <Bot className="w-5 h-5" />
-                        Chat with Echo for Insights
+                        Chat with ZAVN AI for Insights
                         <MessageSquare className="w-4 h-4" />
                       </button>
 
@@ -354,5 +374,6 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
         </>
       )}
     </AnimatePresence>
+    </>
   );
 };

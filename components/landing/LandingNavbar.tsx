@@ -13,10 +13,11 @@ export const LandingNavbar = () => {
   const [waitlistModalOpen, setWaitlistModalOpen] = useState(false);
 
   const navItems = [
-    { name: "How It Works", href: "#how-it-works" },
-    { name: "Features", href: "#features" },
-    { name: "Community", href: "#community" },
-    { name: "Pricing", href: "#pricing" },
+    { name: "How It Works", href: "/how-it-works" },
+    { name: "Features", href: "/features" },
+    { name: "Community", href: "/community" },
+    { name: "Pricing", href: "/pricing" },
+    { name: "Science", href: "/science" },
   ];
 
   return (
@@ -29,27 +30,27 @@ export const LandingNavbar = () => {
               <Image
                 src="/zavn-icon.png"
                 alt="ZAVN Logo"
-                width={40}
-                height={40}
+                width={80}
+                height={80}
                 className="transition-transform group-hover:scale-105"
               />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              ZAVN
+            <span className="text-3xl font-bold tracking-tight text-foreground">
+              Z.A.V.N
             </span>
           </Link>
 
           {/* Desktop Navigation */}
           <nav className="hidden items-center gap-8 lg:flex">
             {navItems.map((item) => (
-              <a
+              <Link
                 key={item.name}
                 href={item.href}
                 className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors relative group"
               >
                 {item.name}
                 <span className="absolute bottom-0 left-0 w-0 h-0.5 bg-primary group-hover:w-full transition-all duration-300" />
-              </a>
+              </Link>
             ))}
           </nav>
 
@@ -106,14 +107,14 @@ export const LandingNavbar = () => {
             >
               <div className="px-4 py-6 space-y-4">
                 {navItems.map((item) => (
-                  <a
+                  <Link
                     key={item.name}
                     href={item.href}
                     onClick={() => setMobileMenuOpen(false)}
                     className="block text-base font-medium text-foreground hover:text-primary transition-colors py-2"
                   >
                     {item.name}
-                  </a>
+                  </Link>
                 ))}
                 <div className="pt-4 border-t border-border space-y-3">
                   {ENABLE_WAITLIST_MODE ? (

@@ -12,9 +12,11 @@ export const HeroSection = () => {
 
   return (
     <>
-      <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-white">
+      {/* Fix: Prevent horizontal scroll by using overflow-x-clip and not using negative margins */}
+      <section className="relative min-h-screen flex items-center justify-center px-4 bg-white overflow-x-clip">
         <div className="w-full max-w-[1920px] mx-auto relative z-10">
-          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center py-20 lg:py-32">
+          {/* Remove gap that could cause overflow on small screens */}
+          <div className="grid lg:grid-cols-2 gap-8 lg:gap-16 items-center py-20 lg:py-32">
             {/* Left Column - Content */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
@@ -22,6 +24,21 @@ export const HeroSection = () => {
               transition={{ duration: 0.7, ease: "easeOut" }}
               className="space-y-8 text-center lg:text-left"
             >
+              {/* Zero-Gap badge */}
+              <motion.div
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1, duration: 0.6 }}
+                className="flex items-center justify-center lg:justify-start mb-1"
+                /* Removed overflow-x-auto and max-w-full to avoid accidental horizontal overflow */
+              >
+                <span className="flex-shrink-0 w-1.5 h-1.5 bg-primary rounded-full mx-1" />
+                <span className="flex-shrink-0 inline-block px-3 py-0.5 rounded-full text-[10px] sm:text-xs font-medium bg-gradient-to-r from-primary to-teal-600 text-white shadow-md border border-primary/20 tracking-wide uppercase whitespace-nowrap">
+                  Zero-Gap Action &amp; Verification Network
+                </span>
+                <span className="flex-shrink-0 w-1.5 h-1.5 bg-primary rounded-full mx-1" />
+              </motion.div>
+
               {/* Main Headline */}
               <motion.h1
                 initial={{ opacity: 0, y: 20 }}
@@ -196,7 +213,8 @@ export const HeroSection = () => {
                 <motion.div
                   animate={{ y: [0, -10, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                  className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-4 border border-border/50 z-10"
+                  className="absolute right-0 top-0 translate-x-1/2 -translate-y-1/2 bg-white rounded-2xl shadow-xl p-4 border border-border/50 z-10
+                  max-w-[210px]" // <--- Fix: prevents overflow due to abs position
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
@@ -211,7 +229,8 @@ export const HeroSection = () => {
                 <motion.div
                   animate={{ y: [0, 10, 0] }}
                   transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-                  className="absolute -bottom-6 -left-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl shadow-xl p-4 border border-primary/20 z-10"
+                  className="absolute left-0 bottom-0 -translate-x-1/2 translate-y-1/2 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl shadow-xl p-4 border border-primary/20 z-10
+                  max-w-[200px]" // <--- Fix: prevents overflow due to abs position
                 >
                   <div className="text-sm">
                     <div className="font-bold text-foreground mb-1">🔥 21 Day Streak</div>
