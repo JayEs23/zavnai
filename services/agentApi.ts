@@ -44,10 +44,10 @@ export interface GoalRefinementResponse {
 
 export const agentApi = {
     /**
-     * Submit a reflection to the Echo agent
+     * Submit a reflection to the Echo agent (via Echo text chat endpoint)
      */
     reflect: async (data: ReflectionRequest): Promise<ReflectionResponse> => {
-        return api.post<ReflectionResponse>('/api/agents/echo/reflect', data);
+        return api.post<ReflectionResponse>('/api/echo/chat', data);
     },
 
     /**

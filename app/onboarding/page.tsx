@@ -1,309 +1,383 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
-import { OnboardingProfile, StructuredOnboardingResponse } from '@/components/onboarding/types';
+import VoiceOnboardingSession from '@/components/onboarding/VoiceOnboardingSession';
+import TribeForm, { TribeMember } from '@/components/onboarding/TribeForm';
+import PreferencesStep, { UserPreferences } from '@/components/onboarding/PreferencesStep';
 import { onboardingApi } from '@/services/onboardingApi';
-import { responseBuilders } from '@/components/onboarding/utils/responseBuilder';
+import { api } from '@/lib/api';
+import { goalsApi } from '@/services/goalsApi';
+import { getAgentMonitor } from '@/lib/opik/agent-monitor';
+import { opikTracker } from '@/lib/opik/client-tracker';
+import { ExtractedProfile } from '@/services/entityExtraction';
 
-// Step Components
-import { Step1Basics } from '@/components/onboarding/steps/Step1Basics';
-import { Step2VoiceIntro } from '@/components/onboarding/steps/Step2VoiceIntro';
-import { Step3SmartGoal } from '@/components/onboarding/steps/Step3SmartGoal';
-import { Step4Patterns } from '@/components/onboarding/steps/Step4Patterns';
-import { Step5Capacity } from '@/components/onboarding/steps/Step5Capacity';
-import { Step6Tribe } from '@/components/onboarding/steps/Step6Tribe';
-import { Step7VoiceCalibration } from '@/components/onboarding/steps/Step7VoiceCalibration';
-import { Step8Verification } from '@/components/onboarding/steps/Step8Verification';
-import { Step9GoalDefinition } from '@/components/onboarding/steps/Step9GoalDefinition';
-import { Step11Subscription } from '@/components/onboarding/steps/Step11Subscription';
-import { Step12Success } from '@/components/onboarding/steps/Step12Success';
+type OnboardingStep = 'voice' | 'preferences' | 'tribe' | 'completing';
 
-// Helper function to parse full name from localStorage
-function parseStoredName(): { first: string; middle: string; last: string } {
-  if (typeof window === 'undefined') {
-    return { first: '', middle: '', last: '' };
-  }
+interface ExtractionResponse {
+  success: boolean;
+  profile?: ExtractedProfile;
+  validation?: {
+    completeness_score: number;
+    is_valid: boolean;
+    field_scores?: Record<string, number>;
+  };
+}
 
-  const stored = localStorage.getItem('full_name');
-  if (!stored) {
-    return { first: '', middle: '', last: '' };
-  }
-
-  const parts = stored.trim().split(/\s+/);
-  if (parts.length >= 2) {
-    return {
-      first: parts[0],
-      middle: parts.length > 2 ? parts.slice(1, -1).join(' ') : '',
-      last: parts[parts.length - 1],
-    };
-  } else if (parts.length === 1) {
-    return { first: parts[0], middle: '', last: '' };
-  }
-  return { first: '', middle: '', last: '' };
+interface InsightsData {
+  goals?: string[];
+  motivation?: string;
+  implementation_style?: string;
+  blockers?: string[];
+  rapport_notes?: string;
 }
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const { data: session, status, update: updateSession } = useSession();
+  const [step, setStep] = useState<OnboardingStep>('voice');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  
+  // Data collected during onboarding
+  const [transcript, setTranscript] = useState<string>('');
+  const [extractedProfile, setExtractedProfile] = useState<ExtractionResponse['profile'] | null>(null);
+  const [tribeMembers, setTribeMembers] = useState<TribeMember[]>([]);
+  const [preferences, setPreferences] = useState<UserPreferences | null>(null);
+  const [voiceInsights, setVoiceInsights] = useState<InsightsData | null>(null);
 
-  // Initialize name from localStorage if available
-  const initialName = parseStoredName();
+  // Get user ID from session
+  const userId = (session?.user as { id?: string })?.id || '';
 
-  // --- Configuration & Feature Flags ---
-  const SHOW_SUBSCRIPTION_STEP = true;
-  const TOTAL_STEPS = SHOW_SUBSCRIPTION_STEP ? 12 : 11;
-
-  // --- State for all steps ---
-  const [profile, setProfile] = useState<OnboardingProfile>({
-    firstName: initialName.first,
-    middleName: initialName.middle,
-    lastName: initialName.last,
-    pronouns: '',
-    username: '',
-    goal: '',
-    successCriteria: '',
-    targetDate: '2024-12-31',
-    patterns: [],
-    tribe: [{ name: '', relationship: 'Friend', contact: '' }],
-    capacity: {},
-    verification: ['echo', 'data'],
-    subscriptionSelected: false,
-    interactionMode: 'voice',
-  });
-
-  // Computed full name
-  const fullName = [profile.firstName, profile.middleName, profile.lastName]
-    .filter(Boolean)
-    .join(' ');
-
-  const nextStep = async () => {
-    // Save data to backend before moving to next step
-    try {
-      if (step === 1) {
-        await onboardingApi.updateProfile({
-          full_name: fullName,
-          first_name: profile.firstName,
-          middle_name: profile.middleName || undefined,
-          last_name: profile.lastName,
-          pronouns: profile.pronouns || undefined,
-          username: profile.username.trim() || undefined,
-        });
-      } else if (step === 3) {
-        if (profile.goal.trim()) {
-          await onboardingApi.updateProfile({
-            primary_goal: profile.goal,
-          });
+  // Check if user is already onboarded — redirect to dashboard
+  useEffect(() => {
+    const checkOnboarding = async () => {
+      try {
+        const res = await api.get<{ is_onboarded: boolean }>('/api/onboarding/status');
+        if (res.is_onboarded) {
+          router.replace('/dashboard');
         }
-      } else if (step === 4) {
-        const structuredResponse = responseBuilders.patterns(profile.patterns);
-        await onboardingApi.submitStep(4, { patterns: profile.patterns, structured: structuredResponse });
-        await onboardingApi.updateProfile({
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
-      } else if (step === 5) {
-        const structuredResponse = responseBuilders.capacity(profile.capacity);
-        await onboardingApi.submitStep(5, { capacity: profile.capacity, structured: structuredResponse });
-        await onboardingApi.updateProfile({
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
-      } else if (step === 6) {
-        const structuredResponse = responseBuilders.tribe(profile.tribe);
-        await onboardingApi.submitStep(6, { tribe: profile.tribe, structured: structuredResponse });
-        await onboardingApi.updateProfile({
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
-      } else if (step === 9) {
-        const structuredResponse = responseBuilders.goalRefinement(
-          profile.goal,
-          profile.successCriteria,
-          profile.targetDate
-        );
-        await onboardingApi.submitStep(9, {
-          goal: profile.goal,
-          success_criteria: profile.successCriteria,
-          target_date: profile.targetDate
-        });
-        await onboardingApi.updateProfile({
-          primary_goal: profile.goal,
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
-      } else if (step === 8) {
-        const structuredResponse = responseBuilders.verification(profile.verification);
-        await onboardingApi.submitStep(8, { verification: profile.verification, structured: structuredResponse });
-        await onboardingApi.updateProfile({
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
-      } else if (step === 10 && !SHOW_SUBSCRIPTION_STEP) {
-        // Step 10 without subscription goes to success
-      } else if (step === 11 && SHOW_SUBSCRIPTION_STEP) {
-        const structuredResponse = responseBuilders.subscription(profile.subscriptionSelected);
-        await onboardingApi.submitStep(11, { subscription_selected: profile.subscriptionSelected });
-        await onboardingApi.updateProfile({
-          baseline_responses: structuredResponse ? { [structuredResponse.stepName]: structuredResponse } : undefined,
-        });
+      } catch {
+        // Continue with onboarding if status check fails
       }
-    } catch (error) {
-      console.error(`Failed to save step ${step} data:`, error);
+    };
+    if (status === 'authenticated') {
+      checkOnboarding();
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
-    setStep(s => s + 1);
-  };
+  // Show loading while session is being fetched
+  if (status === 'loading') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
+          <p className="text-lg font-semibold text-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
-  const prevStep = () => setStep(s => s - 1);
-
-  const handleComplete = async () => {
+  // Handle voice session completion
+  const handleVoiceComplete = async (sessionTranscript: string, insights: InsightsData) => {
+    setTranscript(sessionTranscript);
+    setVoiceInsights(insights); // Store insights for later use
     setLoading(true);
+
     try {
-      // Build all structured responses for final save
-      const allResponses: Record<string, StructuredOnboardingResponse> = {};
-
-      const patternsResponse = responseBuilders.patterns(profile.patterns);
-      if (patternsResponse) allResponses[patternsResponse.stepName] = patternsResponse;
-
-      const capacityResponse = responseBuilders.capacity(profile.capacity);
-      if (capacityResponse) allResponses[capacityResponse.stepName] = capacityResponse;
-
-      const tribeResponse = responseBuilders.tribe(profile.tribe);
-      if (tribeResponse) allResponses[tribeResponse.stepName] = tribeResponse;
-
-      const verificationResponse = responseBuilders.verification(profile.verification);
-      if (verificationResponse) allResponses[verificationResponse.stepName] = verificationResponse;
-
-      const goalResponse = responseBuilders.goalRefinement(
-        profile.goal,
-        profile.successCriteria,
-        profile.targetDate
-      );
-      if (goalResponse) allResponses[goalResponse.stepName] = goalResponse;
-
-      if (SHOW_SUBSCRIPTION_STEP) {
-        const subscriptionResponse = responseBuilders.subscription(profile.subscriptionSelected);
-        if (subscriptionResponse) allResponses[subscriptionResponse.stepName] = subscriptionResponse;
-      }
-
-      await onboardingApi.updateProfile({
-        baseline_responses: allResponses,
+      // Extract entities from transcript with Opik validation
+      const res = await api.post<ExtractionResponse & { 
+        validation?: { 
+          completeness_score: number; 
+          is_valid: boolean;
+          field_scores?: Record<string, number>;
+        } 
+      }>('/api/onboarding/extract-entities', {
+        transcript: sessionTranscript,
+        user_id: userId,
+        insights: insights // Include insights from conversation
       });
-
-      // Phase 2: Trigger Backend Analysis to generate User Baseline
-      await onboardingApi.analyzeBaseline();
-
-      router.push('/dashboard');
-    } catch (error) {
-      console.error('Failed to complete onboarding:', error);
-      router.push('/dashboard');
+      
+      if (res.success && res.profile) {
+        setExtractedProfile(res.profile);
+        
+        // Log quality metrics to Opik
+        if (res.validation) {
+          const monitor = getAgentMonitor();
+          console.log('✓ Echo Extraction Quality:', {
+            completeness: `${(res.validation.completeness_score * 100).toFixed(0)}%`,
+            valid: res.validation.is_valid,
+            fieldScores: res.validation.field_scores
+          });
+          
+          // Track voice onboarding with Opik
+          try {
+            const traceId = await opikTracker.trackVoiceOnboarding(
+              userId,
+              sessionTranscript,
+              res.profile,
+              res.validation
+            );
+            
+            // Submit feedback score if we got a valid trace ID
+            if (traceId && traceId !== 'tracking-error') {
+              await opikTracker.trackFeedback(
+                traceId,
+                res.validation.completeness_score >= 0.7 ? 'positive' : 'neutral',
+                res.validation.completeness_score * 10,
+                `Auto-scored: Completeness ${(res.validation.completeness_score * 100).toFixed(0)}%`
+              );
+            }
+          } catch (trackingErr) {
+            console.warn('Failed to track with Opik:', trackingErr);
+            // Don't break the flow if tracking fails
+          }
+        }
+      }
+      
+      setStep('preferences');
+    } catch (err) {
+      console.error('Extraction failed:', err);
+      // Fallback to defaults
+      setExtractedProfile({ vibe_score: 5 });
+      setStep('preferences');
     } finally {
       setLoading(false);
     }
   };
 
-  // Step configuration
-  const stepConfig = {
-    stepLabel: {
-      1: "Let's get started",
-      2: "Welcome to your journey",
-      3: "Setting your goal",
-      4: "Identifying patterns",
-      5: "Reality check",
-      6: "Assemble your tribe",
-      7: "Voice calibration",
-      8: "Verification",
-      9: "Goal refinement",
-      10: SHOW_SUBSCRIPTION_STEP ? "Subscription" : "Alignment achieved",
-      11: SHOW_SUBSCRIPTION_STEP ? "Subscription" : "Alignment achieved",
-      12: "Alignment achieved",
-    },
-    title: {
-      1: "Let's start with you",
-      2: `Welcome to ZAVN, ${fullName || 'there'}`,
-      3: "Let's make it official",
-      4: "What looks familiar?",
-      5: "Reality Check",
-      6: "Assemble Your Tribe",
-      7: "Sync Your Voice",
-      8: "Choose Your Verification",
-      9: "Let's make it official",
-      10: SHOW_SUBSCRIPTION_STEP ? "Your 18-Month Journey Starts Here" : "Alignment Achieved",
-      11: SHOW_SUBSCRIPTION_STEP ? "Your 18-Month Journey Starts Here" : "Alignment Achieved",
-      12: "Alignment Achieved",
-    },
-    subtitle: {
-      1: "How should Echo and Doyn address you?",
-      2: "Let's start with a quick introduction to how Echo and Doyn will work with you.",
-      3: "Define your goal with clarity",
-      4: "Select patterns that have shaped your work life.",
-      5: "Paint your weekly rhythm of energy and focus.",
-      6: "Nominate your 'Social Mirrors' for an honest look at your journey.",
-      7: "Read the text below so Echo can learn your unique tone.",
-      8: "Combine internal reflection with objective data.",
-      9: "Turn your vague intention into a concrete, measurable goal.",
-      10: SHOW_SUBSCRIPTION_STEP ? "Experience full access to ZAVN free for 7 days." : "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
-      11: SHOW_SUBSCRIPTION_STEP ? "Experience full access to ZAVN free for 7 days." : "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
-      12: "Your profile baseline is set. We've tailored your ZAVN experience to match your current state.",
-    },
+  // Handle preferences completion
+  const handlePreferencesComplete = (userPreferences: UserPreferences) => {
+    setPreferences(userPreferences);
+        setStep('tribe');
   };
 
-  const stepProps = {
-    profile,
-    setProfile,
-    onNext: nextStep,
-    onPrev: prevStep,
+  // Handle tribe form completion
+  const handleTribeComplete = async (members: TribeMember[]) => {
+    setTribeMembers(members);
+    await finalizeOnboarding(members);
   };
 
-  const renderStep = () => {
-    switch (step) {
-      case 1:
-        return <Step1Basics {...stepProps} />;
-      case 2:
-        return <Step2VoiceIntro {...stepProps} />;
-      case 3:
-        return <Step3SmartGoal {...stepProps} />;
-      case 4:
-        return <Step4Patterns {...stepProps} />;
-      case 5:
-        return <Step5Capacity {...stepProps} />;
-      case 6:
-        return <Step6Tribe {...stepProps} />;
-      case 7:
-        return <Step7VoiceCalibration {...stepProps} />;
-      case 8:
-        return <Step8Verification {...stepProps} />;
-      case 9:
-        return <Step9GoalDefinition {...stepProps} />;
-      case 10:
-        // Step 10 was duplicate verification - now maps to subscription or success
-        return SHOW_SUBSCRIPTION_STEP ? <Step11Subscription {...stepProps} /> : <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
-      case 11:
-        return SHOW_SUBSCRIPTION_STEP ? <Step11Subscription {...stepProps} /> : <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
-      case 12:
-        return <Step12Success {...stepProps} onNext={handleComplete} loading={loading} />;
-      default:
-        return null;
+  // Default preferences if user somehow bypasses the preferences step
+  const DEFAULT_PREFERENCES: UserPreferences = {
+    call_window_start: '09:00',
+    call_window_end: '21:00',
+    escalation_preference: 'soft',
+    communication_channel: 'email',
+    echo_vibe: 'balanced',
+  };
+
+  // Final completion handler
+  const finalizeOnboarding = async (finalTribeMembers: TribeMember[]) => {
+    setStep('completing');
+    setLoading(true);
+    
+    try {
+      // Use saved preferences or safe defaults (prevents null → 422 error)
+      const safePreferences = preferences || DEFAULT_PREFERENCES;
+
+      // 1. Call the new refactored complete endpoint with insights
+      // Ensure title is not empty (handle empty string case)
+      const goalTitle = extractedProfile?.primary_goal?.trim() || "My First Goal";
+      
+      const onboardingResult = await api.post<{ status: string; goal_id: string }>('/api/onboarding/complete', {
+        goal: {
+          title: goalTitle,
+          description: extractedProfile?.core_friction?.trim() || "",
+          deadline_days: 30, // Default 30 days deadline
+          category: extractedProfile?.professional_context === 'developer' ? 'work' : 'general'
+        },
+        tribe_members: finalTribeMembers.map(m => ({
+          name: m.name,
+          contact: m.contact,
+          platform: m.platform,
+          relationship: m.relationship
+        })),
+        preferences: safePreferences,
+        insights: voiceInsights // Pass Echo insights to be stored in Goal.metadata_json
+      });
+
+      // 1b. Auto-generate initial commitments so the dashboard isn't empty
+      if (onboardingResult.goal_id) {
+        try {
+          await goalsApi.generateCommitments(onboardingResult.goal_id, 3);
+          console.log('✓ Initial commitments generated for goal', onboardingResult.goal_id);
+        } catch (commitErr) {
+          console.warn('Initial commitment generation skipped (non-critical):', commitErr);
+        }
+      }
+
+      // 2. Update the NextAuth session to reflect onboarding completion
+      // This ensures the JWT token has onboardingCompleted: true for middleware/guards
+      try {
+        await updateSession({ onboardingCompleted: true });
+      } catch (sessionErr) {
+        console.warn('Session update skipped:', sessionErr);
+      }
+
+      // 3. Trigger baseline analysis for RAG (non-critical, don't block onboarding)
+      try {
+        await onboardingApi.analyzeBaseline();
+      } catch (analysisErr) {
+        console.warn('Baseline analysis skipped (non-critical):', analysisErr);
+      }
+
+      // 4. Hard redirect to dashboard to bypass any client-side router cache
+      window.location.href = '/dashboard';
+    } catch (err) {
+      console.error('Finalization failed:', err);
+      
+      // Extract more specific error message
+      let errorMessage = 'Failed to save your profile. Please try again.';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+      } else if (err && typeof err === 'object' && 'data' in err) {
+        const apiErr = err as { data?: { detail?: string }; message?: string };
+        if (apiErr.data?.detail) {
+          errorMessage = apiErr.data.detail;
+        } else if (apiErr.message) {
+          errorMessage = apiErr.message;
+        }
+      }
+      
+      setError(errorMessage);
+      setStep('tribe');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const handleSkip = async () => {
+    await finalizeOnboarding(tribeMembers);
+  };
+
+  // Step configuration
+  const stepConfig = {
+    voice: {
+      stepLabel: 'Discovery',
+      title: 'Meet Echo',
+      subtitle: 'Talk to Echo for 2-3 minutes. We\'ll learn your energy patterns and goals.',
+    },
+    preferences: {
+      stepLabel: 'Preferences',
+      title: 'Set Your Guardrails',
+      subtitle: 'When can we call you? How direct should Echo be?',
+    },
+    tribe: {
+      stepLabel: 'Tribe',
+      title: 'Accountability Network',
+      subtitle: 'Who will hold you to your promises?',
+    },
+    completing: {
+      stepLabel: 'Finalizing',
+      title: 'Locking it in',
+      subtitle: 'Setting up your Zero-Gap ecosystem...',
+    },
+  };
+
+  const currentConfig = stepConfig[step];
+  const totalSteps = 3;
+  const currentStepNumber = step === 'voice' ? 1 : step === 'preferences' ? 2 : 3;
+
   return (
     <OnboardingShell
-      step={step}
-      totalSteps={TOTAL_STEPS}
-      stepLabel={stepConfig.stepLabel[step as keyof typeof stepConfig.stepLabel] || ''}
-      title={stepConfig.title[step as keyof typeof stepConfig.title] || ''}
-      subtitle={stepConfig.subtitle[step as keyof typeof stepConfig.subtitle] || ''}
+      step={currentStepNumber}
+      totalSteps={totalSteps}
+      stepLabel={currentConfig.stepLabel}
+      title={currentConfig.title}
+      subtitle={currentConfig.subtitle}
     >
       <AnimatePresence mode="wait">
-        <motion.div
-          key={step}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          className="mx-auto w-full max-w-5xl pb-10"
-        >
-          {renderStep()}
-        </motion.div>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="absolute top-4 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 bg-red-50 border border-red-200 text-red-600 text-sm font-medium rounded-xl shadow-lg"
+          >
+            {error}
+          </motion.div>
+        )}
+
+        {step === 'voice' && (
+          <motion.div
+            key="voice"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="w-full h-full"
+          >
+            <VoiceOnboardingSession
+              onComplete={handleVoiceComplete}
+              onError={(msg) => setError(msg)}
+            />
+          </motion.div>
+        )}
+
+        {step === 'preferences' && extractedProfile && (
+          <motion.div
+            key="preferences"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="w-full overflow-y-auto"
+          >
+            <PreferencesStep
+              extractedProfile={extractedProfile}
+              onComplete={handlePreferencesComplete}
+            />
+          </motion.div>
+        )}
+
+        {step === 'tribe' && (
+          <motion.div
+            key="tribe"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="w-full overflow-y-auto"
+          >
+            <TribeForm
+              onComplete={handleTribeComplete}
+              onSkip={handleSkip}
+            />
+          </motion.div>
+        )}
+
+        {step === 'completing' && (
+          <motion.div
+            key="completing"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="w-full flex flex-col items-center justify-center p-20 space-y-8 bg-gradient-to-br from-primary/5 to-accent/5"
+          >
+            <div className="relative w-32 h-32">
+              <motion.div
+                animate={{
+                  scale: [1, 1.2, 1],
+                  opacity: [0.2, 0.4, 0.2],
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent blur-3xl"
+              />
+              <div className="absolute inset-0 border-4 border-primary/20 rounded-full animate-pulse" />
+              <div className="absolute inset-2 border-4 border-accent/20 rounded-full animate-spin [animation-duration:3s]" />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-sm text-primary font-bold animate-pulse">Setting up...</span>
+              </div>
+            </div>
+            <div className="text-center space-y-3 max-w-lg">
+              <h3 className="text-3xl font-bold text-foreground">Finalizing Your Profile</h3>
+              <p className="text-muted-foreground">
+                We&apos;re setting up your personalized accountability system and connecting your tribe. This will just take a moment...
+              </p>
+            </div>
+          </motion.div>
+        )}
       </AnimatePresence>
     </OnboardingShell>
   );

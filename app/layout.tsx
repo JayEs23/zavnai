@@ -1,14 +1,25 @@
 import type { Metadata } from "next";
+import { Manrope } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { SessionProvider } from "@/components/providers/SessionProvider";
+import { Toaster } from "react-hot-toast";
 
-// Using system fonts to avoid build-time network dependencies
-// This ensures the build works even if Google Fonts is unavailable
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  variable: "--font-manrope",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   title: "ZAVN | Close the Gap Between Intention and Action",
   description:
-    "A voice-led behavior alignment system. Harness AI-driven behavioral science through natural conversation.",
+    "AI-powered behavioral alignment system that helps you bridge the divide between who you say you are and what you do. Voice-first accountability with real stakes.",
+  icons: {
+    icon: '/favicon.ico',
+    apple: '/apple-touch-icon.png',
+  },
 };
 
 export default function RootLayout({
@@ -17,20 +28,60 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="en" className="light" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  // Remove dark class if present
+                  document.documentElement.classList.remove('dark');
+                  document.documentElement.classList.add('light');
+                  // Clear any stored theme preference
+                  localStorage.removeItem('theme');
+                  localStorage.setItem('theme', 'light');
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
+      </head>
       <body
-        className="antialiased"
+        className={`${manrope.variable} antialiased`}
         style={{
-          fontFamily: "var(--font-system-sans)",
+          fontFamily: "var(--font-manrope)",
         }}
       >
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="light"
-          enableSystem={false}
-        >
-          {children}
-        </ThemeProvider>
+        <SessionProvider>
+          <ThemeProvider
+            attribute="class"
+            defaultTheme="light"
+            forcedTheme="light"
+            enableSystem={false}
+            disableTransitionOnChange
+            storageKey="theme"
+          >
+            {children}
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 4000,
+                style: {
+                  borderRadius: '12px',
+                  padding: '12px 16px',
+                  fontSize: '14px',
+                },
+                success: {
+                  iconTheme: { primary: '#22c55e', secondary: '#fff' },
+                },
+                error: {
+                  iconTheme: { primary: '#ef4444', secondary: '#fff' },
+                },
+              }}
+            />
+          </ThemeProvider>
+        </SessionProvider>
       </body>
     </html>
   );

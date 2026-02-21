@@ -1,194 +1,242 @@
-/**
- * Step 3: Preferences and Echo starting points
- */
-
 'use client';
 
 import React, { useState } from 'react';
-import { PreferencesStepData } from '@/services/onboardingApi';
+import { motion } from 'framer-motion';
+import { MdSchedule, MdPhone, MdEmail, MdNotifications, MdCheckCircle, MdLock } from 'react-icons/md';
+import { ExtractedProfile } from '@/services/entityExtraction';
 
 interface PreferencesStepProps {
-  onNext: (data: PreferencesStepData) => void;
-  initialData?: Partial<PreferencesStepData>;
-  isLoading?: boolean;
+  extractedProfile: ExtractedProfile;
+  onComplete: (preferences: UserPreferences) => void;
 }
 
-const COMMUNICATION_STYLES = [
-  { value: 'direct', label: 'Direct', description: 'Straightforward and to the point' },
-  { value: 'gentle', label: 'Gentle', description: 'Soft and supportive' },
-  { value: 'conversational', label: 'Conversational', description: 'Friendly and engaging' },
-] as const;
+export interface UserPreferences {
+  call_window_start: string; // HH:MM format
+  call_window_end: string; // HH:MM format
+  escalation_preference: 'soft' | 'hard';
+  communication_channel: 'call' | 'sms' | 'whatsapp' | 'email';
+  echo_vibe: 'challenging' | 'supportive' | 'balanced';
+}
 
-const TIME_COMMITMENTS = [
-  { value: 'low', label: 'Low', description: '15-30 minutes per week' },
-  { value: 'medium', label: 'Medium', description: '1-2 hours per week' },
-  { value: 'high', label: 'High', description: '3+ hours per week' },
-] as const;
+export default function PreferencesStep({ extractedProfile, onComplete }: PreferencesStepProps) {
+  // Infer defaults from extracted profile
+  const getDefaultCallWindow = () => {
+    if (extractedProfile.energy_peak === 'morning') {
+      return { start: '07:00', end: '22:00' };
+    } else if (extractedProfile.energy_peak === 'late_night') {
+      return { start: '10:00', end: '23:00' };
+    }
+    return { start: '09:00', end: '21:00' };
+  };
 
-const GROWTH_AREAS = [
-  'Productivity',
-  'Health & Wellness',
-  'Finance',
-  'Learning',
-  'Relationships',
-  'Career',
-  'Creativity',
-  'Mindfulness',
-  'Fitness',
-  'Personal Development',
-];
+  const defaults = getDefaultCallWindow();
 
-export default function PreferencesStep({
-  onNext,
-  initialData = {},
-  isLoading = false,
-}: PreferencesStepProps) {
-  const [formData, setFormData] = useState<PreferencesStepData>({
-    communication_style: initialData.communication_style || 'conversational',
-    time_commitment: initialData.time_commitment || 'medium',
-    growth_areas: initialData.growth_areas || [],
-    additional_responses: initialData.additional_responses || {},
+  const [preferences, setPreferences] = useState<UserPreferences>({
+    call_window_start: defaults.start,
+    call_window_end: defaults.end,
+    escalation_preference: extractedProfile.vibe_score >= 7 ? 'hard' : 'soft',
+    communication_channel: 'email',
+    echo_vibe: 'balanced',
   });
 
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  // Premium channels require phone verification + subscription
+  const premiumChannels = ['call', 'sms', 'whatsapp'] as const;
 
-  const toggleGrowthArea = (area: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      growth_areas: prev.growth_areas.includes(area)
-        ? prev.growth_areas.filter((a) => a !== area)
-        : [...prev.growth_areas, area],
-    }));
-  };
-
-  const validate = (): boolean => {
-    const newErrors: Record<string, string> = {};
-
-    if (formData.growth_areas.length === 0) {
-      newErrors.growth_areas = 'Please select at least one growth area';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validate()) {
-      onNext(formData);
-    }
+  const handleSubmit = () => {
+    onComplete(preferences);
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-8">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-          Tell us about your preferences
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Help Echo understand how to best support you
-        </p>
-      </div>
-
-      {/* Communication Style */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Communication Style <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {COMMUNICATION_STYLES.map((style) => (
-            <button
-              key={style.value}
-              type="button"
-              onClick={() =>
-                setFormData({ ...formData, communication_style: style.value })
-              }
-              className={`p-4 border-2 rounded-lg text-left transition-all ${
-                formData.communication_style === style.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {style.label}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {style.description}
-              </div>
-            </button>
-          ))}
+    <div className="w-full max-w-4xl mx-auto px-6 py-12">
+      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8">
+        <div className="space-y-3">
+          <h2 className="text-3xl font-bold text-foreground">Set Your Preferences</h2>
+          <p className="text-muted-foreground">
+            Help us personalize your experience by setting up your communication preferences and interaction style.
+          </p>
         </div>
-      </div>
 
-      {/* Time Commitment */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Time Commitment <span className="text-red-500">*</span>
-        </label>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {TIME_COMMITMENTS.map((commitment) => (
-            <button
-              key={commitment.value}
-              type="button"
-              onClick={() =>
-                setFormData({ ...formData, time_commitment: commitment.value })
-              }
-              className={`p-4 border-2 rounded-lg text-left transition-all ${
-                formData.time_commitment === commitment.value
-                  ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20'
-                  : 'border-gray-200 hover:border-gray-300 dark:border-gray-700'
-              }`}
-            >
-              <div className="font-semibold text-gray-900 dark:text-white">
-                {commitment.label}
-              </div>
-              <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                {commitment.description}
-              </div>
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Growth Areas */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-4">
-          Growth Areas <span className="text-red-500">*</span>
-          <span className="text-gray-500 font-normal ml-2">
-            (Select all that apply)
-          </span>
-        </label>
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-          {GROWTH_AREAS.map((area) => (
-            <button
-              key={area}
-              type="button"
-              onClick={() => toggleGrowthArea(area)}
-              className={`px-4 py-2 rounded-lg border-2 text-sm font-medium transition-all ${
-                formData.growth_areas.includes(area)
-                  ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300'
-                  : 'border-gray-200 text-gray-700 hover:border-gray-300 dark:border-gray-700 dark:text-gray-300'
-              }`}
-            >
-              {area}
-            </button>
-          ))}
-        </div>
-        {errors.growth_areas && (
-          <p className="mt-2 text-sm text-red-500">{errors.growth_areas}</p>
+        {/* AI Suggestions */}
+        {extractedProfile.energy_peak && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-primary/5 border border-primary/20 rounded-xl p-4 flex items-start gap-3"
+          >
+            <MdCheckCircle className="text-primary flex-shrink-0 mt-0.5" size={20} />
+            <p className="text-sm text-foreground">
+              <strong>Smart suggestion:</strong> We detected you're most productive in the {' '}
+              <span className="font-semibold text-primary">
+                {extractedProfile.energy_peak === 'morning' ? 'morning' : 'evening'}
+              </span>. 
+              We've adjusted your availability window to match your peak hours.
+            </p>
+          </motion.div>
         )}
-      </div>
 
-      <div className="flex justify-end">
-        <button
-          type="submit"
-          disabled={isLoading}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {isLoading ? 'Completing...' : 'Complete Onboarding'}
-        </button>
+        <div className="space-y-8">
+          {/* Call Window */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdSchedule className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Availability Window</h3>
+                <p className="text-sm text-muted-foreground">When can we reach out to you?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 pl-12">
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  Start Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences.call_window_start}
+                  onChange={(e) =>
+                    setPreferences({ ...preferences, call_window_start: e.target.value })
+                  }
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground">
+                  End Time
+                </label>
+                <input
+                  type="time"
+                  value={preferences.call_window_end}
+                  onChange={(e) =>
+                    setPreferences({ ...preferences, call_window_end: e.target.value })
+                  }
+                  className="w-full px-4 py-3 bg-muted border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Escalation Preference */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdNotifications className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Accountability Style</h3>
+                <p className="text-sm text-muted-foreground">How should we keep you on track?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pl-12">
+              <button
+                onClick={() => setPreferences({ ...preferences, escalation_preference: 'soft' })}
+                className={`p-5 border-2 rounded-xl transition-all text-left ${
+                  preferences.escalation_preference === 'soft'
+                    ? 'border-primary bg-primary/5 shadow-md'
+                    : 'border-border bg-white hover:border-primary/30'
+                }`}
+              >
+                <div className="text-base font-semibold text-foreground mb-2">Gentle Nudge</div>
+                <div className="text-sm text-muted-foreground">Supportive reminders and reflective questions to guide you.</div>
+              </button>
+              <button
+                onClick={() => setPreferences({ ...preferences, escalation_preference: 'hard' })}
+                className={`p-5 border-2 rounded-xl transition-all text-left ${
+                  preferences.escalation_preference === 'hard'
+                    ? 'border-primary bg-primary/5 shadow-md'
+                    : 'border-border bg-white hover:border-primary/30'
+                }`}
+              >
+                <div className="text-base font-semibold text-foreground mb-2">Direct Accountability</div>
+                <div className="text-sm text-muted-foreground">High-stakes reminders with clear consequences.</div>
+              </button>
+            </div>
+          </div>
+
+          {/* Communication Channel */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdPhone className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Preferred Channel</h3>
+                <p className="text-sm text-muted-foreground">How would you like us to notify you about your commitments?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pl-12">
+              {/* Email - free, always available */}
+              <button
+                onClick={() => setPreferences({ ...preferences, communication_channel: 'email' })}
+                className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all ${
+                  preferences.communication_channel === 'email'
+                    ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                    : 'border-border bg-white text-foreground hover:border-primary/30'
+                }`}
+              >
+                Email
+              </button>
+
+              {/* Premium channels - call, sms, whatsapp */}
+              {(['call', 'sms', 'whatsapp'] as const).map((channel) => (
+                <div key={channel} className="relative">
+                  <button
+                    disabled
+                    className="w-full py-3 px-4 border-2 border-border rounded-xl text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed capitalize opacity-60"
+                  >
+                    {channel}
+                  </button>
+                  <span className="absolute -top-2 -right-2 flex items-center gap-0.5 px-1.5 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded-full border border-amber-200">
+                    <MdLock size={10} />
+                    PRO
+                  </span>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground pl-12">
+              📱 Phone calls, SMS, and WhatsApp notifications are available with a Pro subscription. 
+              You can enable them anytime in <strong>Settings → Notifications</strong> after verifying your phone number.
+            </p>
+          </div>
+
+          {/* Echo Vibe */}
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                <MdEmail className="text-primary" size={20} />
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Coach Personality</h3>
+                <p className="text-sm text-muted-foreground">What tone works best for you?</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pl-12">
+              {(['challenging', 'balanced', 'supportive'] as const).map((vibe) => (
+                <button
+                  key={vibe}
+                  onClick={() => setPreferences({ ...preferences, echo_vibe: vibe })}
+                  className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                    preferences.echo_vibe === vibe
+                      ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                      : 'border-border bg-white text-foreground hover:border-primary/30'
+                  }`}
+                >
+                  {vibe}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="pt-6">
+          <button
+            onClick={handleSubmit}
+            className="w-full py-4 bg-gradient-to-r from-primary to-accent text-white font-semibold rounded-xl hover:shadow-lg transition-all"
+          >
+            Continue
+          </button>
+        </div>
       </div>
-    </form>
+    </div>
   );
 }
-

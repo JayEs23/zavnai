@@ -1,106 +1,89 @@
-import Link from "next/link";
-import {
-  MdMic,
-  MdContentCut,
-  MdFavorite,
-  MdGroup,
-  MdGraphicEq,
-  MdBolt,
-  MdSpa,
-  MdChevronLeft,
-  MdChevronRight,
-  MdArrowForward,
-} from "react-icons/md";
+"use client";
+
+import React from "react";
+import { motion } from "framer-motion";
+import { Bot, Brain, Users, TrendingUp } from "lucide-react";
 
 const agents = [
   {
-    id: "echo",
-    Icon: MdMic,
-    BadgeIcon: MdGraphicEq,
-    title: "Echo",
-    description:
-      "The Voice Interface. Advanced reflection and awareness tools that listen to your mental models.",
+    icon: Bot,
+    name: "Echo",
+    color: "primary",
+    description: "Your voice-first accountability partner. Natural conversations that understand context and nuance.",
+    features: ["Voice-first interface", "Context aware", "24/7 availability"],
   },
   {
-    id: "doyn",
-    Icon: MdContentCut,
-    BadgeIcon: MdBolt,
-    title: "Doyn",
-    description:
-      "Execution and productivity focus. Turning complex plans into immediate, friction-free movement.",
+    icon: Brain,
+    name: "Doyn",
+    color: "secondary",
+    description: "Smart commitment tracking that learns your patterns and adapts to your behavior.",
+    features: ["Pattern recognition", "Smart reminders", "Progress insights"],
   },
   {
-    id: "thrive",
-    Icon: MdFavorite,
-    BadgeIcon: MdSpa,
-    title: "Thrive",
-    description:
-      "Wellbeing and sustainable growth. Ensuring performance doesn't come at the cost of your health.",
+    icon: Users,
+    name: "Tribe",
+    color: "accent",
+    description: "Connect with your accountability partners. Share progress, celebrate wins, stay motivated.",
+    features: ["Peer support", "Shared goals", "Community motivation"],
   },
   {
-    id: "tribe",
-    Icon: MdGroup,
-    BadgeIcon: MdGroup,
-    title: "Tribe",
-    description:
-      "Collective alignment. Social accountability features that link your progress with your community.",
+    icon: TrendingUp,
+    name: "Thrive",
+    color: "success",
+    description: "Long-term growth tracking with insights that help you understand and improve your behavior.",
+    features: ["Growth analytics", "Behavioral insights", "Long-term trends"],
   },
 ];
 
 export const EcosystemSection = () => {
   return (
-    <section className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-24 dark:border-white/5 lg:px-10">
-      <div className="mb-16 flex flex-col justify-between gap-8 md:flex-row md:items-end">
-        <div className="max-w-2xl">
-          <span className="mb-4 block text-xs font-bold tracking-widest text-[var(--foreground)]">
-            The Ecosystem
-          </span>
-          <h2 className="mb-6 text-4xl font-bold tracking-tight md:text-5xl">
-            Four pillars of behavior alignment
-          </h2>
-          <p className="text-lg text-body">
-            Designed to help you align your daily actions with your deepest
-            intentions using specialized cognitive agents.
+    <section id="how-it-works" className="section-padding bg-white">
+      <div className="max-w-container">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-foreground mb-4">
+            Four AI Agents, One Mission
+            </h2>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            A complete ecosystem designed to help you close the gap between intention and action.
           </p>
+        </motion.div>
+
+        <div className="grid md:grid-cols-2 gap-8">
+          {agents.map((agent, index) => {
+            const Icon = agent.icon;
+            return (
+            <motion.div
+                key={agent.name}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+                transition={{ delay: index * 0.1, duration: 0.5 }}
+                className="card group hover:border-primary/30"
+              >
+                <div className={`inline-flex p-4 rounded-2xl bg-${agent.color}/10 mb-4`}>
+                  <Icon className={`w-8 h-8 accent-${agent.color}`} />
+                </div>
+                <h3 className="text-2xl font-bold text-foreground mb-3">{agent.name}</h3>
+                <p className="text-muted-foreground mb-6">{agent.description}</p>
+                <ul className="space-y-2">
+                  {agent.features.map((feature) => (
+                    <li key={feature} className="flex items-center gap-2 text-sm text-foreground">
+                      <div className={`w-1.5 h-1.5 rounded-full bg-${agent.color}`} />
+                      {feature}
+                    </li>
+                  ))}
+                </ul>
+            </motion.div>
+            );
+          })}
         </div>
-        <div className="flex gap-2">
-          <button className="rounded-full border border-slate-200 p-3 transition-all hover:bg-black/5 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-white/5 dark:hover:text-white">
-            <MdChevronLeft className="text-xl" />
-          </button>
-          <button className="rounded-full border border-slate-200 p-3 transition-all hover:bg-black/5 hover:text-slate-900 dark:border-slate-800 dark:hover:bg-white/5 dark:hover:text-white">
-            <MdChevronRight className="text-xl" />
-          </button>
-        </div>
-      </div>
-      <div className="grid grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-        {agents.map((agent) => (
-          <article
-            key={agent.id}
-            id={agent.id}
-            className="group card"
-          >
-            <div className="absolute right-0 top-0 p-6 opacity-[0.03] transition-opacity group-hover:opacity-[0.07] dark:opacity-10 dark:group-hover:opacity-20">
-              <agent.BadgeIcon className="text-8xl" />
-            </div>
-            <div className="mb-8 size-14 rounded-2xl icon-container group-hover:bg-[var(--foreground)] group-hover:text-[var(--background)] group-hover:rotate-[10deg] group-hover:scale-110 transition-all duration-500">
-              <agent.Icon className="text-2xl" />
-            </div>
-            <h3 className="mb-3 text-2xl font-bold tracking-tight">{agent.title}</h3>
-            <p className="mb-8 text-[15px] text-body">
-              {agent.description}
-            </p>
-            <Link
-              href={`/agents/${agent.id}`}
-              className="inline-flex items-center gap-2 text-sm font-bold text-[var(--foreground)] group-hover:gap-3 transition-all"
-            >
-              <span>Explore {agent.title}</span>
-              <MdArrowForward className="text-base" />
-            </Link>
-          </article>
-        ))}
       </div>
     </section>
   );
 };
-
-

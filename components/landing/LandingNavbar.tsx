@@ -1,48 +1,52 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
-import { ThemeToggle } from "../ThemeToggle";
 
 export const LandingNavbar = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 glass-nav">
-      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-10">
+      <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-12">
         <Link href="/" className="flex items-center gap-3 group">
-          <div className="relative h-12 w-12 rounded-xl transition-transform group-hover:scale-110 icon-container">
-            <Image
-              src="/zavn-icon.png"
-              alt="ZAVN logo"
-              fill
-              className="object-contain p-1.5"
-              priority
-            />
-          </div>
-          <h2 className="text-2xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-slate-900 to-slate-600 dark:from-white dark:to-white/70">
+          <Image
+            src="/zavn-icon.png"
+            alt="ZAVN Logo"
+            width={40}
+            height={40}
+            className="transition-transform group-hover:scale-105"
+          />
+          <span className="text-2xl font-bold tracking-tight text-foreground">
             ZAVN
-          </h2>
+          </span>
         </Link>
-        <nav className="hidden items-center gap-10 md:flex">
-          {["Echo", "Doyn", "Thrive", "Tribe"].map((item) => (
+        
+        <nav className="hidden items-center gap-8 lg:flex">
+          {[
+            { name: "How It Works", href: "#how-it-works" },
+            { name: "Features", href: "#features" },
+            { name: "Community", href: "#community" },
+            { name: "Pricing", href: "#pricing" },
+          ].map((item) => (
             <a
-              key={item}
+              key={item.name}
               className="nav-link"
-              href={`#${item.toLowerCase()}`}
+              href={item.href}
             >
-              {item}
+              {item.name}
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-3 sm:gap-6">
-          <ThemeToggle />
-          <div className="hidden h-6 w-[1px] bg-slate-200 dark:bg-white/10 sm:block" />
+
+        <div className="flex items-center gap-4">
           <Link
             href="/login"
-            className="nav-link font-bold text-[var(--foreground)] hover:text-[var(--primary)]"
+            className="nav-link font-semibold"
           >
-            Login
+            Log In
           </Link>
           <Link
             href="/signup"
-            className="hidden sm:inline-flex btn-primary px-6 py-2.5 text-sm"
+            className="btn-primary"
           >
             Get Started
           </Link>
@@ -51,5 +55,3 @@ export const LandingNavbar = () => {
     </header>
   );
 };
-
-

@@ -1,39 +1,30 @@
+"use client";
+
+import React from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 export const CtaSection = () => {
   return (
-    <section className="px-6 py-32 sm:py-48">
-      <div className="mx-auto max-w-5xl rounded-[3.5rem] bg-[var(--foreground)] px-8 py-20 text-center shadow-2xl md:px-16 md:py-32 relative overflow-hidden">
-        {/* Subtle decorative elements */}
-        <div className="absolute -left-24 -top-24 h-64 w-64 rounded-full bg-[var(--background)]/10 blur-[100px]" />
-        <div className="absolute -bottom-24 -right-24 h-64 w-64 rounded-full bg-[var(--background)]/5 blur-[100px]" />
-
-        <div className="relative z-10">
-          <h2 className="mb-8 text-4xl font-extrabold tracking-tight leading-tight text-[var(--background)] md:text-7xl">
-            Start your alignment <br /> journey today.
-          </h2>
-          <p className="mx-auto mb-16 max-w-2xl text-xl text-[var(--background)]/70">
-            Join a growing community using behavioral science to close the gap
-            between who they are and who they want to be.
-          </p>
-          <div className="flex flex-col justify-center items-center gap-6 sm:flex-row">
-            <Link
-              href="/signup"
-              className="group relative px-12 py-5 text-xl btn-primary bg-[var(--background)] text-[var(--foreground)] hover:bg-[var(--background)]/90"
-            >
-              Get Started for Free
-            </Link>
-            <Link
-              href="/contact"
-              className="text-lg font-bold text-white/80 hover:text-white transition-colors"
-            >
-              Book a Demo &rarr;
-            </Link>
-          </div>
+    <section className="section-padding bg-gradient-to-br from-primary to-accent text-white">
+      <div className="max-w-container text-center">
+        <h2 className="text-4xl md:text-5xl font-bold mb-6">
+          Ready to Close the Gap?
+        </h2>
+        <p className="text-xl text-white/90 max-w-2xl mx-auto mb-8">
+          Join thousands of people who are transforming their intentions into actions.
+          Start your journey today—no credit card required.
+        </p>
+        <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <Link href="/signup" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-primary rounded-xl font-semibold hover:shadow-lg transition-all">
+            Get Started Free
+            <ArrowRight className="w-5 h-5" />
+          </Link>
+          <Link href="/contact" className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white/10 text-white rounded-xl font-semibold border-2 border-white/20 hover:bg-white/20 transition-all">
+            Contact Us
+          </Link>
         </div>
       </div>
     </section>
   );
 };
-
-
