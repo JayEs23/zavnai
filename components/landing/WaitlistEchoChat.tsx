@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { Send, Bot, X, Loader2 } from "lucide-react";
 
 import { FocusAreaId } from "@/constants/focusAreas";
@@ -57,9 +56,6 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
       const focusAreasContext = focusAreas.length > 0 
         ? ` Focus areas: ${focusAreas.join(', ')}.`
         : '';
-      const systemContext = userGoals || userInterests || focusAreas.length > 0
-        ? `The user is on the waitlist and interested in:${focusAreasContext}${userGoals ? ` Goals: ${userGoals}` : ''}${userGoals && userInterests ? '.' : ''}${userInterests ? ` Interests: ${userInterests}` : ''}. Help them understand how ZAVN can help with these specific areas.`
-        : "The user is on the waitlist. Help them understand how ZAVN can help them close the gap between intention and action across all five focus areas.";
 
       const response = await fetch(`${apiUrl}/api/waitlist/echo-chat`, {
         method: 'POST',
@@ -101,12 +97,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="absolute inset-0 bg-white rounded-2xl flex flex-col z-10"
-    >
+    <div className="absolute inset-0 bg-white rounded-2xl flex flex-col z-20 overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-border">
         <div className="flex items-center gap-3">
@@ -176,7 +167,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
           </button>
         </div>
       </div>
-    </motion.div>
+    </div>
   );
 };
 

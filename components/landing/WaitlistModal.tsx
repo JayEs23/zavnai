@@ -13,7 +13,8 @@ interface WaitlistModalProps {
 }
 
 // Client-side sanitization function
-const sanitizeInput = (text: string): string => {
+// Only sanitize dangerous content, preserve spaces and normal characters
+const sanitizeInput = (text: string, preserveSpaces: boolean = true): string => {
   if (!text) return "";
   
   // Remove null bytes
@@ -26,20 +27,16 @@ const sanitizeInput = (text: string): string => {
     .replace(/javascript:/gi, '')
     .replace(/data:text\/html/gi, '');
   
-  // Escape HTML entities
-  sanitized = sanitized
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#x27;');
+  // Only escape HTML entities if not preserving spaces (for display)
+  // For input fields, we don't need to escape HTML entities on every keystroke
+  // The backend will handle proper sanitization
   
   // Limit length
   if (sanitized.length > 1000) {
     sanitized = sanitized.substring(0, 1000);
   }
   
-  return sanitized.trim();
+  return preserveSpaces ? sanitized : sanitized.trim();
 };
 
 export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose }) => {
@@ -55,8 +52,17 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
   const [showEchoChat, setShowEchoChat] = useState(false);
 
   const handleInputChange = (field: string, value: string) => {
-    // Sanitize input on change
-    const sanitized = sanitizeInput(value);
+    // Don't sanitize during typing - only remove null bytes and limit length
+    // Full sanitization will happen on submit
+    let sanitized = value.replace(/\x00/g, ''); // Remove null bytes only
+    
+    // Apply length limits
+    if (field === "name" && sanitized.length > 255) {
+      sanitized = sanitized.substring(0, 255);
+    } else if ((field === "goals" || field === "interests") && sanitized.length > 1000) {
+      sanitized = sanitized.substring(0, 1000);
+    }
+    
     setFormData((prev) => ({ ...prev, [field]: sanitized }));
   };
 
@@ -87,6 +93,11 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
     setIsSubmitting(true);
 
     try {
+      // Sanitize data before sending to backend
+      const sanitizedName = formData.name ? sanitizeInput(formData.name.trim(), true) : undefined;
+      const sanitizedGoals = formData.goals ? sanitizeInput(formData.goals.trim(), false) : undefined;
+      const sanitizedInterests = formData.interests ? sanitizeInput(formData.interests.trim(), false) : undefined;
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/api/waitlist/signup`, {
         method: "POST",
         headers: {
@@ -95,9 +106,9 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
         },
         body: JSON.stringify({
           email: formData.email.trim().toLowerCase(),
-          name: formData.name || undefined,
-          goals: formData.goals || undefined,
-          interests: formData.interests || undefined,
+          name: sanitizedName,
+          goals: sanitizedGoals,
+          interests: sanitizedInterests,
           focus_areas: formData.focusAreas.length > 0 ? formData.focusAreas : undefined,
           contact_on_launch: formData.contactOnLaunch,
         }),
@@ -155,29 +166,19 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden relative">
+            <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] flex flex-col overflow-hidden relative">
               {/* Echo Chat Overlay */}
-              <AnimatePresence>
-                {showEchoChat && (
-                  <WaitlistEchoChat
-                    onClose={() => setShowEchoChat(false)}
-                    userGoals={formData.goals}
-                    userInterests={formData.interests}
-                    focusAreas={formData.focusAreas}
-                  />
-                )}
-              </AnimatePresence>
-
-              {/* Main Form (hidden when chat is open) */}
-              <AnimatePresence>
-                {!showEchoChat && (
-                  <motion.div
-                    initial={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    className="flex flex-col h-full"
-                  >
-                    {/* Header */}
-                    <div className="sticky top-0 bg-white border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
+              {showEchoChat ? (
+                <WaitlistEchoChat
+                  onClose={() => setShowEchoChat(false)}
+                  userGoals={formData.goals}
+                  userInterests={formData.interests}
+                  focusAreas={formData.focusAreas}
+                />
+              ) : (
+                <div className="flex flex-col h-full min-h-0">
+                    {/* Header - Fixed */}
+                    <div className="flex-shrink-0 bg-white border-b border-border px-6 py-4 flex items-center justify-between rounded-t-2xl z-10">
                       <div className="flex items-center gap-3">
                         <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-teal-600">
                           <Sparkles className="w-5 h-5 text-white" />
@@ -196,8 +197,9 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
                       </button>
                     </div>
 
-                    {/* Form */}
-                    <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto flex-1">
+                    {/* Form - Scrollable Container */}
+                    <div className="flex-1 min-h-0 overflow-y-auto">
+                      <form onSubmit={handleSubmit} className="p-6 space-y-6">
                       {/* Email */}
                       <div>
                         <label className="flex items-center gap-2 text-sm font-semibold text-foreground mb-2">
@@ -343,10 +345,10 @@ export const WaitlistModal: React.FC<WaitlistModalProps> = ({ isOpen, onClose })
                           </>
                         )}
                       </button>
-                    </form>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+                      </form>
+                    </div>
+                </div>
+              )}
             </div>
           </motion.div>
         </>
