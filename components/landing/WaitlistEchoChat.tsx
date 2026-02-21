@@ -19,13 +19,8 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
   userInterests,
   focusAreas = []
 }) => {
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
-  const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-
-  // Initialize with ZAVN AI's greeting
-  useEffect(() => {
+  const [messages, setMessages] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>(() => {
+    // Initialize with greeting
     const focusAreasText = focusAreas.length > 0 
       ? ` I see you're interested in ${focusAreas.length === 1 ? 'this area' : 'these areas'}.`
       : '';
@@ -34,65 +29,87 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
       ? `Hi! I'm ZAVN AI, your personal growth assistant.${focusAreasText}${userGoals ? ` I understand you want to achieve: ${userGoals}` : ''}${userGoals && userInterests ? ' and' : ''}${userInterests ? ` you're exploring: ${userInterests}` : ''}. How can I help you understand what ZAVN can do for you?`
       : "Hi! I'm ZAVN AI, your personal growth assistant. I'm here to help you understand how ZAVN can help you close the gap between your intentions and actions across five key areas: Productivity & Work Habits, Health & Wellness, Financial Health, Personal Growth & Learning, and Relationships & Community Impact. What would you like to know?";
     
-    setMessages([{ role: 'assistant', content: greeting }]);
-  }, [userGoals, userInterests, focusAreas]);
+    return [{ role: 'assistant' as const, content: greeting }];
+  });
+  const [inputText, setInputText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const isSendingRef = useRef(false);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const sendMessage = async () => {
-    if (!inputText.trim() || isLoading) return;
+    if (!inputText.trim() || isLoading || isSendingRef.current) return;
 
     const userMessage = inputText.trim();
     setInputText("");
     setIsLoading(true);
+    isSendingRef.current = true;
     
-    // Add user message to state immediately for UI
+    // Add user message to state and get updated messages for API call
+    let conversationHistory: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    
     setMessages((prev) => {
-      const updatedMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [...prev, { role: 'user' as const, content: userMessage }];
-      
-      // Build conversation history including the new user message
-      const conversationHistory = updatedMessages.map(m => ({ role: m.role, content: m.content }));
-      
-      // Send message to backend with complete history
-      (async () => {
-        try {
-          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-          const response = await fetch(`${apiUrl}/api/waitlist/echo-chat`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'X-App-Secret': process.env.NEXT_PUBLIC_APP_SECRET_KEY || '',
-            },
-            body: JSON.stringify({
-              message: userMessage,
-              history: conversationHistory,
-              user_goals: userGoals,
-              user_interests: userInterests,
-              focus_areas: focusAreas,
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error(`Backend error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          setMessages((prevMessages) => [...prevMessages, { role: 'assistant', content: data.response }]);
-        } catch (error) {
-          console.error('[ZAVN AI] Message failed:', error);
-          setMessages((prevMessages) => [...prevMessages, {
-            role: 'assistant',
-            content: "I'm having trouble connecting right now. Please try again or feel free to join the waitlist and we'll be in touch!"
-          }]);
-        } finally {
-          setIsLoading(false);
-        }
-      })();
-      
+      const updatedMessages = [...prev, { role: 'user' as const, content: userMessage }];
+      conversationHistory = updatedMessages.map(m => ({ role: m.role, content: m.content }));
       return updatedMessages;
     });
+
+    try {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/waitlist/echo-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-App-Secret': process.env.NEXT_PUBLIC_APP_SECRET_KEY || '',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          history: conversationHistory,
+          user_goals: userGoals,
+          user_interests: userInterests,
+          focus_areas: focusAreas,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`Backend error: ${response.status}`);
+      }
+
+      const data = await response.json();
+      
+      // Add assistant response with duplicate prevention
+      setMessages((prevMessages) => {
+        // Check if this exact response was already added
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        if (lastMessage?.role === 'assistant' && lastMessage?.content === data.response) {
+          return prevMessages; // Duplicate, skip
+        }
+        // Check for consecutive duplicate assistant messages
+        if (prevMessages.length >= 2) {
+          const secondLast = prevMessages[prevMessages.length - 2];
+          if (secondLast?.role === 'assistant' && secondLast?.content === data.response) {
+            return prevMessages; // Duplicate detected
+          }
+        }
+        return [...prevMessages, { role: 'assistant' as const, content: data.response }];
+      });
+    } catch (error) {
+      console.error('[ZAVN AI] Message failed:', error);
+      const errorMsg = "I'm having trouble connecting right now. Please try again or feel free to join the waitlist and we'll be in touch!";
+      setMessages((prevMessages) => {
+        const lastMessage = prevMessages[prevMessages.length - 1];
+        if (lastMessage?.role === 'assistant' && lastMessage?.content === errorMsg) {
+          return prevMessages;
+        }
+        return [...prevMessages, { role: 'assistant' as const, content: errorMsg }];
+      });
+    } finally {
+      setIsLoading(false);
+      isSendingRef.current = false;
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
