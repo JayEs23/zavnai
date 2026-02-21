@@ -1,0 +1,27 @@
+name: Keep Backend Alive
+
+on:
+    schedule:
+        # Run every 10 minutes
+        - cron: "*/10 * * * *"
+    workflow_dispatch: # Allow manual triggering
+
+jobs:
+    ping-backend:
+        runs-on: ubuntu-latest
+        steps:
+            - name: Ping Keepalive Endpoint
+              run: |
+                  NEXTJS_URL="${NEXTJS_URL:-https://zavnai.vercel.app}"
+                  SECRET="${KEEPALIVE_SECRET:-}"
+
+                  if [ -n "$SECRET" ]; then
+                    curl -f "${NEXTJS_URL}/api/keepalive?secret=${SECRET}" || exit 1
+                  else
+                    curl -f "${NEXTJS_URL}/api/keepalive" || exit 1
+                  fi
+
+                  echo "✅ Backend keepalive pinged successfully at $(date)"
+              env:
+                  NEXTJS_URL: ${{ secrets.NEXTJS_URL }}
+                  KEEPALIVE_SECRET: ${{ secrets.KEEPALIVE_SECRET }}
