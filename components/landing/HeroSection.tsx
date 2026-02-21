@@ -1,176 +1,230 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowRight, CheckCircle2 } from "lucide-react";
+import { ArrowRight, CheckCircle2, Mic, Shield, TrendingUp } from "lucide-react";
+import { ENABLE_WAITLIST_MODE } from "@/constants/featureFlags";
+import { WaitlistModal } from "./WaitlistModal";
 
 export const HeroSection = () => {
+  const [waitlistModalOpen, setWaitlistModalOpen] = useState(false);
+
   return (
-    <section className="relative min-h-[90vh] flex items-center justify-center px-6 lg:px-12 overflow-hidden hero-gradient">
-      <div className="max-w-7xl mx-auto w-full grid lg:grid-cols-2 gap-16 items-center py-20">
-        {/* Left Column - Content */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="space-y-8 text-center lg:text-left"
-        >
-          <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 rounded-full">
-            <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
-            <span className="text-sm font-semibold text-primary">
-              AI-Powered Behavioral Alignment
-            </span>
-          </div>
-
-          <h1 className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-tight">
-            Close the Gap Between{" "}
-            <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">
-              Intention and Action
-            </span>
-          </h1>
-
-          <p className="text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0">
-            ZAVN helps you bridge the divide between who you say you are and what you actually do.
-            A voice-led accountability system powered by behavioral science and AI.
-          </p>
-
-          <div className="space-y-4">
-            {[
-              "Voice-first natural conversations",
-              "Real accountability with stakes",
-              "Supportive tribe community",
-            ].map((feature, i) => (
-              <motion.div
-                key={feature}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.1, duration: 0.5 }}
-                className="flex items-center gap-3 text-foreground"
+    <>
+      <section className="relative min-h-screen flex items-center justify-center px-4 overflow-hidden bg-white">
+        <div className="w-full max-w-[1920px] mx-auto relative z-10">
+          <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-center py-20 lg:py-32">
+            {/* Left Column - Content */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: "easeOut" }}
+              className="space-y-8 text-center lg:text-left"
+            >
+              {/* Main Headline */}
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2, duration: 0.7 }}
+                className="text-5xl md:text-6xl lg:text-7xl font-bold tracking-tight text-foreground leading-[1.1]"
               >
-                <CheckCircle2 className="w-5 h-5 text-secondary flex-shrink-0" />
-                <span>{feature}</span>
+                Close the Gap Between{" "}
+                <span className="bg-gradient-to-r from-primary to-teal-600 bg-clip-text text-transparent">
+                  Intention
+                </span>{" "}
+                and{" "}
+                <span className="bg-gradient-to-r from-accent to-purple-600 bg-clip-text text-transparent">
+                  Action
+                </span>
+              </motion.h1>
+
+              {/* Subheadline */}
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.7 }}
+                className="text-xl md:text-2xl text-muted-foreground leading-relaxed max-w-2xl mx-auto lg:mx-0"
+              >
+                Transform your commitments into reality with voice-first accountability, 
+                real stakes, and AI-powered insights that understand you.
+              </motion.p>
+
+              {/* Key Features - With Descriptions */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.4, duration: 0.7 }}
+                className="grid sm:grid-cols-3 gap-4 pt-2"
+              >
+                {[
+                  { 
+                    icon: Mic, 
+                    text: "Voice-First",
+                    description: "Speak your intentions naturally, stay accountable anywhere"
+                  },
+                  { 
+                    icon: Shield, 
+                    text: "Real Stakes",
+                    description: "Put money on the line for genuine motivation"
+                  },
+                  { 
+                    icon: TrendingUp, 
+                    text: "AI Insights",
+                    description: "Personalized feedback that keeps you on track"
+                  },
+                ].map((feature) => (
+                  <div
+                    key={feature.text}
+                    className="flex flex-col gap-2 p-4 rounded-xl bg-slate-50 border border-border/50 hover:border-primary/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-2">
+                      <feature.icon className="w-5 h-5 text-primary flex-shrink-0" />
+                      <span className="text-sm font-semibold text-foreground">{feature.text}</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground leading-relaxed">{feature.description}</p>
+                  </div>
+                ))}
               </motion.div>
-            ))}
-          </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 pt-4">
-            <Link href="/signup" className="btn-gradient group">
-              Get Started Free
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </Link>
-            <Link href="#how-it-works" className="btn-secondary">
-              Learn More
-            </Link>
-          </div>
-
-          <div className="flex items-center gap-8 pt-4 text-sm text-muted-foreground justify-center lg:justify-start">
-            <div>
-              <div className="text-2xl font-bold text-foreground">14,802+</div>
-              <div>Active Users</div>
-            </div>
-            <div className="w-px h-12 bg-border" />
-            <div>
-              <div className="text-2xl font-bold text-foreground">$1.2M+</div>
-              <div>In Stakes</div>
-            </div>
-            <div className="w-px h-12 bg-border" />
-            <div>
-              <div className="text-2xl font-bold text-foreground">94%</div>
-              <div>Success Rate</div>
-            </div>
-          </div>
-        </motion.div>
-
-        {/* Right Column - Visual */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2, duration: 0.6 }}
-          className="hidden lg:flex items-center justify-center"
-        >
-          <div className="relative">
-            {/* Main card with shadow */}
-            <div className="relative bg-white rounded-3xl shadow-2xl p-8 border border-border max-w-md">
-              <div className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-                    <svg
-                      className="w-8 h-8 text-white"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
+              {/* CTA Buttons */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5, duration: 0.7 }}
+                className="flex flex-col sm:flex-row gap-4 pt-4 justify-center lg:justify-start"
+              >
+                {ENABLE_WAITLIST_MODE ? (
+                  <button
+                    onClick={() => setWaitlistModalOpen(true)}
+                    className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-teal-600 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02]"
+                  >
+                    Join Waitlist
+                    <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  </button>
+                ) : (
+                  <>
+                    <Link
+                      href="/signup"
+                      className="group inline-flex items-center justify-center gap-2 px-8 py-4 bg-gradient-to-r from-primary to-teal-600 text-white rounded-xl font-semibold shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition-all duration-300 hover:scale-[1.02]"
                     >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Your Goals</h3>
-                    <p className="text-sm text-muted-foreground">Track your progress</p>
-                  </div>
-                </div>
+                      Start Free Trial
+                      <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                    </Link>
+                    <Link
+                      href="#how-it-works"
+                      className="inline-flex items-center justify-center gap-2 px-8 py-4 bg-white text-foreground rounded-xl font-semibold border-2 border-border hover:border-primary/50 transition-all duration-300 hover:shadow-md"
+                    >
+                      See How It Works
+                    </Link>
+                  </>
+                )}
+              </motion.div>
+            </motion.div>
 
-                <div className="space-y-3">
-                  {[
-                    { label: "Morning Routine", progress: 85, color: "primary" },
-                    { label: "Reading Goal", progress: 70, color: "secondary" },
-                    { label: "Exercise", progress: 92, color: "accent" },
-                  ].map((item) => (
-                    <div key={item.label} className="space-y-2">
-                      <div className="flex justify-between text-sm">
-                        <span className="font-medium">{item.label}</span>
-                        <span className="text-muted-foreground">{item.progress}%</span>
+            {/* Right Column - Visual - Larger */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, x: 30 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              transition={{ delay: 0.3, duration: 0.8, ease: "easeOut" }}
+              className="hidden lg:flex items-center justify-center relative"
+            >
+              <div className="relative w-full max-w-lg">
+                {/* Main Dashboard Card - Larger */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5, duration: 0.7 }}
+                  className="relative bg-white rounded-3xl shadow-2xl p-10 border border-border/50"
+                >
+                  <div className="space-y-8">
+                    {/* Header */}
+                    <div className="flex items-center gap-4 pb-6 border-b border-border">
+                      <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-teal-600 flex items-center justify-center shadow-lg">
+                        <CheckCircle2 className="w-8 h-8 text-white" />
                       </div>
-                      <div className="h-2 bg-muted rounded-full overflow-hidden">
-                        <motion.div
-                          initial={{ width: 0 }}
-                          animate={{ width: `${item.progress}%` }}
-                          transition={{ delay: 0.5, duration: 1 }}
-                          className={`h-full bg-gradient-to-r ${
-                            item.color === "primary"
-                              ? "from-primary to-primary/80"
-                              : item.color === "secondary"
-                              ? "from-secondary to-secondary/80"
-                              : "from-accent to-accent/80"
-                          }`}
-                        />
+                      <div>
+                        <h3 className="font-bold text-xl text-foreground">Your Goals</h3>
+                        <p className="text-sm text-muted-foreground">3 active commitments</p>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            </div>
 
-            {/* Floating elements */}
-            <motion.div
-              animate={{ y: [0, -10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-              className="absolute -top-8 -right-8 bg-white rounded-2xl shadow-xl p-4 border border-border"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
-                <span className="text-sm font-semibold">On Track!</span>
-              </div>
-            </motion.div>
+                    {/* Progress Items */}
+                    <div className="space-y-6">
+                      {[
+                        { label: "Morning Routine", progress: 85, color: "from-primary to-teal-600" },
+                        { label: "Reading Goal", progress: 70, color: "from-secondary to-emerald-600" },
+                        { label: "Exercise", progress: 92, color: "from-accent to-purple-600" },
+                      ].map((item, index) => (
+                        <motion.div
+                          key={item.label}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.7 + index * 0.15, duration: 0.5 }}
+                          className="space-y-3"
+                        >
+                          <div className="flex justify-between text-base">
+                            <span className="font-semibold text-foreground">{item.label}</span>
+                            <span className="text-muted-foreground font-medium">{item.progress}%</span>
+                          </div>
+                          <div className="h-3 bg-muted rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${item.progress}%` }}
+                              transition={{ delay: 0.9 + index * 0.15, duration: 1, ease: "easeOut" }}
+                              className={`h-full bg-gradient-to-r ${item.color} rounded-full`}
+                            />
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
 
-            <motion.div
-              animate={{ y: [0, 10, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
-              className="absolute -bottom-8 -left-8 bg-white rounded-2xl shadow-xl p-4 border border-border"
-            >
-              <div className="text-sm">
-                <div className="font-semibold">7-day streak 🔥</div>
-                <div className="text-muted-foreground">Keep it up!</div>
+                    {/* Thrive Score */}
+                    <div className="pt-6 border-t border-border">
+                      <div className="flex items-center justify-between">
+                        <span className="text-base font-medium text-muted-foreground">Thrive Score</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-3xl font-bold text-foreground">87</span>
+                          <span className="text-sm text-success font-semibold">↑ 12%</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Floating Notification Card */}
+                <motion.div
+                  animate={{ y: [0, -10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                  className="absolute -top-6 -right-6 bg-white rounded-2xl shadow-xl p-4 border border-border/50 z-10"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-3 h-3 rounded-full bg-success animate-pulse" />
+                    <div>
+                      <div className="text-sm font-semibold text-foreground">On Track!</div>
+                      <div className="text-xs text-muted-foreground">7-day streak</div>
+                    </div>
+                  </div>
+                </motion.div>
+
+                {/* Floating Achievement Card */}
+                <motion.div
+                  animate={{ y: [0, 10, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", delay: 0.5 }}
+                  className="absolute -bottom-6 -left-6 bg-gradient-to-br from-primary/10 to-accent/10 rounded-2xl shadow-xl p-4 border border-primary/20 z-10"
+                >
+                  <div className="text-sm">
+                    <div className="font-bold text-foreground mb-1">🔥 21 Day Streak</div>
+                    <div className="text-xs text-muted-foreground">Keep it up!</div>
+                  </div>
+                </motion.div>
               </div>
             </motion.div>
           </div>
-        </motion.div>
-      </div>
-    </section>
+        </div>
+      </section>
+
+      <WaitlistModal isOpen={waitlistModalOpen} onClose={() => setWaitlistModalOpen(false)} />
+    </>
   );
 };

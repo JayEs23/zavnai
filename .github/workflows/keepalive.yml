@@ -10,18 +10,46 @@ jobs:
     ping-backend:
         runs-on: ubuntu-latest
         steps:
-            - name: Ping Keepalive Endpoint
+            - name: Ping Next.js Keepalive Endpoint
               run: |
                   NEXTJS_URL="${NEXTJS_URL:-https://zavnai.vercel.app}"
                   SECRET="${KEEPALIVE_SECRET:-}"
 
                   if [ -n "$SECRET" ]; then
-                    curl -f "${NEXTJS_URL}/api/keepalive?secret=${SECRET}" || exit 1
+                    for i in {1..5}; do
+                      curl -f "${NEXTJS_URL}/api/keepalive?secret=${SECRET}" && break || sleep 10
+                      if [ $i -eq 5 ]; then
+                        echo "❌ Failed to ping Next.js keepalive endpoint"
+                        exit 1
+                      fi
+                    done
                   else
-                    curl -f "${NEXTJS_URL}/api/keepalive" || exit 1
+                    for i in {1..5}; do
+                      curl -f "${NEXTJS_URL}/api/keepalive" && break || sleep 10
+                      if [ $i -eq 5 ]; then
+                        echo "❌ Failed to ping Next.js keepalive endpoint"
+                        exit 1
+                      fi
+                    done
                   fi
 
-                  echo "✅ Backend keepalive pinged successfully at $(date)"
+                  echo "✅ Next.js keepalive pinged successfully at $(date)"
               env:
                   NEXTJS_URL: ${{ secrets.NEXTJS_URL }}
                   KEEPALIVE_SECRET: ${{ secrets.KEEPALIVE_SECRET }}
+
+            - name: Ping Direct Backend Health Endpoint
+              run: |
+                  BACKEND_URL="${BACKEND_URL:-https://zavn-core.onrender.com}"
+
+                  for i in {1..5}; do
+                    curl -f "${BACKEND_URL}/health" && break || sleep 10
+                    if [ $i -eq 5 ]; then
+                      echo "❌ Failed to ping backend health endpoint"
+                      exit 1
+                    fi
+                  done
+
+                  echo "✅ Backend health endpoint pinged successfully at $(date)"
+              env:
+                  BACKEND_URL: ${{ secrets.BACKEND_URL }}
