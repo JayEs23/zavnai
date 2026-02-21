@@ -61,11 +61,11 @@ body {
   /* Professional Component Styling */
 
   .section-padding {
-    @apply py-20 px-6 lg:px-12;
+    @apply py-20 px-4;
   }
 
   .max-w-container {
-    @apply mx-auto max-w-7xl;
+    @apply mx-auto w-full max-w-[1920px] px-4;
   }
 
   .text-heading {
