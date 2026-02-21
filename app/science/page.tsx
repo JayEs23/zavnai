@@ -129,7 +129,7 @@ export default function SciencePage() {
                   <div>
                     <h3 className="text-lg font-semibold text-foreground mb-2">Social Accountability</h3>
                     <p className="text-muted-foreground leading-relaxed">
-                      Studies by <strong>Cialdini (2001)</strong> show that public commitments increase follow-through by 65%. ZAVN&apos;s Tribe system creates this accountability while respecting privacy boundaries.
+                      Research consistently shows that public commitments significantly increase follow-through (<strong>Cialdini, 2001; Harkin et al., 2016</strong>). ZAVN&apos;s Tribe system creates this accountability while respecting privacy boundaries.
                     </p>
                   </div>
                 </div>
@@ -212,6 +212,144 @@ export default function SciencePage() {
                 <p className="text-sm text-muted-foreground">
                   Automatic goal masking ensures surprise goals stay secret while maintaining accountability through other Tribe members.
                 </p>
+              </div>
+            </div>
+          </div>
+
+          {/* References */}
+          <div className="max-w-4xl mx-auto mb-20">
+            <h2 className="text-3xl font-bold text-foreground mb-8 text-center">References</h2>
+            <div className="space-y-6 text-sm text-muted-foreground leading-relaxed">
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Implementation Intentions & Intention–Action Gap</h3>
+                <div className="space-y-3">
+                  <p>
+                    Gollwitzer, P. M., & Sheeran, P. (2006). Implementation intentions and goal achievement: A meta-analysis of effects and processes. <em>Advances in Experimental Social Psychology, 38</em>, 69–119.{" "}
+                    <a href="https://doi.org/10.1016/S0065-2601(06)38002-1" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://doi.org/10.1016/S0065-2601(06)38002-1
+                    </a>
+                  </p>
+                  <p>
+                    Gollwitzer, P. M. (1999). Implementation intentions: Strong effects of simple plans. <em>American Psychologist, 54</em>(7), 493–503.{" "}
+                    <a href="https://doi.org/10.1037/0003-066X.54.7.493" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://doi.org/10.1037/0003-066X.54.7.493
+                    </a>
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Loss Aversion & Prospect Theory</h3>
+                <div className="space-y-3">
+                  <p>
+                    Kahneman, D., & Tversky, A. (1979). Prospect theory: An analysis of decision under risk. <em>Econometrica, 47</em>(2), 263–291.{" "}
+                    <a href="https://doi.org/10.2307/1914185" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://doi.org/10.2307/1914185
+                    </a>
+                  </p>
+                  <p>
+                    Tversky, A., & Kahneman, D. (1991). Loss aversion in riskless choice: A reference-dependent model. <em>Quarterly Journal of Economics, 106</em>(4), 1039–1061.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Commitment & Consistency / Social Accountability</h3>
+                <div className="space-y-3">
+                  <p>
+                    Cialdini, R. B. (2001). <em>Influence: Science and practice</em> (4th ed.). Allyn & Bacon.
+                  </p>
+                  <p>
+                    Cialdini, R. B. (2009). <em>Influence: Science and practice</em> (5th ed.). Pearson.
+                  </p>
+                  <p>
+                    Harkin, B., et al. (2016). Does monitoring goal progress promote goal attainment? A meta-analysis. <em>Psychological Bulletin, 142</em>(2), 198–229.{" "}
+                    <a href="https://doi.org/10.1037/bul0000025" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://doi.org/10.1037/bul0000025
+                    </a>
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Social Identity Theory</h3>
+                <div className="space-y-3">
+                  <p>
+                    Tajfel, H., & Turner, J. C. (1979). An integrative theory of intergroup conflict. In W. G. Austin & S. Worchel (Eds.), <em>The social psychology of intergroup relations</em> (pp. 33–47). Brooks/Cole.
+                  </p>
+                  <p>
+                    Turner, J. C., Hogg, M. A., Oakes, P. J., Reicher, S. D., & Wetherell, M. S. (1987). <em>Rediscovering the social group: A self-categorization theory</em>. Blackwell.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Cognitive Behavioral Therapy & Externalization</h3>
+                <div className="space-y-3">
+                  <p>
+                    Beck, A. T. (1976). <em>Cognitive therapy and the emotional disorders</em>. International Universities Press.
+                  </p>
+                  <p>
+                    Beck, J. S. (2011). <em>Cognitive behavior therapy: Basics and beyond</em> (2nd ed.). Guilford Press.
+                  </p>
+                  <p>
+                    White, M., & Epston, D. (1990). <em>Narrative means to therapeutic ends</em>. Norton.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Job Demands–Resources (JD-R) Theory</h3>
+                <div className="space-y-3">
+                  <p>
+                    Demerouti, E., Bakker, A. B., Nachreiner, F., & Schaufeli, W. B. (2001). The job demands–resources model of burnout. <em>Journal of Applied Psychology, 86</em>(3), 499–512.
+                  </p>
+                  <p>
+                    Bakker, A. B., & Demerouti, E. (2007). The job demands–resources model: State of the art. <em>Journal of Managerial Psychology, 22</em>(3), 309–328.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Vocal Biomarkers & Psychoacoustics</h3>
+                <div className="space-y-3">
+                  <p>
+                    Scherer, K. R. (2003). Vocal communication of emotion: A review of research paradigms. <em>Speech Communication, 40</em>(1–2), 227–256.
+                  </p>
+                  <p>
+                    Low, L. A., et al. (2020). Vocal biomarkers for monitoring stress and emotional health. <em>NPJ Digital Medicine, 3</em>, 52.{" "}
+                    <a href="https://doi.org/10.1038/s41746-020-0251-5" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                      https://doi.org/10.1038/s41746-020-0251-5
+                    </a>
+                  </p>
+                  <p>
+                    Cummins, N., Scherer, S., Krajewski, J., Schnieder, S., Epps, J., & Quatieri, T. (2015). A review of depression and suicide risk assessment using speech analysis. <em>Speech Communication, 71</em>, 10–49.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Goal Monitoring & Feedback Loops</h3>
+                <div className="space-y-3">
+                  <p>
+                    Carver, C. S., & Scheier, M. F. (1982). Control theory: A useful conceptual framework for personality–social, clinical, and health psychology. <em>Psychological Bulletin, 92</em>(1), 111–135.
+                  </p>
+                  <p>
+                    Locke, E. A., & Latham, G. P. (2002). Building a practically useful theory of goal setting and task motivation. <em>American Psychologist, 57</em>(9), 705–717.
+                  </p>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-muted/30 border border-border">
+                <h3 className="font-semibold text-foreground mb-4">Tiny Habits / Micro-Commitments</h3>
+                <div className="space-y-3">
+                  <p>
+                    Fogg, B. J. (2019). <em>Tiny habits: The small changes that change everything</em>. Houghton Mifflin Harcourt.
+                  </p>
+                  <p>
+                    Lally, P., van Jaarsveld, C. H., Potts, H. W., & Wardle, J. (2010). How are habits formed? <em>European Journal of Social Psychology, 40</em>(6), 998–1009.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
