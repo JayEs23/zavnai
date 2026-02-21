@@ -29,13 +29,13 @@ export const LandingNavbar = () => {
               <Image
                 src="/zavn-icon.png"
                 alt="ZAVN Logo"
-                width={40}
-                height={40}
+                width={80}
+                height={80}
                 className="transition-transform group-hover:scale-105"
               />
             </div>
-            <span className="text-2xl font-bold tracking-tight text-foreground">
-              ZAVN
+            <span className="text-3xl font-bold tracking-tight text-foreground">
+              Z.A.V.N
             </span>
           </Link>
 

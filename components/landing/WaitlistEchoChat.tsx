@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
+import { motion } from "framer-motion";
 import { Send, Bot, X, Loader2 } from "lucide-react";
 
 import { FocusAreaId } from "@/constants/focusAreas";
@@ -23,15 +24,15 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Initialize with Echo's greeting
+  // Initialize with ZAVN AI's greeting
   useEffect(() => {
     const focusAreasText = focusAreas.length > 0 
       ? ` I see you're interested in ${focusAreas.length === 1 ? 'this area' : 'these areas'}.`
       : '';
     
     const greeting = userGoals || userInterests || focusAreas.length > 0
-      ? `Hi! I'm Echo, ZAVN's reflection agent.${focusAreasText}${userGoals ? ` I understand you want to achieve: ${userGoals}` : ''}${userGoals && userInterests ? ' and' : ''}${userInterests ? ` you're exploring: ${userInterests}` : ''}. How can I help you understand what ZAVN can do for you?`
-      : "Hi! I'm Echo, ZAVN's reflection agent. I'm here to help you understand how ZAVN can help you close the gap between your intentions and actions across five key areas: Productivity & Work Habits, Health & Wellness, Financial Health, Personal Growth & Learning, and Relationships & Community Impact. What would you like to know?";
+      ? `Hi! I'm ZAVN AI, your personal growth assistant.${focusAreasText}${userGoals ? ` I understand you want to achieve: ${userGoals}` : ''}${userGoals && userInterests ? ' and' : ''}${userInterests ? ` you're exploring: ${userInterests}` : ''}. How can I help you understand what ZAVN can do for you?`
+      : "Hi! I'm ZAVN AI, your personal growth assistant. I'm here to help you understand how ZAVN can help you close the gap between your intentions and actions across five key areas: Productivity & Work Habits, Health & Wellness, Financial Health, Personal Growth & Learning, and Relationships & Community Impact. What would you like to know?";
     
     setMessages([{ role: 'assistant', content: greeting }]);
   }, [userGoals, userInterests, focusAreas]);
@@ -45,48 +46,53 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
 
     const userMessage = inputText.trim();
     setInputText("");
-    setMessages((prev) => [...prev, { role: 'user', content: userMessage }]);
     setIsLoading(true);
-
-    try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const conversationHistory = messages.map(m => ({ role: m.role, content: m.content }));
+    
+    // Add user message to state immediately for UI
+    setMessages((prev) => {
+      const updatedMessages: Array<{ role: 'user' | 'assistant'; content: string }> = [...prev, { role: 'user' as const, content: userMessage }];
       
-      // Add context about waitlist user
-      const focusAreasContext = focusAreas.length > 0 
-        ? ` Focus areas: ${focusAreas.join(', ')}.`
-        : '';
+      // Build conversation history including the new user message
+      const conversationHistory = updatedMessages.map(m => ({ role: m.role, content: m.content }));
+      
+      // Send message to backend with complete history
+      (async () => {
+        try {
+          const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${apiUrl}/api/waitlist/echo-chat`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'X-App-Secret': process.env.NEXT_PUBLIC_APP_SECRET_KEY || '',
+            },
+            body: JSON.stringify({
+              message: userMessage,
+              history: conversationHistory,
+              user_goals: userGoals,
+              user_interests: userInterests,
+              focus_areas: focusAreas,
+            }),
+          });
 
-      const response = await fetch(`${apiUrl}/api/waitlist/echo-chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-App-Secret': process.env.NEXT_PUBLIC_APP_SECRET_KEY || '',
-        },
-        body: JSON.stringify({
-          message: userMessage,
-          history: conversationHistory,
-          user_goals: userGoals,
-          user_interests: userInterests,
-          focus_areas: focusAreas,
-        }),
-      });
+          if (!response.ok) {
+            throw new Error(`Backend error: ${response.status}`);
+          }
 
-      if (!response.ok) {
-        throw new Error(`Backend error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setMessages((prev) => [...prev, { role: 'assistant', content: data.response }]);
-    } catch (error) {
-      console.error('[Echo] Message failed:', error);
-      setMessages((prev) => [...prev, {
-        role: 'assistant',
-        content: "I'm having trouble connecting right now. Please try again or feel free to join the waitlist and we'll be in touch!"
-      }]);
-    } finally {
-      setIsLoading(false);
-    }
+          const data = await response.json();
+          setMessages((prevMessages) => [...prevMessages, { role: 'assistant', content: data.response }]);
+        } catch (error) {
+          console.error('[ZAVN AI] Message failed:', error);
+          setMessages((prevMessages) => [...prevMessages, {
+            role: 'assistant',
+            content: "I'm having trouble connecting right now. Please try again or feel free to join the waitlist and we'll be in touch!"
+          }]);
+        } finally {
+          setIsLoading(false);
+        }
+      })();
+      
+      return updatedMessages;
+    });
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -97,15 +103,21 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
   };
 
   return (
-    <div className="absolute inset-0 bg-white rounded-2xl flex flex-col z-20 overflow-hidden">
+    <motion.div
+      initial={{ x: '100%' }}
+      animate={{ x: 0 }}
+      exit={{ x: '100%' }}
+      transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+      className="fixed top-0 right-0 h-full w-full md:w-1/2 bg-white shadow-2xl flex flex-col z-[70] overflow-hidden"
+    >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-border">
+      <div className="flex items-center justify-between p-4 border-b border-border flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-gradient-to-br from-primary to-teal-600">
             <Bot className="w-5 h-5 text-white" />
           </div>
           <div>
-            <h3 className="font-semibold text-foreground">Chat with Echo</h3>
+            <h3 className="font-semibold text-foreground">Chat with ZAVN AI</h3>
             <p className="text-xs text-muted-foreground">Ask me about ZAVN</p>
           </div>
         </div>
@@ -154,7 +166,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Ask Echo about ZAVN..."
+            placeholder="Ask ZAVN AI about ZAVN..."
             className="flex-1 px-4 py-2 rounded-xl border border-border focus:border-primary focus:ring-2 focus:ring-primary/10 outline-none transition-all"
             disabled={isLoading}
           />
@@ -167,7 +179,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
