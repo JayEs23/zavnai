@@ -1,5 +1,0 @@
-{
-  "_comment": "Vercel Hobby plan only allows 1 cron job per day. Use GitHub Actions instead (see .github/workflows/keepalive.yml)",
-  "crons": []
-}
-
