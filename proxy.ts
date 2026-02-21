@@ -37,6 +37,10 @@ export async function proxy(request: NextRequest) {
         '/science',
         '/agents',
         '/test-ai',
+        '/how-it-works',
+        '/features',
+        '/community',
+        '/pricing',
         '/tribe/verify',     // external tribe-member verification links (no account needed)
     ];
 
