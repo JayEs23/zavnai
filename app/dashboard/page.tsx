@@ -57,7 +57,7 @@ export default function DashboardPage() {
         const status = await api.get<{ is_onboarded: boolean }>(
           `/api/onboarding/status?_t=${Date.now()}`
         );
-        if (!status.is_onboarded) {
+        if (status.error || !status.data?.is_onboarded) {
           router.replace('/onboarding');
           return;
         }
@@ -82,15 +82,18 @@ export default function DashboardPage() {
       setTodaysCommitments(commitmentsData);
 
       // Calculate growth metrics from real data
-      const completedGoals = goalsData.filter(g => g.status === 'completed').length;
-      const activeGoals = goalsData.filter(g => g.status === 'active').length;
-      const totalGoals = goalsData.length;
+      const completedGoals = goals.filter(g => g.status === 'completed').length;
+      const activeGoals = goals.filter(g => g.status === 'active').length;
+      const totalGoals = goals.length;
       const completionRate = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
 
       // Try to fetch growth metrics from backend
       try {
-        const metrics = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
-        setGrowthMetrics(metrics);
+        const metricsResponse = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
+        if (metricsResponse.error || !metricsResponse.data) {
+          throw new Error(metricsResponse.error?.message || 'Failed to fetch growth metrics');
+        }
+        setGrowthMetrics(metricsResponse.data);
       } catch {
         // Fallback: compute from local data
         setGrowthMetrics({

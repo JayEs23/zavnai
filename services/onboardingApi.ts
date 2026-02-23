@@ -123,6 +123,13 @@ export const onboardingApi = {
 
   // Get Echo voice config (model, API version, system instruction) from backend
   getEchoVoiceConfig: async (): Promise<EchoVoiceConfig> => {
-    return api.get<EchoVoiceConfig>('/api/echo/voice-config');
+    const response = await api.get<EchoVoiceConfig>('/api/echo/voice-config');
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to fetch Echo voice config');
+    }
+    if (!response.data) {
+      throw new Error('No data received from voice config endpoint');
+    }
+    return response.data;
   },
 };

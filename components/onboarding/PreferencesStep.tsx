@@ -19,36 +19,34 @@ export interface UserPreferences {
 }
 
 export default function PreferencesStep({ extractedProfile, onComplete }: PreferencesStepProps) {
-  // Infer defaults from extracted profile
+  // Infer defaults from extracted profile (with safe fallbacks)
   const getDefaultCallWindow = () => {
-    if (extractedProfile.energy_peak === 'morning') {
+    if (extractedProfile?.energy_peak === 'morning') {
       return { start: '07:00', end: '22:00' };
-    } else if (extractedProfile.energy_peak === 'late_night') {
+    } else if (extractedProfile?.energy_peak === 'late_night') {
       return { start: '10:00', end: '23:00' };
     }
     return { start: '09:00', end: '21:00' };
   };
 
   const defaults = getDefaultCallWindow();
+  const vibeScore = extractedProfile?.vibe_score ?? 5;
 
   const [preferences, setPreferences] = useState<UserPreferences>({
     call_window_start: defaults.start,
     call_window_end: defaults.end,
-    escalation_preference: extractedProfile.vibe_score >= 7 ? 'hard' : 'soft',
+    escalation_preference: vibeScore >= 7 ? 'hard' : 'soft',
     communication_channel: 'email',
     echo_vibe: 'balanced',
   });
-
-  // Premium channels require phone verification + subscription
-  const premiumChannels = ['call', 'sms', 'whatsapp'] as const;
 
   const handleSubmit = () => {
     onComplete(preferences);
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto px-6 py-12">
-      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8">
+    <div className="w-full max-w-4xl mx-auto px-6 py-12 min-h-full flex items-start">
+      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8 w-full">
         <div className="space-y-3">
           <h2 className="text-3xl font-bold text-foreground">Set Your Preferences</h2>
           <p className="text-muted-foreground">
@@ -57,7 +55,7 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
         </div>
 
         {/* AI Suggestions */}
-        {extractedProfile.energy_peak && (
+        {extractedProfile?.energy_peak && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -65,11 +63,11 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
           >
             <MdCheckCircle className="text-primary flex-shrink-0 mt-0.5" size={20} />
             <p className="text-sm text-foreground">
-              <strong>Smart suggestion:</strong> We detected you're most productive in the {' '}
+              <strong>Smart suggestion:</strong> We detected you&apos;re most productive in the {' '}
               <span className="font-semibold text-primary">
                 {extractedProfile.energy_peak === 'morning' ? 'morning' : 'evening'}
               </span>. 
-              We've adjusted your availability window to match your peak hours.
+              We&apos;ve adjusted your availability window to match your peak hours.
             </p>
           </motion.div>
         )}
