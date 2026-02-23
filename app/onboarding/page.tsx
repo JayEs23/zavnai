@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -11,7 +11,6 @@ import PreferencesStep, { UserPreferences } from '@/components/onboarding/Prefer
 import { onboardingApi } from '@/services/onboardingApi';
 import { api } from '@/lib/api';
 import { goalsApi } from '@/services/goalsApi';
-import { getAgentMonitor } from '@/lib/opik/agent-monitor';
 import { opikTracker } from '@/lib/opik/client-tracker';
 import { ExtractedProfile } from '@/services/entityExtraction';
 
@@ -39,11 +38,9 @@ export default function OnboardingPage() {
   const router = useRouter();
   const { data: session, status, update: updateSession } = useSession();
   const [step, setStep] = useState<OnboardingStep>('voice');
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   // Data collected during onboarding
-  const [transcript, setTranscript] = useState<string>('');
   const [extractedProfile, setExtractedProfile] = useState<ExtractionResponse['profile'] | null>(null);
   const [tribeMembers, setTribeMembers] = useState<TribeMember[]>([]);
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
@@ -57,7 +54,7 @@ export default function OnboardingPage() {
     const checkOnboarding = async () => {
       try {
         const res = await api.get<{ is_onboarded: boolean }>('/api/onboarding/status');
-        if (res.is_onboarded) {
+        if (res.data?.is_onboarded) {
           router.replace('/dashboard');
         }
       } catch {
@@ -84,9 +81,7 @@ export default function OnboardingPage() {
 
   // Handle voice session completion
   const handleVoiceComplete = async (sessionTranscript: string, insights: InsightsData) => {
-    setTranscript(sessionTranscript);
     setVoiceInsights(insights); // Store insights for later use
-    setLoading(true);
 
     try {
       // Extract entities from transcript with Opik validation
@@ -102,16 +97,19 @@ export default function OnboardingPage() {
         insights: insights // Include insights from conversation
       });
       
-      if (res.success && res.profile) {
-        setExtractedProfile(res.profile);
+      if (res.error) {
+        throw new Error(res.error.message || 'Failed to extract entities');
+      }
+      
+      if (res.data?.success && res.data.profile) {
+        setExtractedProfile(res.data.profile);
         
         // Log quality metrics to Opik
-        if (res.validation) {
-          const monitor = getAgentMonitor();
+        if (res.data.validation) {
           console.log('✓ Echo Extraction Quality:', {
-            completeness: `${(res.validation.completeness_score * 100).toFixed(0)}%`,
-            valid: res.validation.is_valid,
-            fieldScores: res.validation.field_scores
+            completeness: `${(res.data.validation.completeness_score * 100).toFixed(0)}%`,
+            valid: res.data.validation.is_valid,
+            fieldScores: res.data.validation.field_scores
           });
           
           // Track voice onboarding with Opik
@@ -119,17 +117,17 @@ export default function OnboardingPage() {
             const traceId = await opikTracker.trackVoiceOnboarding(
               userId,
               sessionTranscript,
-              res.profile,
-              res.validation
+              res.data.profile,
+              res.data.validation
             );
             
             // Submit feedback score if we got a valid trace ID
             if (traceId && traceId !== 'tracking-error') {
               await opikTracker.trackFeedback(
                 traceId,
-                res.validation.completeness_score >= 0.7 ? 'positive' : 'neutral',
-                res.validation.completeness_score * 10,
-                `Auto-scored: Completeness ${(res.validation.completeness_score * 100).toFixed(0)}%`
+                res.data.validation.completeness_score >= 0.7 ? 'positive' : 'neutral',
+                res.data.validation.completeness_score * 10,
+                `Auto-scored: Completeness ${(res.data.validation.completeness_score * 100).toFixed(0)}%`
               );
             }
           } catch (trackingErr) {
@@ -145,8 +143,6 @@ export default function OnboardingPage() {
       // Fallback to defaults
       setExtractedProfile({ vibe_score: 5 });
       setStep('preferences');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -174,7 +170,6 @@ export default function OnboardingPage() {
   // Final completion handler
   const finalizeOnboarding = async (finalTribeMembers: TribeMember[]) => {
     setStep('completing');
-    setLoading(true);
     
     try {
       // Use saved preferences or safe defaults (prevents null → 422 error)
@@ -201,11 +196,15 @@ export default function OnboardingPage() {
         insights: voiceInsights // Pass Echo insights to be stored in Goal.metadata_json
       });
 
+      if (onboardingResult.error) {
+        throw new Error(onboardingResult.error.message || 'Failed to complete onboarding');
+      }
+
       // 1b. Auto-generate initial commitments so the dashboard isn't empty
-      if (onboardingResult.goal_id) {
+      if (onboardingResult.data?.goal_id) {
         try {
-          await goalsApi.generateCommitments(onboardingResult.goal_id, 3);
-          console.log('✓ Initial commitments generated for goal', onboardingResult.goal_id);
+          await goalsApi.generateCommitments(onboardingResult.data.goal_id, 3);
+          console.log('✓ Initial commitments generated for goal', onboardingResult.data.goal_id);
         } catch (commitErr) {
           console.warn('Initial commitment generation skipped (non-critical):', commitErr);
         }
@@ -246,8 +245,6 @@ export default function OnboardingPage() {
       
       setError(errorMessage);
       setStep('tribe');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -318,7 +315,7 @@ export default function OnboardingPage() {
           </motion.div>
         )}
 
-        {step === 'preferences' && extractedProfile && (
+        {step === 'preferences' && (
           <motion.div
             key="preferences"
             initial={{ opacity: 0, x: 20 }}
@@ -327,7 +324,7 @@ export default function OnboardingPage() {
             className="w-full overflow-y-auto"
           >
             <PreferencesStep
-              extractedProfile={extractedProfile}
+              extractedProfile={extractedProfile || { vibe_score: 5 }}
               onComplete={handlePreferencesComplete}
             />
           </motion.div>

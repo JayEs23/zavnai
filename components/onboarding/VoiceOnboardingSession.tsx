@@ -23,7 +23,7 @@ import { MdMic, MdMicOff, MdSend, MdVolumeUp, MdKeyboard } from 'react-icons/md'
 import { useSession } from 'next-auth/react';
 import { onboardingApi, EchoVoiceConfig } from '@/services/onboardingApi';
 import { createBlob, decode, decodeAudioData } from '@/services/audio-helpers';
-import type { Message, UserProfile, EchoAgentConfig } from './types';
+import type { Message, UserProfile } from './types';
 import { ConnectionStatus } from './types';
 
 // ─── Props ────────────────────────────────────────────────────────────────────
@@ -108,10 +108,24 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
   // Transcript accumulation refs (the critical fix for bidirectional conversation)
   const transcriptRef = useRef<{ user: string; assistant: string }>({ user: '', assistant: '' });
+  
+  // Connection health tracking
+  const connectionHealthRef = useRef<{
+    lastMessageTime: number;
+    reconnectAttempts: number;
+    isHealthy: boolean;
+  }>({
+    lastMessageTime: Date.now(),
+    reconnectAttempts: 0,
+    isHealthy: true,
+  });
+  
+  // State for UI display
+  const [isListening, setIsListening] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
 
   // Live session ref
   const liveSessionRef = useRef<Session | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const sessionPromiseRef = useRef<Promise<Session> | null>(null);
 
   // ─── Audio helpers ────────────────────────────────────────────────────────
@@ -141,7 +155,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     if (audioRefs.current.processor) {
       try {
         audioRefs.current.processor.disconnect();
-      } catch (e) {
+      } catch {
         // Ignore if already disconnected
       }
       audioRefs.current.processor = null;
@@ -223,6 +237,17 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // ─── Auto-greet in text fallback ─────────────────────────────────────────
+
+  const autoGreetText = useCallback(() => {
+    setTimeout(() => {
+      addMsg(
+        'assistant',
+        `Hey ${userName}! I'm Echo, your personal growth coach here at ZAVN (pronounced "Zahvin"). Voice had a hiccup, so let's chat here instead — no worries at all! I'm really excited to get to know you. So tell me, what brought you to ZAVN? What's the big thing you're hoping to work on?`
+      );
+    }, 300);
+  }, [addMsg, userName]);
+
   // ─── Voice connection (Gemini Live — reference pattern) ───────────────────
 
   const connectVoice = useCallback(async (config: EchoVoiceConfig) => {
@@ -233,6 +258,16 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     const apiKey = process.env.NEXT_PUBLIC_GEMINI_API_KEY;
     if (!apiKey) {
       setStatusText('Gemini API key not configured — switching to text chat');
+      setConnectionStatus(ConnectionStatus.ERROR);
+      setMode('text-fallback');
+      autoGreetText();
+      return;
+    }
+
+    // Validate config structure
+    if (!config || !config.onboarding) {
+      console.error('[Echo] Invalid config structure:', config);
+      setStatusText('Invalid configuration — switching to text chat');
       setConnectionStatus(ConnectionStatus.ERROR);
       setMode('text-fallback');
       autoGreetText();
@@ -255,12 +290,12 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
         processor: null
       };
 
+      const agentConfig = config.onboarding;
+      
       const ai = new GoogleGenAI({
         apiKey,
-        apiVersion: config.onboarding.api_version || 'v1alpha',
+        apiVersion: agentConfig.api_version || 'v1alpha',
       });
-
-      const agentConfig = config.onboarding;
 
       setStatusText('Connecting to Echo voice...');
 
@@ -291,10 +326,22 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                 sessPromise.then(s => {
                   try {
                     // Always send audio chunks - the session will handle if it's ready
-                    s.sendRealtimeInput({ media: createBlob(e.inputBuffer.getChannelData(0)) });
+                    if (s && connectionHealthRef.current.isHealthy) {
+                      s.sendRealtimeInput({ media: createBlob(e.inputBuffer.getChannelData(0)) });
+                      // Update listening state when we're actively sending audio
+                      if (!isAssistantTalking) {
+                        setIsListening(true);
+                      }
+                    }
                   } catch (err) {
                     // Log errors instead of silently ignoring - helps debug
                     console.warn('[Echo] Error sending audio chunk:', err);
+                    // Check if connection is dead
+                    const timeSinceLastMessage = Date.now() - connectionHealthRef.current.lastMessageTime;
+                    if (timeSinceLastMessage > 30000) { // 30 seconds without response
+                      connectionHealthRef.current.isHealthy = false;
+                      console.error('[Echo] Connection appears dead, attempting recovery...');
+                    }
                   }
                 }).catch(err => {
                   console.warn('[Echo] Session promise error:', err);
@@ -320,12 +367,14 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                   turns: [
                     {
                       role: 'user',
-                      parts: [{ text: `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.` }],
+                      parts: [{ text: `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Remember: when SPEAKING, pronounce "ZAVN" as "Zahvin", but always SPELL it as "ZAVN" in any text or transcriptions. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.` }],
                     },
                   ],
                   turnComplete: true,
                 });
                 console.log('[Echo] Proactive greeting sent — Echo will speak first');
+                setIsListening(true);
+                setStatusText('Echo is listening...');
               } catch (err) {
                 console.warn('[Echo] Failed to send greeting:', err);
               }
@@ -365,30 +414,42 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
               }
             }
 
+            // Update connection health
+            connectionHealthRef.current.lastMessageTime = Date.now();
+            connectionHealthRef.current.isHealthy = true;
+            connectionHealthRef.current.reconnectAttempts = 0;
+
             // ── Transcript accumulation (THE key fix for bidirectional) ──
             // Output transcription = what Echo said
             if (msg.serverContent?.outputTranscription?.text) {
-              transcriptRef.current.assistant += msg.serverContent.outputTranscription.text;
+              const newText = msg.serverContent.outputTranscription.text;
+              transcriptRef.current.assistant += newText;
               addMsg('assistant', transcriptRef.current.assistant);
+              setIsTranscribing(false);
+              setIsListening(false);
             }
-            // Input transcription = what the user said
+            
+            // Input transcription = what the user said (but don't display it)
             if (msg.serverContent?.inputTranscription?.text) {
               const t = msg.serverContent.inputTranscription.text;
-              // Filter out internal protocol messages (the greeting trigger sent via sendClientContent)
+              // Filter out internal protocol messages
               const isInternalPrompt = t.includes('INTERNAL_PROTOCOL')
                 || t.includes('ZAVN onboarding session')
                 || t.includes('personal growth coach at ZAVN');
               if (!isInternalPrompt) {
                 transcriptRef.current.user += t;
-                addMsg('user', transcriptRef.current.user);
+                // Don't add user message to display - just track it internally
+                setIsTranscribing(true);
+                setIsListening(false);
               }
             }
 
-            // ── Turn complete → reset accumulators ──
+            // ── Turn complete → reset accumulators but keep listening ──
             if (msg.serverContent?.turnComplete) {
               console.log('[Echo] Turn complete - resetting transcript accumulators, continuing to listen...');
               transcriptRef.current = { user: '', assistant: '' };
-              // Ensure we're still listening after turn completes
+              setIsTranscribing(false);
+              setIsListening(true);
               setStatusText('Echo is listening...');
             }
 
@@ -423,15 +484,43 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
           onerror: (error: unknown) => {
             const errMsg = error instanceof Error ? error.message : String(error);
             console.error('[Echo] Connection error:', errMsg);
-            setConnectionStatus(ConnectionStatus.ERROR);
-            setStatusText(`Voice connection error — switching to text (${errMsg})`);
-            setMode('text-fallback');
-            autoGreetText();
+            connectionHealthRef.current.isHealthy = false;
+            
+            // Attempt reconnection if we haven't exceeded max attempts
+            if (connectionHealthRef.current.reconnectAttempts < 3) {
+              connectionHealthRef.current.reconnectAttempts++;
+              console.log(`[Echo] Attempting reconnection ${connectionHealthRef.current.reconnectAttempts}/3...`);
+              setTimeout(() => {
+                if (voiceConfigRef.current) {
+                  setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                  connectVoice(voiceConfigRef.current);
+                }
+              }, 2000);
+            } else {
+              setConnectionStatus(ConnectionStatus.ERROR);
+              setStatusText(`Voice connection error — switching to text (${errMsg})`);
+              setMode('text-fallback');
+              autoGreetText();
+            }
           },
 
           onclose: () => {
             console.log('[Echo] WebSocket closed');
+            connectionHealthRef.current.isHealthy = false;
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
+            
+            // Attempt reconnection if session was active
+            if (mode === 'voice' && connectionHealthRef.current.reconnectAttempts < 3) {
+              connectionHealthRef.current.reconnectAttempts++;
+              console.log(`[Echo] WebSocket closed, attempting reconnection ${connectionHealthRef.current.reconnectAttempts}/3...`);
+              setTimeout(() => {
+                if (voiceConfigRef.current) {
+                  setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                  setStatusText('Reconnecting to Echo...');
+                  connectVoice(voiceConfigRef.current);
+                }
+              }, 2000);
+            }
           },
         },
         config: {
@@ -460,20 +549,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       setMode('text-fallback');
       autoGreetText();
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [connectionStatus, addMsg, stopAudio]);
-
-  // ─── Auto-greet in text fallback ─────────────────────────────────────────
-
-  const autoGreetText = useCallback(() => {
-    setTimeout(() => {
-      addMsg(
-        'assistant',
-        `Hey ${userName}! I'm Echo, your personal growth coach here at ZAVN. Voice had a hiccup, so let's chat here instead — no worries at all! I'm really excited to get to know you. So tell me, what brought you to ZAVN? What's the big thing you're hoping to work on?`
-      );
-    }, 300);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [addMsg, userName]);
+  }, [connectionStatus, addMsg, stopAudio, isAssistantTalking, userName, autoGreetText, handleEndConversation, mode]);
 
   // ─── Bootstrap ────────────────────────────────────────────────────────────
 
@@ -483,6 +559,25 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     const bootstrap = async () => {
       try {
         const config = await onboardingApi.getEchoVoiceConfig();
+        
+        // Log the received config for debugging
+        console.log('[Echo] Received config from backend:', config);
+        
+        // Validate config structure before using it
+        if (!config) {
+          throw new Error('Config is null or undefined');
+        }
+        
+        if (!config.onboarding) {
+          console.error('[Echo] Config missing onboarding property:', config);
+          throw new Error('Invalid config structure: missing onboarding property');
+        }
+        
+        if (!config.onboarding.model || !config.onboarding.api_version) {
+          console.error('[Echo] Config missing required properties:', config.onboarding);
+          throw new Error('Invalid config structure: missing required properties');
+        }
+        
         voiceConfigRef.current = config;
         if (!cancelled) connectVoice(config);
       } catch (err) {
@@ -584,12 +679,26 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     return (
       <div className="flex h-full w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
         {/* Header */}
-        <div className="bg-white/80 backdrop-blur border-b border-border px-6 py-3">
+        <div className="bg-white/95 backdrop-blur-md border-b border-border/50 px-6 py-4 shadow-sm">
           <div className="max-w-5xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className={`w-3 h-3 rounded-full ${isAssistantTalking ? 'bg-accent animate-pulse' : 'bg-green-500 animate-pulse'}`} />
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                isAssistantTalking 
+                  ? 'bg-accent animate-pulse' 
+                  : isTranscribing 
+                    ? 'bg-blue-500 animate-pulse' 
+                    : isListening 
+                      ? 'bg-green-500 animate-pulse' 
+                      : 'bg-gray-400'
+              }`} />
               <span className="text-sm font-medium text-foreground">
-                {isAssistantTalking ? 'Echo is speaking' : 'Listening'} &middot; {formatTime(timeRemaining)}
+                {isAssistantTalking 
+                  ? 'Echo is speaking...' 
+                  : isTranscribing 
+                    ? 'Transcribing...' 
+                    : isListening 
+                      ? 'Listening...' 
+                      : 'Connecting...'} &middot; {formatTime(timeRemaining)}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -611,59 +720,100 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
           </div>
         </div>
 
-        {/* Voice Visualisation */}
-        <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden">
-          <div className="relative w-48 h-48 mb-10">
+        {/* Voice Visualisation - Professional Design */}
+        <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-white via-primary/5 to-accent/5">
+          <div className="relative w-64 h-64 mb-12">
+            {/* Animated background rings */}
             <motion.div
               animate={{
-                scale: isAssistantTalking ? [1, 1.4, 1] : [1, 1.1, 1],
-                opacity: isAssistantTalking ? [0.15, 0.35, 0.15] : [0.08, 0.15, 0.08],
+                scale: isAssistantTalking ? [1, 1.5, 1] : isTranscribing ? [1, 1.3, 1] : isListening ? [1, 1.2, 1] : [1, 1.1, 1],
+                opacity: isAssistantTalking ? [0.2, 0.4, 0.2] : isTranscribing ? [0.15, 0.3, 0.15] : isListening ? [0.1, 0.2, 0.1] : [0.05, 0.1, 0.05],
               }}
-              transition={{ duration: isAssistantTalking ? 0.8 : 2.5, repeat: Infinity }}
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent blur-2xl"
+              transition={{ duration: isAssistantTalking ? 0.8 : isTranscribing ? 1.2 : isListening ? 2 : 3, repeat: Infinity }}
+              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent blur-3xl"
             />
             <motion.div
-              animate={{ scale: isAssistantTalking ? [1, 1.25, 1] : [1, 1.06, 1] }}
-              transition={{ duration: isAssistantTalking ? 0.6 : 3, repeat: Infinity }}
-              className="absolute inset-4 rounded-full border-2 border-primary/30"
+              animate={{ scale: isAssistantTalking ? [1, 1.3, 1] : isTranscribing ? [1, 1.2, 1] : isListening ? [1, 1.1, 1] : 1 }}
+              transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 1 : isListening ? 2.5 : 3, repeat: Infinity }}
+              className="absolute inset-6 rounded-full border-2 border-primary/20"
             />
             <motion.div
-              animate={{ scale: isAssistantTalking ? [1, 1.15, 1] : [1, 1.03, 1] }}
-              transition={{ duration: isAssistantTalking ? 0.5 : 3.5, repeat: Infinity }}
-              className="absolute inset-8 rounded-full border-2 border-accent/20"
+              animate={{ scale: isAssistantTalking ? [1, 1.2, 1] : isTranscribing ? [1, 1.15, 1] : isListening ? [1, 1.08, 1] : 1 }}
+              transition={{ duration: isAssistantTalking ? 0.5 : isTranscribing ? 0.9 : isListening ? 3 : 3.5, repeat: Infinity }}
+              className="absolute inset-12 rounded-full border-2 border-accent/15"
             />
+            
+            {/* Central icon */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl">
-                <MdMic className="text-white" size={40} />
-              </div>
+              <motion.div 
+                animate={{ 
+                  scale: isAssistantTalking ? [1, 1.1, 1] : isTranscribing ? [1, 1.05, 1] : isListening ? [1, 1.02, 1] : 1,
+                  rotate: isTranscribing ? [0, 5, -5, 0] : 0
+                }}
+                transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 0.8 : isListening ? 2 : 0, repeat: Infinity }}
+                className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl border-4 border-white/50"
+              >
+                {isTranscribing ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                  >
+                    <MdMic className="text-white" size={48} />
+                  </motion.div>
+                ) : (
+                  <MdMic className="text-white" size={48} />
+                )}
+              </motion.div>
             </div>
           </div>
 
-          <p className="text-lg font-semibold text-foreground mb-1">
-            {isAssistantTalking ? 'Echo is speaking...' : 'Listening...'}
-          </p>
-          <p className="text-sm text-muted-foreground max-w-sm text-center">
-            Just talk naturally — Echo will guide you.
-          </p>
+          {/* Status text */}
+          <div className="text-center space-y-2 mb-8">
+            <motion.p 
+              key={isAssistantTalking ? 'speaking' : isTranscribing ? 'transcribing' : 'listening'}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-2xl font-semibold text-foreground"
+            >
+              {isAssistantTalking 
+                ? 'Echo is speaking...' 
+                : isTranscribing 
+                  ? 'Transcribing your words...' 
+                  : isListening 
+                    ? 'Listening...' 
+                    : 'Connecting...'}
+            </motion.p>
+            <p className="text-sm text-muted-foreground max-w-md">
+              {isAssistantTalking 
+                ? 'Please wait while Echo responds' 
+                : isTranscribing 
+                  ? 'Processing what you said' 
+                  : isListening 
+                    ? 'Speak naturally — Echo is ready to hear you' 
+                    : 'Setting up your conversation with Echo'}
+            </p>
+          </div>
 
-          {/* Transcript bubbles */}
-          {messages.length > 0 && (
-            <div className="absolute bottom-4 left-0 right-0 max-h-48 overflow-y-auto px-6">
-              <div className="max-w-2xl mx-auto space-y-2">
-                {messages.slice(-6).map(m => (
-                  <motion.div
-                    key={m.id}
-                    initial={{ opacity: 0, y: 8 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className={`text-xs px-3 py-1.5 rounded-lg w-fit max-w-[80%] ${
-                      m.role === 'user'
-                        ? 'ml-auto bg-primary/10 text-primary'
-                        : 'bg-white/80 text-foreground border border-border/50'
-                    }`}
-                  >
-                    {m.content}
-                  </motion.div>
-                ))}
+          {/* Echo's responses only - no user speech */}
+          {messages.filter(m => m.role === 'assistant').length > 0 && (
+            <div className="absolute bottom-8 left-0 right-0 max-h-64 overflow-y-auto px-6">
+              <div className="max-w-3xl mx-auto space-y-3">
+                <AnimatePresence>
+                  {messages
+                    .filter(m => m.role === 'assistant')
+                    .slice(-4)
+                    .map(m => (
+                      <motion.div
+                        key={m.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                        className="bg-white/95 backdrop-blur-sm rounded-2xl px-5 py-4 shadow-lg border border-border/50 max-w-[85%] mx-auto"
+                      >
+                        <p className="text-sm leading-relaxed text-foreground">{m.content}</p>
+                      </motion.div>
+                    ))}
+                </AnimatePresence>
                 <div ref={messagesEndRef} />
               </div>
             </div>
@@ -712,27 +862,32 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
   // === Text-fallback mode ===
   return (
-    <div className="flex h-full w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
-      {/* Header */}
-      <div className="bg-white border-b border-border px-6 py-4">
+    <div className="flex h-full w-full flex-col bg-gradient-to-b from-white via-primary/3 to-accent/3">
+      {/* Header - Clean and Modern */}
+      <div className="bg-white/95 backdrop-blur-md border-b border-border/50 px-6 py-4 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-4">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <MdVolumeUp className="text-white" size={20} />
+          <div className="flex items-center gap-3">
+            <div className="relative">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-md">
+                <MdVolumeUp className="text-white" size={22} />
+              </div>
+              <div className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-amber-500 border-2 border-white" />
             </div>
             <div>
               <h2 className="text-lg font-bold text-foreground">Chat with Echo</h2>
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                <div className="w-2 h-2 rounded-full bg-amber-500" />
-                <span>Text Mode (voice unavailable)</span>
+                <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-medium">Text Mode</span>
               </div>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-sm text-muted-foreground">{formatTime(timeRemaining)} remaining</span>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 text-sm text-muted-foreground">
+              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+              <span>{formatTime(timeRemaining)}</span>
+            </div>
             <button
               onClick={handleEndConversation}
-              className="px-4 py-2 rounded-xl bg-muted hover:bg-muted/80 text-foreground transition-colors text-sm font-medium"
+              className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-foreground transition-colors text-sm font-medium border border-border/50"
             >
               End Session
             </button>
@@ -740,21 +895,30 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-6 py-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+      {/* Messages - Modern Chat Interface */}
+      <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-6">
+        <div className="max-w-3xl mx-auto space-y-4">
           {messages.length === 0 && (
-            <div className="flex items-center justify-center py-16">
-              <div className="text-center space-y-4 max-w-md">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center mx-auto shadow-lg">
-                  <MdVolumeUp className="text-white" size={36} />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="flex items-center justify-center py-20"
+            >
+              <div className="text-center space-y-6 max-w-lg">
+                <div className="relative mx-auto w-24 h-24">
+                  <div className="absolute inset-0 rounded-full bg-gradient-to-br from-primary/20 to-accent/20 blur-xl" />
+                  <div className="relative w-24 h-24 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl border-4 border-white">
+                    <MdVolumeUp className="text-white" size={40} />
+                  </div>
                 </div>
-                <h3 className="text-2xl font-bold text-foreground">Welcome, {userName}! I&apos;m Echo</h3>
-                <p className="text-muted-foreground">
-                  Voice wasn&apos;t available, but no worries — we can chat here instead. I&apos;m your personal growth coach and I&apos;m excited to get to know you!
-                </p>
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold text-foreground">Welcome, {userName}!</h3>
+                  <p className="text-muted-foreground leading-relaxed">
+                    I&apos;m Echo, your personal growth coach. Voice isn&apos;t available right now, but we can chat here instead. I&apos;m excited to get to know you!
+                  </p>
+                </div>
               </div>
-            </div>
+            </motion.div>
           )}
 
           <AnimatePresence>
@@ -763,64 +927,87 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                 key={message.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
               >
                 <div
-                  className={`max-w-[75%] rounded-2xl px-5 py-3 shadow-sm ${
+                  className={`max-w-[80%] sm:max-w-[75%] rounded-2xl px-4 py-3 shadow-sm ${
                     message.role === 'user'
                       ? 'bg-gradient-to-br from-primary to-accent text-white'
-                      : 'bg-white border border-border text-foreground'
+                      : 'bg-white border border-border/50 text-foreground shadow-sm'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed">{message.content}</p>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
                 </div>
               </motion.div>
             ))}
           </AnimatePresence>
+          {isProcessing && (
+            <div className="flex justify-start">
+              <div className="bg-white border border-border/50 rounded-2xl px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <div className="w-2 h-2 rounded-full bg-primary animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
       </div>
 
-      {/* Input */}
-      <div className="bg-white border-t border-border px-6 py-4">
-        <div className="max-w-4xl mx-auto flex items-center gap-3">
-          <button
-            onClick={() => {
-              if (voiceConfigRef.current) {
-                setConnectionStatus(ConnectionStatus.DISCONNECTED);
-                setMode('loading');
-                setStatusText('Retrying voice connection...');
-                connectVoice(voiceConfigRef.current);
-              }
-            }}
-            className="w-12 h-12 rounded-full bg-muted text-muted-foreground hover:bg-muted/80 flex items-center justify-center flex-shrink-0 transition-all"
-            title="Retry voice"
-          >
-            <MdMicOff size={24} />
-          </button>
-          <input
-            ref={inputRef}
-            type="text"
-            value={inputText}
-            onChange={(e) => setInputText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault();
-                sendTextMessage(inputText);
-              }
-            }}
-            placeholder="Type your message..."
-            disabled={isProcessing}
-            className="flex-1 px-4 py-3 rounded-xl bg-muted border border-border text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
-          />
-          <button
-            onClick={() => sendTextMessage(inputText)}
-            disabled={!inputText.trim() || isProcessing}
-            className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent text-white flex items-center justify-center hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
-          >
-            <MdSend size={20} />
-          </button>
+      {/* Input - Modern and Clean */}
+      <div className="bg-white/95 backdrop-blur-md border-t border-border/50 px-4 sm:px-6 py-4 shadow-lg">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-end gap-3">
+            <button
+              onClick={() => {
+                if (voiceConfigRef.current) {
+                  setConnectionStatus(ConnectionStatus.DISCONNECTED);
+                  setMode('loading');
+                  setStatusText('Retrying voice connection...');
+                  connectVoice(voiceConfigRef.current);
+                }
+              }}
+              className="w-11 h-11 rounded-xl bg-muted hover:bg-muted/80 text-muted-foreground flex items-center justify-center flex-shrink-0 transition-all border border-border/50"
+              title="Retry voice connection"
+            >
+              <MdMicOff size={20} />
+            </button>
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    sendTextMessage(inputText);
+                  }
+                }}
+                placeholder="Type your message..."
+                disabled={isProcessing}
+                className="w-full px-4 py-3 pr-12 rounded-xl bg-muted/50 border border-border/50 text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary/30 transition-all text-sm"
+              />
+            </div>
+            <button
+              onClick={() => sendTextMessage(inputText)}
+              disabled={!inputText.trim() || isProcessing}
+              className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-accent text-white flex items-center justify-center hover:shadow-lg hover:scale-105 transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 flex-shrink-0"
+            >
+              {isProcessing ? (
+                <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              ) : (
+                <MdSend size={20} />
+              )}
+            </button>
+          </div>
+          <p className="text-xs text-muted-foreground mt-2 text-center">
+            Press Enter to send • Shift+Enter for new line
+          </p>
         </div>
       </div>
     </div>
