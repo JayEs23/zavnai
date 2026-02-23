@@ -60,10 +60,13 @@ export function CommitmentVerification({
           return;
         }
 
-        await api.post('/api/verify/journal', {
+        const journalResponse = await api.post('/api/verify/journal', {
           commitment_id: commitmentId,
           text: journalText,
         });
+        if (journalResponse.error) {
+          throw new Error(journalResponse.error.message || 'Failed to verify with journal entry');
+        }
       } else if (method === 'link') {
         if (!linkUrl.trim()) {
           setError('Please provide a valid URL.');
@@ -71,10 +74,13 @@ export function CommitmentVerification({
           return;
         }
 
-        await api.post('/api/verify/link', {
+        const linkResponse = await api.post('/api/verify/link', {
           commitment_id: commitmentId,
           url: linkUrl,
         });
+        if (linkResponse.error) {
+          throw new Error(linkResponse.error.message || 'Failed to verify with link');
+        }
       } else if (method === 'photo') {
         if (!photoFile) {
           setError('Please upload a photo.');
@@ -86,7 +92,10 @@ export function CommitmentVerification({
         formData.append('commitment_id', commitmentId);
         formData.append('photo', photoFile);
 
-        await api.post('/api/verify/photo', formData);
+        const photoResponse = await api.post('/api/verify/photo', formData);
+        if (photoResponse.error) {
+          throw new Error(photoResponse.error.message || 'Failed to verify with photo');
+        }
       
         // Success - trigger reflection
         onVerified();

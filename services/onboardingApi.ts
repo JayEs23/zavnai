@@ -89,36 +89,58 @@ export const onboardingApi = {
   // Start Session
   startSession: async (): Promise<{ session_id: string; current_step: number }> => {
     const res = await api.post<{ session_id: string; current_step: number }>('/api/onboarding/start', {});
-    return res;
+    if (res.error || !res.data) {
+      throw new Error(res.error?.message || 'Failed to start onboarding session');
+    }
+    return res.data;
   },
 
   // Submit Step (Generic)
   submitStep: async (stepNumber: number, data: Record<string, any>): Promise<StepResponse> => {
-    return api.post<StepResponse>('/api/onboarding/step', {
+    const response = await api.post<StepResponse>('/api/onboarding/step', {
       step_number: stepNumber,
       data: data
     });
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to submit step');
+    }
+    return response.data;
   },
 
   // Trigger Backend Analysis
   analyzeBaseline: async (): Promise<BaselineAnalysisResult> => {
     const res = await api.post<BaselineAnalysisResult>('/api/onboarding/analyze', {});
-    return res;
+    if (res.error || !res.data) {
+      throw new Error(res.error?.message || 'Failed to analyze baseline');
+    }
+    return res.data;
   },
 
   // Legacy/Profile Update wrapper (Full type support now)
   updateProfile: async (data: ProfileUpdateRequest): Promise<any> => {
-    return api.put('/api/onboarding/profile', data);
+    const response = await api.put('/api/onboarding/profile', data);
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to update profile');
+    }
+    return response.data;
   },
 
   // Check Username
   checkUsername: async (username: string): Promise<UsernameCheckResponse> => {
-    return api.get(`/api/onboarding/username/check?username=${encodeURIComponent(username)}`);
+    const response = await api.get<UsernameCheckResponse>(`/api/onboarding/username/check?username=${encodeURIComponent(username)}`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to check username');
+    }
+    return response.data;
   },
 
   // Legacy Status Check (Restored for store compatibility)
   getStatus: async (): Promise<any> => {
-    return api.get('/api/onboarding/status');
+    const response = await api.get('/api/onboarding/status');
+    if (response.error) {
+      throw new Error(response.error.message || 'Failed to get onboarding status');
+    }
+    return response.data;
   },
 
   // Get Echo voice config (model, API version, system instruction) from backend

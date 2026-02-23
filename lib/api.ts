@@ -79,7 +79,7 @@ async function request<T>(
   let responseData: unknown;
   try {
     responseData = await response.json();
-  } catch (jsonErr) {
+  } catch {
     responseData = {};
   }
 

@@ -41,7 +41,12 @@ export default function EchoReflectPage() {
     try {
       setLoading(true);
       const response = await api.get<Commitment>(`/api/v1/goals/commitments/${commitmentId}`);
-      setCommitment(response);
+      if (response.error || !response.data) {
+        console.error('Error loading commitment:', response.error);
+        router.push('/dashboard');
+        return;
+      }
+      setCommitment(response.data);
     } catch (error) {
       console.error('Error loading commitment:', error);
       router.push('/dashboard');

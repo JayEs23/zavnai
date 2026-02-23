@@ -78,47 +78,88 @@ export interface CreateGoalRequest {
 export const goalsApi = {
   /** List all goals (lightweight summary for dashboard) */
   async list(): Promise<GoalSummary[]> {
-    return api.get<GoalSummary[]>('/api/v1/goals/list');
+    const response = await api.get<GoalSummary[]>('/api/v1/goals/list');
+    if (response.error || !response.data) {
+      console.error('Failed to load goals:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Get a single goal by ID */
   async get(goalId: string): Promise<GoalSummary> {
-    return api.get<GoalSummary>(`/api/v1/goals/${goalId}`);
+    const response = await api.get<GoalSummary>(`/api/v1/goals/${goalId}`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to load goal');
+    }
+    return response.data;
   },
 
   /** List all goals (full Goal type for goals page) */
   async getGoals(): Promise<Goal[]> {
-    return api.get<Goal[]>('/api/v1/goals/list');
+    const response = await api.get<Goal[]>('/api/v1/goals/list');
+    if (response.error || !response.data) {
+      console.error('Failed to load goals:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Get commitments for a specific goal */
   async getCommitments(goalId: string): Promise<CommitmentSummary[]> {
-    return api.get<CommitmentSummary[]>(`/api/v1/goals/${goalId}/commitments`);
+    const response = await api.get<CommitmentSummary[]>(`/api/v1/goals/${goalId}/commitments`);
+    if (response.error || !response.data) {
+      console.error('Failed to load commitments:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Alias used by goals page */
   async getGoalCommitments(goalId: string): Promise<Commitment[]> {
-    return api.get<Commitment[]>(`/api/v1/goals/${goalId}/commitments`);
+    const response = await api.get<Commitment[]>(`/api/v1/goals/${goalId}/commitments`);
+    if (response.error || !response.data) {
+      console.error('Failed to load commitments:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Get today's commitments across all goals */
   async getTodaysCommitments(): Promise<CommitmentSummary[]> {
-    return api.get<CommitmentSummary[]>('/api/v1/goals/commitments/today');
+    const response = await api.get<CommitmentSummary[]>('/api/v1/goals/commitments/today');
+    if (response.error || !response.data) {
+      console.error('Failed to load today\'s commitments:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Create a new goal (via Echo contract ingestion) */
   async createGoal(data: CreateGoalRequest): Promise<{ success: boolean; goal_id: string; message: string }> {
-    return api.post('/api/v1/goals/ingest-contract', data);
+    const response = await api.post<{ success: boolean; goal_id: string; message: string }>('/api/v1/goals/ingest-contract', data);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to create goal');
+    }
+    return response.data;
   },
 
   /** Archive a goal */
   async archiveGoal(goalId: string): Promise<{ success: boolean; message: string }> {
-    return api.put(`/api/v1/goals/${goalId}/archive`);
+    const response = await api.put<{ success: boolean; message: string }>(`/api/v1/goals/${goalId}/archive`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to archive goal');
+    }
+    return response.data;
   },
 
   /** Mark a goal as completed */
   async completeGoal(goalId: string): Promise<{ success: boolean; message: string }> {
-    return api.put(`/api/v1/goals/${goalId}/complete`);
+    const response = await api.put<{ success: boolean; message: string }>(`/api/v1/goals/${goalId}/complete`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to complete goal');
+    }
+    return response.data;
   },
 
   /** Auto-generate commitments for a goal using Doyn AI */
@@ -128,14 +169,27 @@ export const goalsApi = {
     commitments_created: number;
     commitments: { id: string; task_detail: string; due_at: string }[];
   }> {
-    return api.post(`/api/v1/goals/${goalId}/generate-commitments`, { count });
+    const response = await api.post<{
+      success: boolean;
+      goal_id: string;
+      commitments_created: number;
+      commitments: { id: string; task_detail: string; due_at: string }[];
+    }>(`/api/v1/goals/${goalId}/generate-commitments`, { count });
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to generate commitments');
+    }
+    return response.data;
   },
 
   /** Add a financial stake to an existing goal */
   async stakeGoal(goalId: string, stakeAmount: number, antiCharityId?: string): Promise<{ success: boolean; message: string; payment_intent_id?: string }> {
-    return api.post(`/api/v1/goals/${goalId}/stake`, {
+    const response = await api.post<{ success: boolean; message: string; payment_intent_id?: string }>(`/api/v1/goals/${goalId}/stake`, {
       stake_amount: stakeAmount,
       anti_charity_id: antiCharityId,
     });
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to stake goal');
+    }
+    return response.data;
   },
 };

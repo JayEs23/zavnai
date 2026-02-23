@@ -153,8 +153,8 @@ describe('Tribe API', () => {
     it('should update trust score successfully', async () => {
       const memberId = '123';
       const update = {
-        interaction_type: 'message_sent',
-        interaction_outcome: 'positive',
+        interaction_type: 'message_sent' as const,
+        interaction_outcome: 'positive' as const,
       };
 
       const mockResponse = {

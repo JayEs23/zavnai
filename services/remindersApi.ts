@@ -40,28 +40,38 @@ export interface ReminderUpdate {
 }
 
 export const remindersApi = {
-    create: async (data: ReminderCreate): Promise<ReminderSchedule> => {
-        return api.post<ReminderSchedule>('/api/reminders', data);
+    async create(data: ReminderCreate): Promise<ReminderSchedule> {
+        const res = await api.post<ReminderSchedule>('/api/reminders', data);
+        if (res.error) throw new Error(res.error.message || 'Failed to create reminder');
+        return res.data!;
     },
 
-    list: async (reminder_type?: string, is_active?: boolean): Promise<ReminderSchedule[]> => {
+    async list(reminder_type?: string, is_active?: boolean): Promise<ReminderSchedule[]> {
         const params = new URLSearchParams();
         if (reminder_type) params.append('reminder_type', reminder_type);
         if (is_active !== undefined) params.append('is_active', String(is_active));
         const query = params.toString();
-        return api.get<ReminderSchedule[]>(`/api/reminders${query ? `?${query}` : ''}`);
+        const res = await api.get<ReminderSchedule[]>(`/api/reminders${query ? `?${query}` : ''}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to list reminders');
+        return res.data || [];
     },
 
-    get: async (id: string): Promise<ReminderSchedule> => {
-        return api.get<ReminderSchedule>(`/api/reminders/${id}`);
+    async get(id: string): Promise<ReminderSchedule> {
+        const res = await api.get<ReminderSchedule>(`/api/reminders/${id}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to get reminder');
+        return res.data!;
     },
 
-    update: async (id: string, data: ReminderUpdate): Promise<ReminderSchedule> => {
-        return api.put<ReminderSchedule>(`/api/reminders/${id}`, data);
+    async update(id: string, data: ReminderUpdate): Promise<ReminderSchedule> {
+        const res = await api.put<ReminderSchedule>(`/api/reminders/${id}`, data);
+        if (res.error) throw new Error(res.error.message || 'Failed to update reminder');
+        return res.data!;
     },
 
-    delete: async (id: string): Promise<void> => {
-        return api.delete<void>(`/api/reminders/${id}`);
+    async delete(id: string): Promise<void> {
+        const res = await api.delete<void>(`/api/reminders/${id}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to delete reminder');
+        // void methods don't return data
     }
 };
 

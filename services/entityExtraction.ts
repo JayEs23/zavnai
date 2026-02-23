@@ -30,24 +30,25 @@ export async function extractEntities(
   transcript: string,
   userId: string
 ): Promise<ExtractedProfile> {
-  try {
-    const response = await api.post<EntityExtractionResponse>(
-      '/api/onboarding/extract-entities',
-      {
-        transcript,
-        user_id: userId,
-      }
-    );
-
-    if (!response.success) {
-      throw new Error(response.message || 'Failed to extract entities');
+  const response = await api.post<EntityExtractionResponse>(
+    '/api/onboarding/extract-entities',
+    {
+      transcript,
+      user_id: userId,
     }
+  );
 
-    return response.profile;
-  } catch (error) {
-    console.error('Entity extraction error:', error);
-    throw error;
+  if (response.error || !response.data) {
+    const errorMessage = response.error?.message || 'Failed to extract entities';
+    console.error('Entity extraction error:', errorMessage);
+    throw new Error(errorMessage);
   }
+
+  if (!response.data.success) {
+    throw new Error(response.data.message || 'Failed to extract entities');
+  }
+
+  return response.data.profile;
 }
 
 /**

@@ -52,106 +52,130 @@ export interface CalendarAuthUrl {
 
 export const calendarApi = {
   /** Get user's connected calendars */
-  getCalendars: async (): Promise<CalendarProvider[]> => {
-    return api.get<CalendarProvider[]>('/api/integrations/calendars');
+  async getCalendars(): Promise<CalendarProvider[]> {
+    const res = await api.get<CalendarProvider[]>('/api/integrations/calendars');
+    if (res.error) throw new Error(res.error.message || 'Failed to get calendars');
+    return res.data || [];
   },
 
   /** Get OAuth authorization URL for Google Calendar */
-  getGoogleAuthUrl: async (redirectUri: string): Promise<CalendarAuthUrl> => {
-    return api.post<CalendarAuthUrl>('/api/integrations/google-calendar/auth', {
+  async getGoogleAuthUrl(redirectUri: string): Promise<CalendarAuthUrl> {
+    const res = await api.post<CalendarAuthUrl>('/api/integrations/google-calendar/auth', {
       redirect_uri: redirectUri,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to get Google auth URL');
+    return res.data!;
   },
 
   /** Get OAuth authorization URL for Outlook Calendar */
-  getOutlookAuthUrl: async (redirectUri: string): Promise<CalendarAuthUrl> => {
-    return api.post<CalendarAuthUrl>('/api/integrations/outlook-calendar/auth', {
+  async getOutlookAuthUrl(redirectUri: string): Promise<CalendarAuthUrl> {
+    const res = await api.post<CalendarAuthUrl>('/api/integrations/outlook-calendar/auth', {
       redirect_uri: redirectUri,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to get Outlook auth URL');
+    return res.data!;
   },
 
   /** Complete OAuth flow and save tokens (Google) */
-  connectGoogleCalendar: async (
+  async connectGoogleCalendar(
     code: string,
     state: string
-  ): Promise<CalendarProvider> => {
-    return api.post<CalendarProvider>('/api/integrations/google-calendar/callback', {
+  ): Promise<CalendarProvider> {
+    const res = await api.post<CalendarProvider>('/api/integrations/google-calendar/callback', {
       code,
       state,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to connect Google Calendar');
+    return res.data!;
   },
 
   /** Complete Outlook OAuth flow */
-  connectOutlookCalendar: async (
+  async connectOutlookCalendar(
     code: string,
     state: string
-  ): Promise<CalendarProvider> => {
-    return api.post<CalendarProvider>('/api/integrations/outlook-calendar/callback', {
+  ): Promise<CalendarProvider> {
+    const res = await api.post<CalendarProvider>('/api/integrations/outlook-calendar/callback', {
       code,
       state,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to connect Outlook Calendar');
+    return res.data!;
   },
 
   /** Disconnect a calendar */
-  disconnectCalendar: async (
+  async disconnectCalendar(
     provider: 'google' | 'outlook'
-  ): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>(
+  ): Promise<{ success: boolean }> {
+    const res = await api.delete<{ success: boolean }>(
       `/api/integrations/calendars/${provider}`
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to disconnect calendar');
+    return res.data!;
   },
 
   /** Enable/disable calendar sync */
-  toggleSync: async (
+  async toggleSync(
     provider: 'google' | 'outlook',
     enabled: boolean
-  ): Promise<CalendarProvider> => {
-    return api.patch<CalendarProvider>(`/api/integrations/calendars/${provider}`, {
+  ): Promise<CalendarProvider> {
+    const res = await api.patch<CalendarProvider>(`/api/integrations/calendars/${provider}`, {
       sync_enabled: enabled,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to toggle sync');
+    return res.data!;
   },
 
   /** Get calendar events for user */
-  getEvents: async (
+  async getEvents(
     startDate?: string,
     endDate?: string
-  ): Promise<CalendarEvent[]> => {
+  ): Promise<CalendarEvent[]> {
     const params = new URLSearchParams();
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
-    return api.get<CalendarEvent[]>(`/api/integrations/calendar-events?${params}`);
+    const res = await api.get<CalendarEvent[]>(`/api/integrations/calendar-events?${params}`);
+    if (res.error) throw new Error(res.error.message || 'Failed to get calendar events');
+    return res.data || [];
   },
 
   /** Manually trigger calendar sync */
-  syncCalendar: async (
+  async syncCalendar(
     provider: 'google' | 'outlook'
-  ): Promise<CalendarSyncStatus> => {
-    return api.post<CalendarSyncStatus>(
+  ): Promise<CalendarSyncStatus> {
+    const res = await api.post<CalendarSyncStatus>(
       `/api/integrations/calendars/${provider}/sync`,
       {}
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to sync calendar');
+    return res.data!;
   },
 
   /** Create calendar event from commitment */
-  createEventFromCommitment: async (
+  async createEventFromCommitment(
     commitmentId: string,
     provider: 'google' | 'outlook'
-  ): Promise<CalendarEvent> => {
-    return api.post<CalendarEvent>('/api/integrations/calendar-events', {
+  ): Promise<CalendarEvent> {
+    const res = await api.post<CalendarEvent>('/api/integrations/calendar-events', {
       commitment_id: commitmentId,
       provider,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to create calendar event');
+    return res.data!;
   },
 
   /** Delete calendar event */
-  deleteEvent: async (eventId: string): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>(
+  async deleteEvent(eventId: string): Promise<{ success: boolean }> {
+    const res = await api.delete<{ success: boolean }>(
       `/api/integrations/calendar-events/${eventId}`
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to delete calendar event');
+    return res.data!;
   },
 
   /** Get sync status for all calendars */
-  getSyncStatus: async (): Promise<CalendarSyncStatus> => {
-    return api.get<CalendarSyncStatus>('/api/integrations/calendars/sync-status');
+  async getSyncStatus(): Promise<CalendarSyncStatus> {
+    const res = await api.get<CalendarSyncStatus>('/api/integrations/calendars/sync-status');
+    if (res.error) throw new Error(res.error.message || 'Failed to get sync status');
+    return res.data!;
   },
 };
