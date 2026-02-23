@@ -29,7 +29,7 @@ export interface DoynInsights {
   goal_id: string;
   insights: Array<{
     type: string;
-    value: any;
+    value: unknown;
     source: string;
   }>;
   thrive_score: number;
@@ -56,7 +56,13 @@ export const coreLoopApi = {
       outcome,
       reflection_text: reflectionText,
     });
-    return response;
+    if (response.error || !response.data) {
+      return {
+        success: false,
+        error: response.error?.message || 'Failed to handle commitment outcome',
+      };
+    }
+    return response.data;
   },
 
   /**
@@ -70,7 +76,13 @@ export const coreLoopApi = {
       `/api/core-loop/reflect/${commitmentId}`,
       { reflection_text: reflectionText }
     );
-    return response;
+    if (response.error || !response.data) {
+      return {
+        success: false,
+        error: response.error?.message || 'Failed to process reflection',
+      };
+    }
+    return response.data;
   },
 
   /**
@@ -78,7 +90,22 @@ export const coreLoopApi = {
    */
   async getInsightsForDoyn(goalId: string): Promise<DoynInsights> {
     const response = await api.get<DoynInsights>(`/api/core-loop/insights-for-doyn/${goalId}`);
-    return response;
+    if (response.error || !response.data) {
+      // Return a safe default structure
+      return {
+        goal_id: goalId,
+        insights: [],
+        thrive_score: 50,
+        risk_level: 'unknown',
+        completion_rate: 0,
+        recommendations: {
+          intensity: 'normal',
+          commitment_size: 'normal',
+          tone: 'supportive',
+        },
+      };
+    }
+    return response.data;
   },
 };
 

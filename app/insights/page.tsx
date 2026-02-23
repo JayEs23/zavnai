@@ -38,11 +38,18 @@ export default function InsightsPage() {
   const loadMetrics = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
-      setMetrics(data);
+      const response = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
+      if (response.error || !response.data) {
+        console.error('Failed to load growth metrics:', response.error);
+        toast.error(response.error?.message || 'Could not load growth data');
+        setMetrics(null);
+      } else {
+        setMetrics(response.data);
+      }
     } catch (err) {
       console.error('Failed to load growth metrics:', err);
       toast.error('Could not load growth data');
+      setMetrics(null);
     } finally {
       setLoading(false);
     }

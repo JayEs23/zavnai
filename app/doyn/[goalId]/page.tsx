@@ -76,7 +76,10 @@ export default function DoynGoalPage() {
   const loadChatHistory = async (goalId: string): Promise<DoynMessage[]> => {
     try {
       const response = await api.get<DoynMessage[]>(`/api/agents/doyn/history/${goalId}?limit=20`);
-      return response;
+      if (response.error || !response.data) {
+        return [];
+      }
+      return response.data;
     } catch (error) {
       console.error('Error loading chat history:', error);
       return [];
@@ -133,7 +136,18 @@ export default function DoynGoalPage() {
         },
       });
 
-      setMessages((prev) => [...prev, response]);
+      if (response.error || !response.data) {
+        const errorMessage: DoynMessage = {
+          id: (Date.now() + 1).toString(),
+          role: 'doyn',
+          content: response.error?.message || "Sorry, I had trouble processing that. Can you try rephrasing?",
+          timestamp: new Date().toISOString(),
+        };
+        setMessages((prev) => [...prev, errorMessage]);
+        return;
+      }
+
+      setMessages((prev) => [...prev, response.data]);
     } catch (error: any) {
       console.error('Error sending message:', error);
       

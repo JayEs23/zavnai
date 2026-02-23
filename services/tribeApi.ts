@@ -75,17 +75,30 @@ export interface TribeMemberWithHistory extends TribeMember {
 export const tribeApi = {
   /** Get all tribe members for the current user */
   getTribeMembers: async (): Promise<TribeMember[]> => {
-    return api.get<TribeMember[]>('/api/tribe');
+    const response = await api.get<TribeMember[]>('/api/tribe');
+    if (response.error || !response.data) {
+      console.error('Failed to load tribe members:', response.error);
+      return [];
+    }
+    return response.data;
   },
 
   /** Add a new tribe member (initiates AI vetting) */
   addTribeMember: async (data: CreateTribeMemberRequest): Promise<TribeMember> => {
-    return api.post<TribeMember>('/api/tribe', data);
+    const response = await api.post<TribeMember>('/api/tribe', data);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to add tribe member');
+    }
+    return response.data;
   },
 
   /** Get a specific tribe member by ID */
   getTribeMember: async (memberId: string): Promise<TribeMemberWithHistory> => {
-    return api.get<TribeMemberWithHistory>(`/api/tribe/${memberId}`);
+    const response = await api.get<TribeMemberWithHistory>(`/api/tribe/${memberId}`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to load tribe member');
+    }
+    return response.data;
   },
 
   /** Update tribe member details */
@@ -93,12 +106,20 @@ export const tribeApi = {
     memberId: string,
     updates: Partial<CreateTribeMemberRequest>
   ): Promise<TribeMember> => {
-    return api.put<TribeMember>(`/api/tribe/${memberId}`, updates);
+    const response = await api.put<TribeMember>(`/api/tribe/${memberId}`, updates);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to update tribe member');
+    }
+    return response.data;
   },
 
   /** Remove a tribe member */
   removeTribeMember: async (memberId: string): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>(`/api/tribe/${memberId}`);
+    const response = await api.delete<{ success: boolean }>(`/api/tribe/${memberId}`);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to remove tribe member');
+    }
+    return response.data;
   },
 
   /** Update trust score based on interaction */
@@ -106,15 +127,23 @@ export const tribeApi = {
     memberId: string,
     update: TrustScoreUpdate
   ): Promise<TribeMember> => {
-    return api.post<TribeMember>(`/api/tribe/${memberId}/trust-score`, update);
+    const response = await api.post<TribeMember>(`/api/tribe/${memberId}/trust-score`, update);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to update trust score');
+    }
+    return response.data;
   },
 
   /** Resend vetting invitation to tribe member */
   resendVetting: async (memberId: string): Promise<{ success: boolean; message: string }> => {
-    return api.post<{ success: boolean; message: string }>(
+    const response = await api.post<{ success: boolean; message: string }>(
       `/api/tribe/${memberId}/resend-vetting`,
       {}
     );
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to resend vetting');
+    }
+    return response.data;
   },
 
   /** Request tribe verification for a commitment */
@@ -122,10 +151,14 @@ export const tribeApi = {
     commitmentId: string,
     tribeMemberIds?: string[]
   ): Promise<{ success: boolean; message: string }> => {
-    return api.post<{ success: boolean; message: string }>(
+    const response = await api.post<{ success: boolean; message: string }>(
       `/api/tribe/request-verification/${commitmentId}`,
       { tribe_member_ids: tribeMemberIds }
     );
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to request verification');
+    }
+    return response.data;
   },
 
   /** Get verified tribe members only */

@@ -33,17 +33,24 @@ export interface UserResponse {
 
 export const authApi = {
   register: async (data: RegisterRequest): Promise<UserResponse> => {
-    return api.post<UserResponse>('/api/auth/register', data);
+    const response = await api.post<UserResponse>('/api/auth/register', data);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to register');
+    }
+    return response.data;
   },
 
   login: async (data: LoginRequest): Promise<TokenResponse> => {
     const response = await api.post<TokenResponse>('/api/auth/login', data);
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to login');
+    }
     // Store token
     if (typeof window !== 'undefined') {
-      localStorage.setItem('auth_token', response.access_token);
-      localStorage.setItem('user_id', response.user_id);
+      localStorage.setItem('auth_token', response.data.access_token);
+      localStorage.setItem('user_id', response.data.user_id);
     }
-    return response;
+    return response.data;
   },
 
   logout: () => {
@@ -54,7 +61,11 @@ export const authApi = {
   },
 
   getCurrentUser: async (): Promise<UserResponse> => {
-    return api.get<UserResponse>('/api/auth/me');
+    const response = await api.get<UserResponse>('/api/auth/me');
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to get current user');
+    }
+    return response.data;
   },
 };
 

@@ -88,13 +88,8 @@ export default function DashboardPage() {
       const completionRate = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
 
       // Try to fetch growth metrics from backend
-      try {
-        const metricsResponse = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
-        if (metricsResponse.error || !metricsResponse.data) {
-          throw new Error(metricsResponse.error?.message || 'Failed to fetch growth metrics');
-        }
-        setGrowthMetrics(metricsResponse.data);
-      } catch {
+      const metricsResponse = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
+      if (metricsResponse.error || !metricsResponse.data) {
         // Fallback: compute from local data
         setGrowthMetrics({
           streak_days: commitmentsData.filter(c => c.status === 'verified').length > 0 ? 1 : 0,
@@ -105,6 +100,8 @@ export default function DashboardPage() {
           patterns_detected: [],
           recent_insight: null,
         });
+      } else {
+        setGrowthMetrics(metricsResponse.data);
       }
 
       // Show celebration if there are newly completed goals
