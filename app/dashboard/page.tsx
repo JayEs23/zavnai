@@ -57,7 +57,7 @@ export default function DashboardPage() {
         const status = await api.get<{ is_onboarded: boolean }>(
           `/api/onboarding/status?_t=${Date.now()}`
         );
-        if (!status.is_onboarded) {
+        if (status.error || !status.data?.is_onboarded) {
           router.replace('/onboarding');
           return;
         }
