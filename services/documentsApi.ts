@@ -128,58 +128,69 @@ export const documentsApi = {
   },
 
   /** Get all documents for the current user */
-  getDocuments: async (params?: {
+  async getDocuments(params?: {
     commitment_id?: string;
     goal_id?: string;
     file_type?: string;
     verified?: boolean;
-  }): Promise<Document[]> => {
+  }): Promise<Document[]> {
     const searchParams = new URLSearchParams();
     if (params?.commitment_id) searchParams.append('commitment_id', params.commitment_id);
     if (params?.goal_id) searchParams.append('goal_id', params.goal_id);
     if (params?.file_type) searchParams.append('file_type', params.file_type);
     if (params?.verified !== undefined) searchParams.append('verified', String(params.verified));
-
-    return api.get<Document[]>(`/api/documents?${searchParams}`);
+    const res = await api.get<Document[]>(`/api/documents?${searchParams}`);
+    if (res.error) throw new Error(res.error.message || 'Failed to get documents');
+    return res.data || [];
   },
 
   /** Get a specific document */
-  getDocument: async (documentId: string): Promise<Document> => {
-    return api.get<Document>(`/api/documents/${documentId}`);
+  async getDocument(documentId: string): Promise<Document> {
+    const res = await api.get<Document>(`/api/documents/${documentId}`);
+    if (res.error) throw new Error(res.error.message || 'Failed to get document');
+    return res.data!;
   },
 
   /** Delete a document */
-  deleteDocument: async (documentId: string): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>(`/api/documents/${documentId}`);
+  async deleteDocument(documentId: string): Promise<{ success: boolean }> {
+    const res = await api.delete<{ success: boolean }>(`/api/documents/${documentId}`);
+    if (res.error) throw new Error(res.error.message || 'Failed to delete document');
+    return res.data!;
   },
 
   /** Update document metadata */
-  updateDocument: async (
+  async updateDocument(
     documentId: string,
     updates: {
       description?: string;
       tags?: string[];
     }
-  ): Promise<Document> => {
-    return api.patch<Document>(`/api/documents/${documentId}`, updates);
+  ): Promise<Document> {
+    const res = await api.patch<Document>(`/api/documents/${documentId}`, updates);
+    if (res.error) throw new Error(res.error.message || 'Failed to update document');
+    return res.data!;
   },
 
   /** Verify a document (approve/reject) */
-  verifyDocument: async (
+  async verifyDocument(
     request: DocumentVerificationRequest
-  ): Promise<Document> => {
-    return api.post<Document>(
+  ): Promise<Document> {
+    const res = await api.post<Document>(
       `/api/documents/${request.document_id}/verify`,
       {
         status: request.status,
         notes: request.notes,
       }
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to verify document');
+    return res.data!;
   },
 
   /** Get download URL for a document */
-  getDownloadUrl: async (documentId: string): Promise<{ url: string }> => {
-    return api.get<{ url: string }>(`/api/documents/${documentId}/download`);
+  async getDownloadUrl(documentId: string): Promise<{ url: string }> {
+    const res = await api.get<{ url: string }>(`/api/documents/${documentId}/download`);
+    if (res.error) throw new Error(res.error.message || 'Failed to get download URL');
+    return res.data!;
   },
 
   /** Get documents for a specific commitment */

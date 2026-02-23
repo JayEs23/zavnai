@@ -24,25 +24,33 @@ export interface NotificationLog {
 }
 
 export const notificationsApi = {
-    getHistory: async (limit: number = 50, status?: string): Promise<NotificationLog[]> => {
+    async getHistory(limit: number = 50, status?: string): Promise<NotificationLog[]> {
         const params = new URLSearchParams();
         params.append('limit', String(limit));
         if (status) params.append('status', status);
-        return api.get<NotificationLog[]>(`/api/notifications/history?${params.toString()}`);
+        const res = await api.get<NotificationLog[]>(`/api/notifications/history?${params.toString()}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to get notification history');
+        return res.data || [];
     },
 
-    getUnread: async (limit: number = 50): Promise<NotificationLog[]> => {
+    async getUnread(limit: number = 50): Promise<NotificationLog[]> {
         const params = new URLSearchParams();
         params.append('limit', String(limit));
-        return api.get<NotificationLog[]>(`/api/notifications/unread?${params.toString()}`);
+        const res = await api.get<NotificationLog[]>(`/api/notifications/unread?${params.toString()}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to get unread notifications');
+        return res.data || [];
     },
 
-    markRead: async (id: string): Promise<void> => {
-        return api.put<void>(`/api/notifications/${id}/read`, {});
+    async markRead(id: string): Promise<void> {
+        const res = await api.put<void>(`/api/notifications/${id}/read`, {});
+        if (res.error) throw new Error(res.error.message || 'Failed to mark notification as read');
+        // void methods don't return data
     },
 
-    delete: async (id: string): Promise<void> => {
-        return api.delete<void>(`/api/notifications/${id}`);
+    async delete(id: string): Promise<void> {
+        const res = await api.delete<void>(`/api/notifications/${id}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to delete notification');
+        // void methods don't return data
     }
 };
 

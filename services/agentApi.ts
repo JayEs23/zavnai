@@ -46,8 +46,10 @@ export const agentApi = {
     /**
      * Submit a reflection to the Echo agent (via Echo text chat endpoint)
      */
-    reflect: async (data: ReflectionRequest): Promise<ReflectionResponse> => {
-        return api.post<ReflectionResponse>('/api/echo/chat', data);
+    async reflect(data: ReflectionRequest): Promise<ReflectionResponse> {
+        const res = await api.post<ReflectionResponse>('/api/echo/chat', data);
+        if (res.error) throw new Error(res.error.message || 'Failed to submit reflection');
+        return res.data!;
     },
 
     /**
@@ -55,21 +57,24 @@ export const agentApi = {
      * Turns vague intentions into SMART goals
      * Uses the backend Python SDK which works reliably with Gemini
      */
-    refineGoal: async (data: GoalRefinementRequest): Promise<GoalRefinementResponse> => {
-        return api.post<GoalRefinementResponse>('/api/agents/doyn/refine-goal', {
+    async refineGoal(data: GoalRefinementRequest): Promise<GoalRefinementResponse> {
+        const res = await api.post<GoalRefinementResponse>('/api/agents/doyn/refine-goal', {
             goal: data.goal,
             success_criteria: data.successCriteria,
             target_date: data.targetDate,
         });
+        if (res.error) throw new Error(res.error.message || 'Failed to refine goal');
+        return res.data!;
     },
 
     /**
      * Check if an agent can proceed (Gate Check)
      */
-    checkGate: async (agentType: string, junctionType?: string): Promise<{ can_proceed: boolean }> => {
+    async checkGate(agentType: string, junctionType?: string): Promise<{ can_proceed: boolean }> {
         const params = new URLSearchParams({ agent_type: agentType });
         if (junctionType) params.append('junction_type', junctionType);
-
-        return api.get<{ can_proceed: boolean }>(`/api/agents/junctions/check?${params.toString()}`);
+        const res = await api.get<{ can_proceed: boolean }>(`/api/agents/junctions/check?${params.toString()}`);
+        if (res.error) throw new Error(res.error.message || 'Failed to check gate');
+        return res.data!;
     }
 };

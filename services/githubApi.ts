@@ -70,100 +70,124 @@ export interface CommitmentVerification {
 
 export const githubApi = {
   /** Get GitHub connection status */
-  getConnection: async (): Promise<GitHubConnection> => {
-    return api.get<GitHubConnection>('/api/integrations/github');
+  async getConnection(): Promise<GitHubConnection> {
+    const res = await api.get<GitHubConnection>('/api/integrations/github');
+    if (res.error) throw new Error(res.error.message || 'Failed to get GitHub connection');
+    return res.data!;
   },
 
   /** Get OAuth authorization URL for GitHub */
-  getAuthUrl: async (redirectUri: string): Promise<GitHubAuthUrl> => {
-    return api.post<GitHubAuthUrl>('/api/integrations/github/auth', {
+  async getAuthUrl(redirectUri: string): Promise<GitHubAuthUrl> {
+    const res = await api.post<GitHubAuthUrl>('/api/integrations/github/auth', {
       redirect_uri: redirectUri,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to get GitHub auth URL');
+    return res.data!;
   },
 
   /** Complete OAuth flow and save tokens */
-  connectGitHub: async (code: string, state: string): Promise<GitHubConnection> => {
-    return api.post<GitHubConnection>('/api/integrations/github/callback', {
+  async connectGitHub(code: string, state: string): Promise<GitHubConnection> {
+    const res = await api.post<GitHubConnection>('/api/integrations/github/callback', {
       code,
       state,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to connect GitHub');
+    return res.data!;
   },
 
   /** Disconnect GitHub */
-  disconnectGitHub: async (): Promise<{ success: boolean }> => {
-    return api.delete<{ success: boolean }>('/api/integrations/github');
+  async disconnectGitHub(): Promise<{ success: boolean }> {
+    const res = await api.delete<{ success: boolean }>('/api/integrations/github');
+    if (res.error) throw new Error(res.error.message || 'Failed to disconnect GitHub');
+    return res.data!;
   },
 
   /** Enable/disable GitHub sync */
-  toggleSync: async (enabled: boolean): Promise<GitHubConnection> => {
-    return api.patch<GitHubConnection>('/api/integrations/github', {
+  async toggleSync(enabled: boolean): Promise<GitHubConnection> {
+    const res = await api.patch<GitHubConnection>('/api/integrations/github', {
       sync_enabled: enabled,
     });
+    if (res.error) throw new Error(res.error.message || 'Failed to toggle GitHub sync');
+    return res.data!;
   },
 
   /** Get user's GitHub repositories */
-  getRepositories: async (): Promise<GitHubRepository[]> => {
-    return api.get<GitHubRepository[]>('/api/integrations/github/repositories');
+  async getRepositories(): Promise<GitHubRepository[]> {
+    const res = await api.get<GitHubRepository[]>('/api/integrations/github/repositories');
+    if (res.error) throw new Error(res.error.message || 'Failed to get GitHub repositories');
+    return res.data || [];
   },
 
   /** Track/untrack a repository */
-  toggleRepositoryTracking: async (
+  async toggleRepositoryTracking(
     repoId: number,
     tracked: boolean
-  ): Promise<GitHubRepository> => {
-    return api.patch<GitHubRepository>(
+  ): Promise<GitHubRepository> {
+    const res = await api.patch<GitHubRepository>(
       `/api/integrations/github/repositories/${repoId}`,
       { tracked }
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to toggle repository tracking');
+    return res.data!;
   },
 
   /** Get recent commits across tracked repositories */
-  getCommits: async (
+  async getCommits(
     since?: string,
     until?: string
-  ): Promise<GitHubCommit[]> => {
+  ): Promise<GitHubCommit[]> {
     const params = new URLSearchParams();
     if (since) params.append('since', since);
     if (until) params.append('until', until);
-    return api.get<GitHubCommit[]>(
+    const res = await api.get<GitHubCommit[]>(
       `/api/integrations/github/commits?${params}`
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to get GitHub commits');
+    return res.data || [];
   },
 
   /** Get GitHub activity stats */
-  getStats: async (): Promise<GitHubStats> => {
-    return api.get<GitHubStats>('/api/integrations/github/stats');
+  async getStats(): Promise<GitHubStats> {
+    const res = await api.get<GitHubStats>('/api/integrations/github/stats');
+    if (res.error) throw new Error(res.error.message || 'Failed to get GitHub stats');
+    return res.data!;
   },
 
   /** Manually trigger GitHub sync */
-  syncGitHub: async (): Promise<{ synced_commits: number }> => {
-    return api.post<{ synced_commits: number }>(
+  async syncGitHub(): Promise<{ synced_commits: number }> {
+    const res = await api.post<{ synced_commits: number }>(
       '/api/integrations/github/sync',
       {}
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to sync GitHub');
+    return res.data!;
   },
 
   /** Verify a code-based commitment using GitHub commits */
-  verifyCommitment: async (
+  async verifyCommitment(
     commitmentId: string
-  ): Promise<CommitmentVerification> => {
-    return api.post<CommitmentVerification>(
+  ): Promise<CommitmentVerification> {
+    const res = await api.post<CommitmentVerification>(
       `/api/integrations/github/verify/${commitmentId}`,
       {}
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to verify commitment');
+    return res.data!;
   },
 
   /** Link GitHub commit to commitment */
-  linkCommitToCommitment: async (
+  async linkCommitToCommitment(
     commitmentId: string,
     commitSha: string
-  ): Promise<{ success: boolean }> => {
-    return api.post<{ success: boolean }>(
+  ): Promise<{ success: boolean }> {
+    const res = await api.post<{ success: boolean }>(
       `/api/integrations/github/link-commit`,
       {
         commitment_id: commitmentId,
         commit_sha: commitSha,
       }
     );
+    if (res.error) throw new Error(res.error.message || 'Failed to link commit to commitment');
+    return res.data!;
   },
 };

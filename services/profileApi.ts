@@ -48,12 +48,16 @@ export interface ProfileUpdate {
 }
 
 export const profileApi = {
-    get: async (): Promise<UserProfile> => {
-        return api.get<UserProfile>('/api/profile');
+    async get(): Promise<UserProfile> {
+        const res = await api.get<UserProfile>('/api/profile');
+        if (res.error) throw new Error(res.error.message || 'Failed to get profile');
+        return res.data!;
     },
 
-    update: async (data: ProfileUpdate): Promise<UserProfile> => {
-        return api.put<UserProfile>('/api/profile', data);
+    async update(data: ProfileUpdate): Promise<UserProfile> {
+        const res = await api.put<UserProfile>('/api/profile', data);
+        if (res.error) throw new Error(res.error.message || 'Failed to update profile');
+        return res.data!;
     }
 };
 

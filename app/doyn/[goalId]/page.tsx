@@ -147,7 +147,9 @@ export default function DoynGoalPage() {
         return;
       }
 
-      setMessages((prev) => [...prev, response.data]);
+      // TypeScript now knows response.data is defined after the check above
+      const doynMessage = response.data;
+      setMessages((prev) => [...prev, doynMessage]);
     } catch (error: any) {
       console.error('Error sending message:', error);
       

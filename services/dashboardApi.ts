@@ -59,8 +59,10 @@ export interface DashboardData {
 }
 
 export const dashboardApi = {
-  getDashboard: async (): Promise<DashboardData> => {
-    return api.get<DashboardData>('/api/dashboard');
+  async getDashboard(): Promise<DashboardData> {
+    const res = await api.get<DashboardData>('/api/dashboard');
+    if (res.error) throw new Error(res.error.message || 'Failed to get dashboard data');
+    return res.data!;
   },
 };
 

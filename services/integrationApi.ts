@@ -17,11 +17,15 @@ export interface ConnectRequest {
 }
 
 export const integrationApi = {
-    list: async (): Promise<Integration[]> => {
-        return api.get<Integration[]>('/api/integrations/');
+    async list(): Promise<Integration[]> {
+        const res = await api.get<Integration[]>('/api/integrations/');
+        if (res.error) throw new Error(res.error.message || 'Failed to list integrations');
+        return res.data || [];
     },
 
-    connect: async (data: ConnectRequest): Promise<Integration> => {
-        return api.post<Integration>('/api/integrations/connect', data);
+    async connect(data: ConnectRequest): Promise<Integration> {
+        const res = await api.post<Integration>('/api/integrations/connect', data);
+        if (res.error) throw new Error(res.error.message || 'Failed to connect integration');
+        return res.data!;
     }
 };

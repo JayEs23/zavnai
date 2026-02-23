@@ -27,9 +27,17 @@ export interface CanCreateGoal {
 
 export const thriveApi = {
   /** Fetch current Thrive score with component breakdown */
-  getScore: () => api.get<ThriveScore>('/api/thrive/score'),
+  async getScore(): Promise<ThriveScore> {
+    const res = await api.get<ThriveScore>('/api/thrive/score');
+    if (res.error) throw new Error(res.error.message || 'Failed to get Thrive score');
+    return res.data!;
+  },
 
   /** Check if the user can create a new goal */
-  canCreateGoal: () => api.get<CanCreateGoal>('/api/thrive/can-create-goal'),
+  async canCreateGoal(): Promise<CanCreateGoal> {
+    const res = await api.get<CanCreateGoal>('/api/thrive/can-create-goal');
+    if (res.error) throw new Error(res.error.message || 'Failed to check if can create goal');
+    return res.data!;
+  },
 };
 

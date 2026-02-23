@@ -80,11 +80,15 @@ export interface SettingsUpdate {
 }
 
 export const settingsApi = {
-    get: async (): Promise<UserSettings> => {
-        return api.get<UserSettings>('/api/settings/');
+    async get(): Promise<UserSettings> {
+        const res = await api.get<UserSettings>('/api/settings/');
+        if (res.error) throw new Error(res.error.message || 'Failed to get settings');
+        return res.data!;
     },
 
-    update: async (data: SettingsUpdate): Promise<UserSettings> => {
-        return api.put<UserSettings>('/api/settings/', data);
+    async update(data: SettingsUpdate): Promise<UserSettings> {
+        const res = await api.put<UserSettings>('/api/settings/', data);
+        if (res.error) throw new Error(res.error.message || 'Failed to update settings');
+        return res.data!;
     }
 };
