@@ -33,6 +33,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
   });
   const [inputText, setInputText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const isSendingRef = useRef(false);
 
@@ -71,6 +72,7 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
           user_goals: userGoals,
           user_interests: userInterests,
           focus_areas: focusAreas,
+          thread_id: threadId,
         }),
       });
 
@@ -78,7 +80,11 @@ export const WaitlistEchoChat: React.FC<WaitlistEchoChatProps> = ({
         throw new Error(`Backend error: ${response.status}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as { response: string; thread_id?: string };
+
+      if (!threadId && data.thread_id) {
+        setThreadId(data.thread_id);
+      }
       
       // Add assistant response with duplicate prevention
       setMessages((prevMessages) => {
