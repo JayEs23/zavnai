@@ -6,6 +6,8 @@ import Image from "next/image";
 import { ArrowLeft } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { PasswordField } from "@/components/forms/PasswordField";
+import { formatFastApiDetail } from "@/lib/fastApiErrors";
 
 export default function SignupPage() {
   const [name, setName] = useState("");
@@ -21,24 +23,42 @@ export default function SignupPage() {
     setError("");
 
     try {
-      // First, register the user
       const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
-      const registerRes = await fetch(`${apiUrl}/api/auth/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          email,
-          password,
-          full_name: name || undefined,
-          auth_provider: "email",
-        }),
-      });
+      let registerRes: Response;
+      try {
+        registerRes = await fetch(`${apiUrl}/api/auth/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email,
+            password,
+            full_name: name || undefined,
+            auth_provider: "email",
+          }),
+        });
+      } catch {
+        setError(
+          "Could not reach the server. Check your connection, confirm NEXT_PUBLIC_API_URL, and try again."
+        );
+        setIsLoading(false);
+        return;
+      }
 
       if (!registerRes.ok) {
-        const errorData = await registerRes.json();
-        setError(errorData.detail || "Registration failed. Please try again.");
+        let message = "Registration failed. Please try again.";
+        try {
+          const errorData = (await registerRes.json()) as { detail?: unknown };
+          const detailText = formatFastApiDetail(errorData.detail);
+          if (detailText) message = detailText;
+        } catch {
+          /* non-JSON body */
+        }
+        if (/already registered/i.test(message)) {
+          message = `${message} Try logging in instead.`;
+        }
+        setError(message);
         setIsLoading(false);
         return;
       }
@@ -56,10 +76,10 @@ export default function SignupPage() {
         return;
       }
 
-      // Redirect to onboarding
+      // Redirect to onboarding (middleware routes non-onboarded users here; zavnexample ch.2)
       router.push("/onboarding");
     } catch {
-      setError("An error occurred. Please try again.");
+      setError("Something went wrong after sign-up. Try logging in, or try again in a moment.");
       setIsLoading(false);
     }
   };
@@ -91,28 +111,30 @@ export default function SignupPage() {
         </Link>
 
         <div className="space-y-6">
-          <h1 className="text-5xl font-bold leading-tight">
-            Start Your Journey
+          <h1 className="text-4xl font-bold leading-tight lg:text-5xl">
+            Welcome in
           </h1>
-          <p className="text-xl text-white/90">
-            Join thousands who are closing the gap between who they say they are and what they do.
+          <p className="text-lg leading-relaxed text-white/90 lg:text-xl">
+            Next you&apos;ll meet Echo — a real conversation first, not a wall of settings. We keep
+            signup calm: clear errors, sensible password rules, no drama.
           </p>
+          <ul className="max-w-md space-y-3 text-sm text-white/85">
+            <li className="flex gap-2">
+              <span className="shrink-0 text-white">·</span>
+              <span>You&apos;ll know what happens next before you start.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0 text-white">·</span>
+              <span>Copy stays factual — no shame hooks.</span>
+            </li>
+            <li className="flex gap-2">
+              <span className="shrink-0 text-white">·</span>
+              <span>If something breaks, we say network vs. account — not a stack trace.</span>
+            </li>
+          </ul>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 text-center">
-          <div>
-            <div className="text-3xl font-bold">14K+</div>
-            <div className="text-sm text-white/80">Active Users</div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">$1.2M+</div>
-            <div className="text-sm text-white/80">In Stakes</div>
-          </div>
-          <div>
-            <div className="text-3xl font-bold">94%</div>
-            <div className="text-sm text-white/80">Success Rate</div>
-          </div>
-        </div>
+        <p className="text-sm text-white/70">ZAVN</p>
       </div>
 
       {/* Right Side - Form */}
@@ -175,21 +197,18 @@ export default function SignupPage() {
             </div>
 
             <div>
-              <label htmlFor="password" className="label">
-                Password
-              </label>
-              <input
+              <PasswordField
                 id="password"
-                type="password"
+                label="Password"
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
                 placeholder="••••••••"
                 disabled={isLoading}
                 minLength={8}
+                autoComplete="new-password"
               />
-              <p className="text-xs text-muted-foreground mt-1">
+              <p className="mt-1 text-xs text-muted-foreground">
                 Must be at least 8 characters
               </p>
             </div>

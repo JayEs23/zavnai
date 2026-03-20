@@ -32,6 +32,11 @@ import { ConnectionStatus } from './types';
 interface VoiceOnboardingSessionProps {
   onComplete: (transcript: string, insights: Record<string, unknown>) => void;
   onError: (error: string) => void;
+  /**
+   * `voice` — try Gemini Live, fall back to text (default).
+   * `text` — skip mic/Live; full onboarding via `POST /api/echo/chat` (`mode=onboarding`). See zavnexample ch.3.
+   */
+  entryMode?: 'voice' | 'text';
 }
 
 // ─── Tool declarations for Echo profile extraction ───────────────────────────
@@ -64,11 +69,18 @@ const ECHO_TOOLS: FunctionDeclaration[] = [
 
 const STORAGE_KEY = 'zavn_echo_onboarding_conversation';
 
+/** Used by onboarding page to detect resume without importing private state */
+export const ECHO_ONBOARDING_STORAGE_KEY = STORAGE_KEY;
+
 type SessionMode = 'loading' | 'voice' | 'text-fallback';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
-export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnboardingSessionProps) {
+export default function VoiceOnboardingSession({
+  onComplete,
+  onError,
+  entryMode = 'voice',
+}: VoiceOnboardingSessionProps) {
   const { data: session } = useSession();
 
   // Derive user's display name from session (OAuth name > email prefix)
@@ -122,6 +134,9 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
   // State for UI display
   const [isListening, setIsListening] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  /** Mic input to Gemini Live: off = no audio sent, Live session stays open */
+  const [micCaptureEnabled, setMicCaptureEnabled] = useState(true);
+  const micCaptureEnabledRef = useRef(true);
 
   // Live session ref
   const liveSessionRef = useRef<Session | null>(null);
@@ -176,6 +191,15 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       audioRefs.current.output = null;
     } catch { /* ignore */ }
   }, [stopAudio]);
+
+  const applyMicCaptureEnabled = useCallback((enabled: boolean) => {
+    micCaptureEnabledRef.current = enabled;
+    setMicCaptureEnabled(enabled);
+    if (!enabled) setIsListening(false);
+    audioRefs.current.stream?.getAudioTracks().forEach((t) => {
+      t.enabled = enabled;
+    });
+  }, []);
 
   // ─── Message helpers ──────────────────────────────────────────────────────
 
@@ -333,7 +357,10 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
             navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
               // Store stream reference to prevent garbage collection
               audioRefs.current.stream = stream;
-              
+              stream.getAudioTracks().forEach((t) => {
+                t.enabled = micCaptureEnabledRef.current;
+              });
+
               const source = iCtx.createMediaStreamSource(stream);
               const proc = iCtx.createScriptProcessor(4096, 1, 1);
               
@@ -341,6 +368,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
               audioRefs.current.processor = proc;
               
               proc.onaudioprocess = (e) => {
+                if (!micCaptureEnabledRef.current) return;
                 // Continue sending audio chunks - this should persist across turns
                 sessPromise.then(s => {
                   try {
@@ -618,6 +646,14 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
           setStatusText('Restoring your conversation...');
         }
 
+        // Text-first path: no mic / no Gemini Live — aligns with UC-1 (zavndocs §12)
+        if (!cancelled && entryMode === 'text') {
+          setConnectionStatus(ConnectionStatus.DISCONNECTED);
+          setMode('text-fallback');
+          if (!hasMessagesRef.current) autoGreetText();
+          return;
+        }
+
         const config = await onboardingApi.getEchoVoiceConfig();
         
         // Log the received config for debugging
@@ -668,8 +704,8 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       try { audioRefs.current.input?.close(); } catch { /* ignore */ }
       try { audioRefs.current.output?.close(); } catch { /* ignore */ }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one bootstrap per entryMode; avoid re-running when chat callbacks are recreated
+  }, [entryMode]);
 
   // ─── Text fallback: send message via backend ─────────────────────────────
 
@@ -687,6 +723,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
         message: text,
         history: conversationHistory,
         user_name: userName,
+        mode: 'onboarding',
       });
 
       if (res.error) {
@@ -736,44 +773,66 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
   if (mode === 'voice') {
     const assistantMessages = messages.filter(m => m.role === 'assistant');
     const hasMessages = assistantMessages.length > 0;
+    const micOff = !micCaptureEnabled;
+    const statusDotClass =
+      isAssistantTalking
+        ? 'bg-accent animate-pulse'
+        : isTranscribing
+          ? 'bg-blue-500 animate-pulse'
+          : micOff
+            ? 'bg-amber-500'
+            : isListening
+              ? 'bg-green-500 animate-pulse'
+              : 'bg-gray-400';
+    const headerStatusText =
+      isAssistantTalking
+        ? 'Echo is speaking...'
+        : isTranscribing
+          ? 'Transcribing...'
+          : micOff
+            ? 'Microphone off — still connected'
+            : isListening
+              ? 'Listening...'
+              : 'Connecting...';
 
     return (
       <div className="flex flex-1 min-h-0 w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
         {/* Compact header */}
         <div className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-border/50 px-4 sm:px-6 py-3 shadow-sm">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className={`w-2.5 h-2.5 rounded-full ${
-                isAssistantTalking 
-                  ? 'bg-accent animate-pulse' 
-                  : isTranscribing 
-                    ? 'bg-blue-500 animate-pulse' 
-                    : isListening 
-                      ? 'bg-green-500 animate-pulse' 
-                      : 'bg-gray-400'
-              }`} />
-              <span className="text-sm font-medium text-foreground">
-                {isAssistantTalking 
-                  ? 'Echo is speaking...' 
-                  : isTranscribing 
-                    ? 'Transcribing...' 
-                    : isListening 
-                      ? 'Listening...' 
-                      : 'Connecting...'}
-              </span>
+          <div className="max-w-6xl mx-auto flex items-center justify-between gap-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass}`} />
+              <span className="truncate text-sm font-medium text-foreground">{headerStatusText}</span>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               <button
+                type="button"
+                onClick={() => applyMicCaptureEnabled(!micCaptureEnabled)}
+                className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors ${
+                  micOff
+                    ? 'bg-amber-100 text-amber-900 hover:bg-amber-200'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                }`}
+                title={micCaptureEnabled ? 'Mute microphone (session stays connected)' : 'Unmute microphone'}
+                aria-pressed={micOff}
+                aria-label={micCaptureEnabled ? 'Mute microphone' : 'Unmute microphone'}
+              >
+                {micCaptureEnabled ? <MdMic size={16} /> : <MdMicOff size={16} />}
+                {micCaptureEnabled ? 'Mute' : 'Unmute'}
+              </button>
+              <button
+                type="button"
                 onClick={() => setShowTextInput(prev => !prev)}
-                className="px-3 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-muted-foreground text-xs font-medium transition-colors flex items-center gap-1.5"
+                className="flex items-center gap-1.5 rounded-lg bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-muted/80"
                 title="Toggle text input"
               >
                 <MdKeyboard size={16} />
                 Text
               </button>
               <button
+                type="button"
                 onClick={handleEndConversation}
-                className="px-4 py-1.5 rounded-lg bg-muted hover:bg-muted/80 text-foreground text-xs font-medium transition-colors"
+                className="rounded-lg bg-muted px-4 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-muted/80"
               >
                 End Session
               </button>
@@ -805,15 +864,23 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                     scale: isAssistantTalking ? [1, 1.08, 1] : isTranscribing ? [1, 1.04, 1] : isListening ? [1, 1.02, 1] : 1,
                   }}
                   transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 0.8 : isListening ? 2 : 0, repeat: Infinity }}
-                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl border-4 border-white/50"
+                  className={`flex h-24 w-24 items-center justify-center rounded-full border-4 shadow-xl sm:h-28 sm:w-28 ${
+                    micOff
+                      ? 'border-amber-200/80 bg-gradient-to-br from-muted to-muted-foreground/30'
+                      : 'border-white/50 bg-gradient-to-br from-primary to-accent'
+                  }`}
                 >
-                  <MdMic className="text-white" size={36} />
+                  {micOff ? (
+                    <MdMicOff className="text-foreground" size={36} aria-hidden />
+                  ) : (
+                    <MdMic className="text-white" size={36} aria-hidden />
+                  )}
                 </motion.div>
               </div>
             </div>
             <div className="mt-4 text-center space-y-1">
               <motion.p 
-                key={isAssistantTalking ? 'speaking' : isTranscribing ? 'transcribing' : 'listening'}
+                key={isAssistantTalking ? 'speaking' : isTranscribing ? 'transcribing' : micOff ? 'muted' : 'listening'}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 className="text-base font-semibold text-foreground"
@@ -822,18 +889,22 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                   ? 'Echo is speaking...' 
                   : isTranscribing 
                     ? 'Transcribing...' 
-                    : isListening 
-                      ? 'Listening...' 
-                      : 'Connecting...'}
+                    : micOff
+                      ? 'Mic muted'
+                      : isListening 
+                        ? 'Listening...' 
+                        : 'Connecting...'}
               </motion.p>
-              <p className="text-xs text-muted-foreground max-w-[220px]">
-                {isListening 
-                  ? 'Speak naturally — Echo hears you' 
-                  : isTranscribing 
-                    ? 'Processing your words' 
-                    : isAssistantTalking 
-                      ? 'Wait for Echo to finish' 
-                      : 'Setting up...'}
+              <p className="max-w-[240px] text-xs text-muted-foreground">
+                {micOff
+                  ? 'Echo can still talk. Unmute when you want to reply — the live session stays open.'
+                  : isListening 
+                    ? 'Speak naturally — Echo hears you' 
+                    : isTranscribing 
+                      ? 'Processing your words' 
+                      : isAssistantTalking 
+                        ? 'Wait for Echo to finish' 
+                        : 'Setting up...'}
               </p>
             </div>
           </div>
@@ -888,17 +959,19 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
             {/* Tips bar - always visible at bottom of transcript panel */}
             <div className="flex-shrink-0 border-t border-border/50 bg-white/80 px-4 sm:px-6 py-3">
-              <div className="max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
+              <div className="mx-auto flex max-w-2xl flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  Allow microphone access
+                  <span
+                    className={`h-1.5 w-1.5 rounded-full ${micOff ? 'bg-amber-500' : 'bg-green-500'}`}
+                  />
+                  {micOff ? 'Mute only stops your mic — session stays connected' : 'Allow microphone access'}
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                   2–3 min conversation
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-accent" />
                   Click Text to type instead
                 </span>
               </div>

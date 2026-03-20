@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { OnboardingShell } from '@/components/onboarding/OnboardingShell';
-import VoiceOnboardingSession from '@/components/onboarding/VoiceOnboardingSession';
+import VoiceOnboardingSession, {
+  ECHO_ONBOARDING_STORAGE_KEY,
+} from '@/components/onboarding/VoiceOnboardingSession';
+import { EchoEntryChoice } from '@/components/onboarding/EchoEntryChoice';
 import TribeForm, { TribeMember } from '@/components/onboarding/TribeForm';
 import PreferencesStep, { UserPreferences } from '@/components/onboarding/PreferencesStep';
 import { onboardingApi } from '@/services/onboardingApi';
@@ -46,6 +49,11 @@ export default function OnboardingPage() {
   const [preferences, setPreferences] = useState<UserPreferences | null>(null);
   const [voiceInsights, setVoiceInsights] = useState<InsightsData | null>(null);
 
+  /** Echo modality gate: resume skips picker (zavnexample ch.3, zavndocs §6 onboarding UX) */
+  const [echoEntry, setEchoEntry] = useState<'loading' | 'pick' | 'voice' | 'text'>('loading');
+  /** True when local or server echo-draft had messages — show resume banner + calmer subtitle */
+  const [echoResumeDraft, setEchoResumeDraft] = useState(false);
+
   // Get user ID from session
   const userId = (session?.user as { id?: string })?.id || '';
 
@@ -65,6 +73,46 @@ export default function OnboardingPage() {
       checkOnboarding();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
+
+  // Skip voice/text picker when a draft exists (local or server)
+  useEffect(() => {
+    if (status !== 'authenticated') return;
+    let cancelled = false;
+    (async () => {
+      try {
+        let hasDraft = false;
+        if (typeof window !== 'undefined') {
+          const raw = localStorage.getItem(ECHO_ONBOARDING_STORAGE_KEY);
+          if (raw) {
+            try {
+              const parsed = JSON.parse(raw) as { messages?: unknown[] };
+              if (Array.isArray(parsed?.messages) && parsed.messages.length > 0) {
+                hasDraft = true;
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        if (!hasDraft) {
+          const draft = await onboardingApi.getEchoDraft();
+          hasDraft = !!(draft && Array.isArray(draft.messages) && draft.messages.length > 0);
+        }
+        if (!cancelled) {
+          setEchoResumeDraft(hasDraft);
+          setEchoEntry(hasDraft ? 'voice' : 'pick');
+        }
+      } catch {
+        if (!cancelled) {
+          setEchoResumeDraft(false);
+          setEchoEntry('pick');
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, [status]);
 
   // Show loading while session is being fetched
@@ -278,7 +326,24 @@ export default function OnboardingPage() {
 
   const currentConfig = stepConfig[step];
   const totalSteps = 3;
-  const currentStepNumber = step === 'voice' ? 1 : step === 'preferences' ? 2 : 3;
+  const currentStepNumber =
+    step === 'voice' ? 1 : step === 'preferences' ? 2 : step === 'tribe' ? 3 : 3;
+
+  const echoDiscoverySubtitle =
+    step === 'voice' && echoResumeDraft
+      ? "We're reopening your saved conversation with Echo. Pick up where you left off — voice or text still works from here."
+      : currentConfig.subtitle;
+
+  const echoResumeBanner =
+    step === 'voice' &&
+    echoResumeDraft &&
+    echoEntry !== 'loading' &&
+    echoEntry !== 'pick' ? (
+      <span>
+        <span className="font-semibold text-primary">Continue where you left off.</span> Your Echo
+        thread was restored from this device or your account. Nothing was lost.
+      </span>
+    ) : undefined;
 
   return (
     <OnboardingShell
@@ -286,7 +351,8 @@ export default function OnboardingPage() {
       totalSteps={totalSteps}
       stepLabel={currentConfig.stepLabel}
       title={currentConfig.title}
-      subtitle={currentConfig.subtitle}
+      subtitle={echoDiscoverySubtitle}
+      banner={echoResumeBanner}
     >
       <AnimatePresence mode="wait">
         {error && (
@@ -300,15 +366,45 @@ export default function OnboardingPage() {
           </motion.div>
         )}
 
-        {step === 'voice' && (
+        {step === 'voice' && echoEntry === 'loading' && (
+          <motion.div
+            key="echo-loading"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-4 px-4"
+          >
+            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <p className="text-center text-sm text-muted-foreground">
+              Checking for a saved Echo conversation…
+            </p>
+          </motion.div>
+        )}
+
+        {step === 'voice' && echoEntry === 'pick' && (
+          <motion.div
+            key="echo-pick"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-y-auto"
+          >
+            <EchoEntryChoice
+              onChooseVoice={() => setEchoEntry('voice')}
+              onChooseText={() => setEchoEntry('text')}
+            />
+          </motion.div>
+        )}
+
+        {step === 'voice' && (echoEntry === 'voice' || echoEntry === 'text') && (
           <motion.div
             key="voice"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full flex-1 min-h-0 flex flex-col"
+            className="flex min-h-0 w-full flex-1 flex-col"
           >
             <VoiceOnboardingSession
+              entryMode={echoEntry}
               onComplete={handleVoiceComplete}
               onError={(msg) => setError(msg)}
             />

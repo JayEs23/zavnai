@@ -348,10 +348,12 @@ export default function TestAIPage() {
               {statusNote
                 ? statusNote
                 : isSpeaking
-                ? 'Speaking'
-                : isConnected
-                ? 'Connected'
-                : 'Connecting...'}
+                  ? 'Speaking'
+                  : isConnected
+                    ? selectedAgent === 'echo' && !isTextMode && isMuted
+                      ? 'Connected — mic muted (WebSocket stays open)'
+                      : 'Connected'
+                    : 'Connecting...'}
             </span>
           </div>
 
@@ -360,14 +362,18 @@ export default function TestAIPage() {
               <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center">
                 {isMuted ? <MdMicOff size={32} /> : <MdMic size={32} />}
               </div>
-              <p className="text-sm text-center">
-                Voice mode active. No transcript displayed. Switch to Text to view chat.
+              <p className="text-sm text-center max-w-md">
+                Voice mode active. Mute pauses the browser speech listener only — the Echo WebSocket stays connected.
+                No transcript in voice mode; switch to Text to view chat.
               </p>
               <button
+                type="button"
                 onClick={() => setIsMuted((prev) => !prev)}
                 className="px-4 py-2 rounded-lg bg-gray-900 text-white text-sm"
+                aria-pressed={isMuted}
+                aria-label={isMuted ? 'Unmute microphone' : 'Mute microphone'}
               >
-                {isMuted ? 'Unmute Mic' : 'Mute Mic'}
+                {isMuted ? 'Unmute mic' : 'Mute mic'}
               </button>
             </div>
           )}

@@ -15,6 +15,7 @@ export const LandingNavbar = () => {
   const navItems = [
     { name: "How It Works", href: "/how-it-works" },
     { name: "Features", href: "/features" },
+    { name: "About", href: "/about" },
     { name: "Community", href: "/community" },
     { name: "Pricing", href: "/pricing" },
     { name: "Science", href: "/science" },

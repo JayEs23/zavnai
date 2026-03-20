@@ -10,6 +10,8 @@ interface OnboardingShellProps {
   stepLabel: string;
   title: string;
   subtitle: string;
+  /** Optional notice under the progress header (e.g. draft resume — zavndocs §6) */
+  banner?: ReactNode;
   children: ReactNode;
 }
 
@@ -19,6 +21,7 @@ export function OnboardingShell({
   stepLabel,
   title,
   subtitle,
+  banner,
   children,
 }: OnboardingShellProps) {
   const progressPercentage = (step / totalSteps) * 100;
@@ -69,6 +72,14 @@ export function OnboardingShell({
           </div>
         </div>
       </div>
+
+      {banner != null && (
+        <div className="border-b border-primary/20 bg-primary/5">
+          <div className="mx-auto max-w-7xl px-6 py-3 text-sm leading-relaxed text-foreground lg:px-8">
+            {banner}
+          </div>
+        </div>
+      )}
 
       {/* Main Content - min-h-0 allows flex children to shrink and fill viewport */}
       <main className="flex-1 flex flex-col min-h-0 overflow-hidden">

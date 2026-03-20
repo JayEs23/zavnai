@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { signIn } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { PasswordField } from "@/components/forms/PasswordField";
 
 
 const Login = () => {
@@ -170,29 +171,24 @@ const Login = () => {
               />
             </div>
 
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <label htmlFor="password" className="label mb-0">
-                  Password
-                </label>
+            <PasswordField
+              id="password"
+              label="Password"
+              labelExtra={
                 <Link
                   href="/forgot-password"
-                  className="text-sm text-primary font-medium hover:underline"
+                  className="text-sm font-medium text-primary hover:underline"
                 >
                   Forgot password?
                 </Link>
-              </div>
-              <input
-                id="password"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="input-field"
-                placeholder="••••••••"
-                disabled={isLoading}
-              />
-            </div>
+              }
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              disabled={isLoading}
+              autoComplete="current-password"
+            />
 
             <button 
               type="submit" 
