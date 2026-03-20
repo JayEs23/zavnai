@@ -38,12 +38,12 @@ export default function AppNavbar() {
 
     const check = async () => {
       try {
-        const commitments: CommitmentSummary[] = await goalsApi.getTodaysCommitments();
+        const commitments: CommitmentSummary[] = await goalsApi.getPendingCommitments();
         const now = Date.now();
         const count = commitments.filter((c) => {
-          if (c.status !== 'pending') return false;
+          if (c.status !== 'pending' && c.status !== 'escalated') return false;
           const hoursLeft = (new Date(c.due_at).getTime() - now) / (1000 * 60 * 60);
-          return hoursLeft < 2; // overdue or < 2 hours
+          return hoursLeft < 2;
         }).length;
         if (!cancelled) setUrgentCount(count);
       } catch {

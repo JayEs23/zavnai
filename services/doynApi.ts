@@ -4,13 +4,15 @@
 
 import axiosInstance, { getApiErrorMessage } from '@/lib/axios';
 
+/** Matches `CommitmentSummary` from `GET /api/v1/goals/commitments/pending` (and related goal routes). */
 export interface Commitment {
   id: string;
   goal_id: string;
+  goal_title?: string;
   task_detail: string;
   due_at: string;
   status: 'pending' | 'verified' | 'escalated' | 'failed' | 'missed';
-  escalation_level: number;
+  escalation_level?: number;
   verification_score?: number;
   proof_url?: string;
   proof_text?: string;

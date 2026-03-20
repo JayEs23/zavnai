@@ -6,6 +6,17 @@
 
 import '@testing-library/jest-dom';
 
+// `lib/api.ts` calls `getSession()` before each fetch; without this, tests that mock
+// `global.fetch` see the session request consume the mock and return undefined.
+jest.mock('next-auth/react', () => ({
+  __esModule: true,
+  getSession: jest.fn().mockResolvedValue(null),
+  useSession: jest.fn(() => ({ data: null, status: 'unauthenticated' })),
+  SessionProvider: ({ children }) => children,
+  signIn: jest.fn(),
+  signOut: jest.fn(),
+}));
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {
@@ -52,6 +63,9 @@ global.IntersectionObserver = class IntersectionObserver {
   }
   unobserve() {}
 };
+
+// jsdom does not implement scrollIntoView; components that call it on mount would crash tests.
+Element.prototype.scrollIntoView = jest.fn();
 
 // Mock ResizeObserver
 global.ResizeObserver = class ResizeObserver {

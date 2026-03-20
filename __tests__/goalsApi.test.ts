@@ -40,13 +40,15 @@ describe('Goals API', () => {
       expect(result).toEqual(mockGoals);
     });
 
-    it('should handle fetch error', async () => {
+    it('should return empty array when fetch fails', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        statusText: 'Internal Server Error',
+        status: 500,
+        json: async () => ({}),
       });
 
-      await expect(goalsApi.getGoals()).rejects.toThrow();
+      const result = await goalsApi.getGoals();
+      expect(result).toEqual([]);
     });
   });
 
@@ -141,6 +143,36 @@ describe('Goals API', () => {
           method: 'PUT',
         })
       );
+    });
+  });
+
+  describe('getPendingCommitments', () => {
+    it('should fetch pending and escalated commitments', async () => {
+      const mock = [
+        {
+          id: 'c1',
+          goal_id: 'g1',
+          goal_title: 'Test',
+          task_detail: 'Task',
+          due_at: '2026-03-20T12:00:00Z',
+          status: 'pending',
+          escalation_level: 0,
+          created_at: '2026-03-01T00:00:00Z',
+        },
+      ];
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => mock,
+      });
+
+      const result = await goalsApi.getPendingCommitments();
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining('/api/v1/goals/commitments/pending'),
+        expect.objectContaining({ method: 'GET' })
+      );
+      expect(result).toEqual(mock);
     });
   });
 

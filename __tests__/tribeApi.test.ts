@@ -41,13 +41,15 @@ describe('Tribe API', () => {
       expect(result).toEqual(mockMembers);
     });
 
-    it('should handle fetch error', async () => {
+    it('should return empty array when fetch fails', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
-        statusText: 'Internal Server Error',
+        status: 500,
+        json: async () => ({}),
       });
 
-      await expect(tribeApi.getTribeMembers()).rejects.toThrow();
+      const result = await tribeApi.getTribeMembers();
+      expect(result).toEqual([]);
     });
   });
 

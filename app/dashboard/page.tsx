@@ -88,10 +88,10 @@ export default function DashboardPage() {
       // Try to fetch growth metrics from backend
       const metricsResponse = await api.get<GrowthMetrics>('/api/dashboard/growth-metrics');
       if (metricsResponse.error || !metricsResponse.data) {
-        // Fallback: compute from local data
+        // Fallback: pending list has no verified rows — avoid fake streak/reflection counts
         setGrowthMetrics({
-          streak_days: commitmentsData.filter(c => c.status === 'verified').length > 0 ? 1 : 0,
-          total_reflections: commitmentsData.length,
+          streak_days: 0,
+          total_reflections: 0,
           completion_rate: completionRate,
           growth_score: Math.min(100, completedGoals * 20 + activeGoals * 10),
           insights_count: 0,

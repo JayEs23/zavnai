@@ -9,8 +9,8 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { DoynChat } from '@/components/dashboard/DoynChat';
 
-// Mock the API
-jest.mock('@/services/doynApi', () => ({
+// Resolve the same path the component uses (see jest moduleNameMapper `^@/` → `<rootDir>/`)
+jest.mock('../services/doynApi', () => ({
   doynApi: {
     getChatHistory: jest.fn().mockResolvedValue([]),
     sendMessage: jest.fn().mockResolvedValue({
@@ -27,23 +27,29 @@ describe('DoynChat Component', () => {
     jest.clearAllMocks();
   });
 
-  it('should render chat interface', () => {
+  it('should render chat interface', async () => {
     render(<DoynChat />);
-    
-    expect(screen.getByPlaceholderText(/tell doyn what you need to do/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByPlaceholderText(/tell doyn what you need to do/i)).toBeInTheDocument();
+    });
     expect(screen.getByRole('button', { name: /send message/i })).toBeInTheDocument();
   });
 
-  it('should display welcome message', () => {
+  it('should display welcome message', async () => {
     render(<DoynChat />);
-    
-    expect(screen.getByText(/hey there/i)).toBeInTheDocument();
+
+    await waitFor(() => {
+      expect(screen.getByText(/hey there/i)).toBeInTheDocument();
+    });
   });
 
-  it('should allow user to type message', () => {
+  it('should allow user to type message', async () => {
     render(<DoynChat />);
-    
-    const input = screen.getByPlaceholderText(/tell doyn what you need to do/i) as HTMLInputElement;
+
+    const input = (await waitFor(() =>
+      screen.getByPlaceholderText(/tell doyn what you need to do/i)
+    )) as HTMLInputElement;
     fireEvent.change(input, { target: { value: 'Hello Doyn' } });
     
     expect(input.value).toBe('Hello Doyn');
@@ -51,9 +57,11 @@ describe('DoynChat Component', () => {
 
   it('should send message on button click', async () => {
     render(<DoynChat />);
-    
-    const input = screen.getByPlaceholderText(/tell doyn what you need to do/i) as HTMLInputElement;
-    const sendButton = screen.getByRole('button', { name: /send message/i });
+
+    const input = (await waitFor(() =>
+      screen.getByPlaceholderText(/tell doyn what you need to do/i)
+    )) as HTMLInputElement;
+    const sendButton = await waitFor(() => screen.getByRole('button', { name: /send message/i }));
     
     fireEvent.change(input, { target: { value: 'Can we reschedule?' } });
     fireEvent.click(sendButton);
@@ -68,8 +76,8 @@ describe('DoynChat Component', () => {
 
   it('should send message on Enter key', async () => {
     render(<DoynChat />);
-    
-    const input = screen.getByPlaceholderText(/tell doyn what you need to do/i);
+
+    const input = await waitFor(() => screen.getByPlaceholderText(/tell doyn what you need to do/i));
     
     fireEvent.change(input, { target: { value: 'Hello!' } });
     fireEvent.keyDown(input, { key: 'Enter', code: 'Enter' });
@@ -79,10 +87,10 @@ describe('DoynChat Component', () => {
     });
   });
 
-  it('should not send empty message', () => {
+  it('should not send empty message', async () => {
     render(<DoynChat />);
-    
-    const sendButton = screen.getByRole('button', { name: /send message/i });
+
+    const sendButton = await waitFor(() => screen.getByRole('button', { name: /send message/i }));
     const initialMessageCount = screen.queryAllByText(/hey there/i).length;
     
     fireEvent.click(sendButton);
