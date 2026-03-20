@@ -83,6 +83,8 @@ export interface EchoVoiceConfig {
     api_version: string;
     system_instruction: string;
   };
+  /** Canonical focus key from backend (productivity | health_fitness | …) */
+  resolved_focus_area?: string;
 }
 
 export const onboardingApi = {
@@ -144,8 +146,12 @@ export const onboardingApi = {
   },
 
   // Get Echo voice config (model, API version, system instruction) from backend
-  getEchoVoiceConfig: async (): Promise<EchoVoiceConfig> => {
-    const response = await api.get<EchoVoiceConfig>('/api/echo/voice-config');
+  getEchoVoiceConfig: async (focusArea?: string | null): Promise<EchoVoiceConfig> => {
+    const q =
+      focusArea && String(focusArea).trim()
+        ? `?focus_area=${encodeURIComponent(String(focusArea).trim())}`
+        : '';
+    const response = await api.get<EchoVoiceConfig>(`/api/echo/voice-config${q}`);
     if (response.error) {
       throw new Error(response.error.message || 'Failed to fetch Echo voice config');
     }

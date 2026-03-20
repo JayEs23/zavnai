@@ -37,6 +37,11 @@ interface VoiceOnboardingSessionProps {
    * `text` — skip mic/Live; full onboarding via `POST /api/echo/chat` (`mode=onboarding`). See zavnexample ch.3.
    */
   entryMode?: 'voice' | 'text';
+  /**
+   * Canonical focus key for `GET /api/echo/voice-config?focus_area=` (see backend `app.prompts.focus`).
+   * When omitted, backend uses `profile_data.primary_focus_area` if Bearer token sent.
+   */
+  focusArea?: string | null;
 }
 
 // ─── Tool declarations for Echo profile extraction ───────────────────────────
@@ -80,6 +85,7 @@ export default function VoiceOnboardingSession({
   onComplete,
   onError,
   entryMode = 'voice',
+  focusArea = null,
 }: VoiceOnboardingSessionProps) {
   const { data: session } = useSession();
 
@@ -654,7 +660,7 @@ export default function VoiceOnboardingSession({
           return;
         }
 
-        const config = await onboardingApi.getEchoVoiceConfig();
+        const config = await onboardingApi.getEchoVoiceConfig(focusArea ?? undefined);
         
         // Log the received config for debugging
         console.log('[Echo] Received config from backend:', config);
@@ -704,8 +710,8 @@ export default function VoiceOnboardingSession({
       try { audioRefs.current.input?.close(); } catch { /* ignore */ }
       try { audioRefs.current.output?.close(); } catch { /* ignore */ }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one bootstrap per entryMode; avoid re-running when chat callbacks are recreated
-  }, [entryMode]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- one bootstrap per entryMode/focusArea; avoid re-running when chat callbacks are recreated
+  }, [entryMode, focusArea]);
 
   // ─── Text fallback: send message via backend ─────────────────────────────
 
@@ -724,6 +730,7 @@ export default function VoiceOnboardingSession({
         history: conversationHistory,
         user_name: userName,
         mode: 'onboarding',
+        ...(focusArea ? { focus_area: focusArea } : {}),
       });
 
       if (res.error) {
