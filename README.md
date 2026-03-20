@@ -39,7 +39,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ## ZAVN (this repo)
 
-- **Auth**: `/login`, `/signup` — password fields use `components/forms/PasswordField` (show/hide). Sign-up errors map FastAPI `detail` and distinguish network failures.  
+- **Auth**: `/login`, `/signup` — password fields use `components/forms/PasswordField` (show/hide). Sign-up errors map FastAPI `detail` and distinguish network failures. Set **`NEXTAUTH_URL`** to the exact origin you use in the browser (e.g. `http://localhost:3000`); avoid mixing **`localhost` vs `127.0.0.1`** or cookies/session fetches can fail. `lib/next-auth-session.ts` dedupes concurrent `getSession()` calls so parallel API requests don’t hammer `/api/auth/session`.  
 - **Onboarding**: `/onboarding` — Echo **voice vs text** entry (`EchoEntryChoice`); text uses `/api/echo/chat` with `mode=onboarding`. Draft resume skips the picker. In **Gemini Live** voice mode, **Mute / Unmute** stops sending mic audio and disables the capture track but **does not** end the session or tear down the Live connection.  
 - **Forgot password**: `/forgot-password` placeholder until the API supports reset.  
 - **Marketing**: `/about` — full landing-style page (`components/landing/AboutPageContent.tsx`: hero, belief strip, pillars, Vocett, shared `CtaSection`); footer “About” links here, not `/blog`.  

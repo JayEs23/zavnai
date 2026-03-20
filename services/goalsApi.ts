@@ -1,5 +1,19 @@
 import { api } from '@/lib/api';
 
+/** HTTP 200 + JSON `null` is valid; `!null` is true so never use `!response.data` alone for lists. */
+function listFromResponse<T>(
+  response: { data?: T[] | null; error?: { message: string; status: number; data?: unknown } },
+  logLabel: string
+): T[] {
+  if (response.error) {
+    console.error(`Failed to load ${logLabel}:`, response.error.message, `(HTTP ${response.error.status})`);
+    return [];
+  }
+  const d = response.data;
+  if (d == null) return [];
+  return Array.isArray(d) ? d : [];
+}
+
 // ── Types ──────────────────────────────────────────────────────────────
 
 export interface GoalInsights {
@@ -79,11 +93,7 @@ export const goalsApi = {
   /** List all goals (lightweight summary for dashboard) */
   async list(): Promise<GoalSummary[]> {
     const response = await api.get<GoalSummary[]>('/api/v1/goals/list');
-    if (response.error || !response.data) {
-      console.error('Failed to load goals:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, 'goals');
   },
 
   /** Get a single goal by ID */
@@ -98,51 +108,31 @@ export const goalsApi = {
   /** List all goals (full Goal type for goals page) */
   async getGoals(): Promise<Goal[]> {
     const response = await api.get<Goal[]>('/api/v1/goals/list');
-    if (response.error || !response.data) {
-      console.error('Failed to load goals:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, 'goals');
   },
 
   /** Get commitments for a specific goal */
   async getCommitments(goalId: string): Promise<CommitmentSummary[]> {
     const response = await api.get<CommitmentSummary[]>(`/api/v1/goals/${goalId}/commitments`);
-    if (response.error || !response.data) {
-      console.error('Failed to load commitments:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, 'commitments');
   },
 
   /** Alias used by goals page */
   async getGoalCommitments(goalId: string): Promise<Commitment[]> {
     const response = await api.get<Commitment[]>(`/api/v1/goals/${goalId}/commitments`);
-    if (response.error || !response.data) {
-      console.error('Failed to load commitments:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, 'commitments');
   },
 
   /** Get today's commitments across all goals */
   async getTodaysCommitments(): Promise<CommitmentSummary[]> {
     const response = await api.get<CommitmentSummary[]>('/api/v1/goals/commitments/today');
-    if (response.error || !response.data) {
-      console.error('Failed to load today\'s commitments:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, "today's commitments");
   },
 
   /** Pending + escalated commitments (dashboard / core loop actions) */
   async getPendingCommitments(): Promise<CommitmentSummary[]> {
     const response = await api.get<CommitmentSummary[]>('/api/v1/goals/commitments/pending');
-    if (response.error || !response.data) {
-      console.error('Failed to load pending commitments:', response.error);
-      return [];
-    }
-    return response.data;
+    return listFromResponse(response, 'pending commitments');
   },
 
   /** Create a new goal (via Echo contract ingestion) */

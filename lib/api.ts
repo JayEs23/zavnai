@@ -1,4 +1,4 @@
-import { getSession } from "next-auth/react";
+import { getSessionDeduped } from "@/lib/next-auth-session";
 
 /**
  * API client for ZAVN backend
@@ -43,7 +43,7 @@ async function request<T>(
   };
 
   if (typeof window !== 'undefined') {
-    const session = await getSession();
+    const session = await getSessionDeduped();
     const token = (session as { accessToken?: string } | null)?.accessToken;
 
     if (token) {

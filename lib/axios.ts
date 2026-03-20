@@ -4,7 +4,7 @@
  */
 
 import axios, { AxiosError, AxiosInstance, InternalAxiosRequestConfig } from 'axios';
-import { getSession } from 'next-auth/react';
+import { getSessionDeduped } from '@/lib/next-auth-session';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
@@ -24,7 +24,7 @@ axiosInstance.interceptors.request.use(
     if (typeof window !== 'undefined') {
       try {
         // Try NextAuth session first
-        const session = await getSession();
+        const session = await getSessionDeduped();
         const token = (session as any)?.accessToken;
 
         if (token) {

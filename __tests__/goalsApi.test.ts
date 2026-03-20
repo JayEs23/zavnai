@@ -174,6 +174,17 @@ describe('Goals API', () => {
       );
       expect(result).toEqual(mock);
     });
+
+    it('should return empty array on 200 + JSON null (not a client error)', async () => {
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: async () => null,
+      });
+
+      const result = await goalsApi.getPendingCommitments();
+      expect(result).toEqual([]);
+    });
   });
 
   describe('getCommitments', () => {
