@@ -3,32 +3,25 @@ import type { NextRequest } from 'next/server';
 import { getToken } from 'next-auth/jwt';
 
 /**
- * Proxy – Auth & Onboarding Gate (Next.js 16)
+ * Middleware – Auth & Onboarding Gate
+ *
+ * Uses middleware.ts (not proxy.ts) for Next.js 16 compatibility – proxy.ts
+ * has known issues with Response/NextResponse instanceof checks causing 404s.
  *
  * 1. Public routes → pass through (no auth needed)
  * 2. Unauthenticated users on protected routes → redirect to /login
  * 3. Authenticated but NOT onboarded → redirect to /onboarding
  * 4. Authenticated + onboarded → allow access
- *
- * The JWT token shape (from NextAuth callbacks):
- *   token.accessToken        – backend JWT
- *   token.onboardingCompleted – boolean from backend login response
- *   token.id / token.sub     – user id
  */
-export async function proxy(request: NextRequest) {
-    const token = await getToken({
-        req: request,
-        secret: process.env.JWT_SECRET_KEY || process.env.NEXTAUTH_SECRET,
-    });
-
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
-    // ── 1. Public routes (no auth required) ──────────────────────────
+    // ── 1. Public routes (no auth required) – check BEFORE getToken ─────
     const publicRoutes = [
         '/login',
         '/signup',
         '/',
-        '/api',              // all API routes (NextAuth, echo, opik, etc.)
+        '/api',
         '/verify',
         '/privacy',
         '/terms',
@@ -41,10 +34,9 @@ export async function proxy(request: NextRequest) {
         '/features',
         '/community',
         '/pricing',
-        '/tribe/verify',     // external tribe-member verification links (no account needed)
+        '/tribe/verify',
     ];
 
-    // Exact match for "/" but startsWith for everything else
     const isPublicRoute = publicRoutes.some((route) =>
         route === '/' ? pathname === '/' : pathname.startsWith(route)
     );
@@ -53,38 +45,33 @@ export async function proxy(request: NextRequest) {
         return NextResponse.next();
     }
 
-    // ── 2. Unauthenticated → redirect to /login ─────────────────────
+    // ── 2. Protected routes – require token ─────────────────────────────
+    const token = await getToken({
+        req: request,
+        secret: process.env.JWT_SECRET_KEY || process.env.NEXTAUTH_SECRET,
+    });
+
     if (!token) {
         const loginUrl = new URL('/login', request.url);
         loginUrl.searchParams.set('callbackUrl', pathname);
         return NextResponse.redirect(loginUrl);
     }
 
-    // ── 3. Authenticated – allow onboarding & echo unconditionally ──
+    // ── 3. Authenticated – allow onboarding & echo unconditionally ──────
     if (pathname.startsWith('/onboarding') || pathname.startsWith('/echo')) {
         return NextResponse.next();
     }
 
-    // ── 4. Onboarding gate — redirect to /onboarding if not complete ─
-    //    token.onboardingCompleted is set by the NextAuth jwt() callback
+    // ── 4. Onboarding gate ──────────────────────────────────────────────
     if (!token.onboardingCompleted) {
         return NextResponse.redirect(new URL('/onboarding', request.url));
     }
 
-    // ── 5. Fully authenticated + onboarded → allow ──────────────────
     return NextResponse.next();
 }
 
 export const config = {
     matcher: [
-        /*
-         * Match all request paths except for the ones starting with:
-         * - _next/static (static files)
-         * - _next/image (image optimization files)
-         * - favicon.ico (favicon file)
-         * - public folder
-         */
         '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
     ],
 };
-

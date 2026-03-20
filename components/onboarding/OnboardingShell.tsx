@@ -70,8 +70,8 @@ export function OnboardingShell({
         </div>
       </div>
 
-      {/* Main Content */}
-      <main className="flex-1 flex flex-col">
+      {/* Main Content - min-h-0 allows flex children to shrink and fill viewport */}
+      <main className="flex-1 flex flex-col min-h-0 overflow-hidden">
         {children}
       </main>
 

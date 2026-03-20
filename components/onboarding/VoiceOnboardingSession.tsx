@@ -21,6 +21,7 @@ import { GoogleGenAI, Modality, Type } from '@google/genai';
 import type { FunctionDeclaration, Schema, Session } from '@google/genai';
 import { MdMic, MdMicOff, MdSend, MdVolumeUp, MdKeyboard } from 'react-icons/md';
 import { useSession } from 'next-auth/react';
+import { api } from '@/lib/api';
 import { onboardingApi, EchoVoiceConfig } from '@/services/onboardingApi';
 import { createBlob, decode, decodeAudioData } from '@/services/audio-helpers';
 import type { Message, UserProfile } from './types';
@@ -61,7 +62,6 @@ const ECHO_TOOLS: FunctionDeclaration[] = [
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const MAX_DURATION_MS = 5 * 60 * 1000;
 const STORAGE_KEY = 'zavn_echo_onboarding_conversation';
 
 type SessionMode = 'loading' | 'voice' | 'text-fallback';
@@ -83,8 +83,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
   const [isProcessing, setIsProcessing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>(ConnectionStatus.DISCONNECTED);
   const [isAssistantTalking, setIsAssistantTalking] = useState(false);
-  const [timeRemaining, setTimeRemaining] = useState(MAX_DURATION_MS);
-  const [startTime] = useState(new Date());
+  const [startTime, setStartTime] = useState(() => new Date());
   const [statusText, setStatusText] = useState('Connecting to Echo...');
   const [showTextInput, setShowTextInput] = useState(false);
   const [extractedProfile, setExtractedProfile] = useState<UserProfile>({});
@@ -127,6 +126,12 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
   // Live session ref
   const liveSessionRef = useRef<Session | null>(null);
   const sessionPromiseRef = useRef<Promise<Session> | null>(null);
+
+  // Skip auto-greet when we have restored or existing messages (connection recovery)
+  const hasMessagesRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  const extractedProfileRef = useRef<UserProfile>({});
+  const startTimeRef = useRef<Date>(new Date());
 
   // ─── Audio helpers ────────────────────────────────────────────────────────
 
@@ -176,6 +181,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
   /** Add or append to the last message of the same role (accumulation pattern) */
   const addMsg = useCallback((role: 'user' | 'assistant', content: string) => {
+    hasMessagesRef.current = true;
     setMessages(prev => {
       const last = prev[prev.length - 1];
       if (last?.role === role) {
@@ -183,6 +189,26 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       }
       return [...prev, { id: Math.random(), role, content }];
     });
+  }, []);
+
+  /** Persist conversation for resume (localStorage + backend) */
+  const saveDraft = useCallback((msgs: Message[], profile: UserProfile, started: Date) => {
+    if (msgs.length === 0) return;
+    const payload = {
+      messages: msgs.map(m => ({ role: m.role, content: m.content, id: m.id })),
+      extractedProfile: profile,
+      startedAt: started.toISOString(),
+    };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+    } catch {
+      // ignore
+    }
+    onboardingApi.saveEchoDraft({
+      messages: payload.messages,
+      extracted_profile: profile as Record<string, unknown>,
+      started_at: payload.startedAt,
+    }).catch(() => {});
   }, []);
 
   // ─── End conversation ─────────────────────────────────────────────────────
@@ -197,20 +223,11 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     const transcript = messages.map(m => `${m.role === 'user' ? 'User' : 'Echo'}: ${m.content}`).join('\n');
 
     // Send to backend (non-blocking)
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
     try {
-      const token = (session as { accessToken?: string } | null)?.accessToken;
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      await fetch(`${apiUrl}/api/onboarding/complete-echo`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({
-          transcript,
-          conversation: { messages, startedAt: startTime.toISOString(), endedAt: new Date().toISOString() },
-          insights: extractedProfile,
-        }),
+      await api.post('/api/onboarding/complete-echo', {
+        transcript,
+        conversation: { messages, startedAt: startTime.toISOString(), endedAt: new Date().toISOString() },
+        insights: extractedProfile,
       });
     } catch {
       // non-critical
@@ -218,26 +235,28 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
     localStorage.removeItem(STORAGE_KEY);
     onComplete(transcript, extractedProfile as Record<string, unknown>);
-  }, [messages, onComplete, session, startTime, extractedProfile, cleanupAudio]);
+  }, [messages, onComplete, startTime, extractedProfile, cleanupAudio]);
 
-  // ─── Timer ────────────────────────────────────────────────────────────────
-
+  // Keep refs in sync for use in callbacks
   useEffect(() => {
-    const timer = setInterval(() => {
-      const elapsed = Date.now() - startTime.getTime();
-      const remaining = Math.max(0, MAX_DURATION_MS - elapsed);
-      setTimeRemaining(remaining);
-      if (remaining === 0) handleEndConversation();
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [startTime, handleEndConversation]);
+    messagesRef.current = messages;
+    extractedProfileRef.current = extractedProfile;
+    startTimeRef.current = startTime;
+  }, [messages, extractedProfile, startTime]);
 
   // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // ─── Auto-greet in text fallback ─────────────────────────────────────────
+  // Persist conversation when messages or profile change (debounced)
+  useEffect(() => {
+    if (messages.length === 0 || hasEndedRef.current) return;
+    const t = setTimeout(() => saveDraft(messages, extractedProfile, startTime), 500);
+    return () => clearTimeout(t);
+  }, [messages, extractedProfile, startTime, saveDraft]);
+
+  // ─── Auto-greet in text fallback (only when no existing messages) ────────
 
   const autoGreetText = useCallback(() => {
     setTimeout(() => {
@@ -260,7 +279,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       setStatusText('Gemini API key not configured — switching to text chat');
       setConnectionStatus(ConnectionStatus.ERROR);
       setMode('text-fallback');
-      autoGreetText();
+      if (!hasMessagesRef.current) autoGreetText();
       return;
     }
 
@@ -270,7 +289,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       setStatusText('Invalid configuration — switching to text chat');
       setConnectionStatus(ConnectionStatus.ERROR);
       setMode('text-fallback');
-      autoGreetText();
+      if (!hasMessagesRef.current) autoGreetText();
       return;
     }
 
@@ -356,23 +375,21 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
               console.error('[Echo] Mic access failed after connect:', err);
               setStatusText('Microphone access failed — switching to text');
               setMode('text-fallback');
-              autoGreetText();
+              if (!hasMessagesRef.current) autoGreetText();
             });
 
-            // ── PROACTIVE GREETING ──
-            // Send text turn to make Echo speak first (bidirectional initiation)
+            // ── PROACTIVE GREETING or CONTINUE ──
             sessPromise.then(s => {
               try {
+                const isResume = hasMessagesRef.current && messagesRef.current.length > 0;
+                const prompt = isResume
+                  ? `The user "${userName}" has returned. Acknowledge their return briefly and continue the conversation naturally. Don't repeat your full introduction — pick up where you left off.`
+                  : `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Remember: when SPEAKING, pronounce "ZAVN" as "Zahvin", but always SPELL it as "ZAVN" in any text or transcriptions. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.`;
                 s.sendClientContent({
-                  turns: [
-                    {
-                      role: 'user',
-                      parts: [{ text: `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Remember: when SPEAKING, pronounce "ZAVN" as "Zahvin", but always SPELL it as "ZAVN" in any text or transcriptions. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.` }],
-                    },
-                  ],
+                  turns: [{ role: 'user', parts: [{ text: prompt }] }],
                   turnComplete: true,
                 });
-                console.log('[Echo] Proactive greeting sent — Echo will speak first');
+                console.log('[Echo]', isResume ? 'Continue prompt sent' : 'Proactive greeting sent');
                 setIsListening(true);
                 setStatusText('Echo is listening...');
               } catch (err) {
@@ -498,9 +515,14 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
               }, 2000);
             } else {
               setConnectionStatus(ConnectionStatus.ERROR);
-              setStatusText(`Voice connection error — switching to text (${errMsg})`);
+              if (hasMessagesRef.current && messagesRef.current.length > 0) {
+                saveDraft(messagesRef.current, extractedProfileRef.current, startTimeRef.current);
+                setStatusText('Connection lost. Your conversation is saved — continue below.');
+              } else {
+                setStatusText(`Voice connection error — switching to text (${errMsg})`);
+              }
               setMode('text-fallback');
-              autoGreetText();
+              if (!hasMessagesRef.current) autoGreetText();
             }
           },
 
@@ -508,7 +530,12 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
             console.log('[Echo] WebSocket closed');
             connectionHealthRef.current.isHealthy = false;
             setConnectionStatus(ConnectionStatus.DISCONNECTED);
-            
+
+            // Persist immediately on disconnect so user can resume
+            if (hasMessagesRef.current && messagesRef.current.length > 0) {
+              saveDraft(messagesRef.current, extractedProfileRef.current, startTimeRef.current);
+            }
+
             // Attempt reconnection if session was active
             if (mode === 'voice' && connectionHealthRef.current.reconnectAttempts < 3) {
               connectionHealthRef.current.reconnectAttempts++;
@@ -540,16 +567,19 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
       const error = err as { name?: string; message?: string };
       setConnectionStatus(ConnectionStatus.ERROR);
 
-      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+      if (hasMessagesRef.current && messagesRef.current.length > 0) {
+        saveDraft(messagesRef.current, extractedProfileRef.current, startTimeRef.current);
+        setStatusText('Connection lost. Your conversation is saved — continue below.');
+      } else if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         setStatusText('Microphone access denied — switching to text');
       } else {
         setStatusText(`Voice unavailable — switching to text (${error.message || 'unknown error'})`);
       }
 
       setMode('text-fallback');
-      autoGreetText();
+      if (!hasMessagesRef.current) autoGreetText();
     }
-  }, [connectionStatus, addMsg, stopAudio, isAssistantTalking, userName, autoGreetText, handleEndConversation, mode]);
+  }, [connectionStatus, addMsg, stopAudio, isAssistantTalking, userName, autoGreetText, handleEndConversation, mode, saveDraft]);
 
   // ─── Bootstrap ────────────────────────────────────────────────────────────
 
@@ -558,6 +588,36 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
     const bootstrap = async () => {
       try {
+        // Restore draft from localStorage (fast) or backend (cross-device)
+        const localRaw = typeof window !== 'undefined' ? localStorage.getItem(STORAGE_KEY) : null;
+        type DraftShape = { messages: Message[]; extractedProfile?: UserProfile; startedAt?: string };
+        let draft: DraftShape | null = null;
+        if (localRaw) {
+          try {
+            const parsed = JSON.parse(localRaw) as DraftShape;
+            if (parsed?.messages?.length) draft = parsed;
+          } catch {
+            /* ignore */
+          }
+        }
+        if (!draft) {
+          const backendDraft = await onboardingApi.getEchoDraft();
+          if (backendDraft && Array.isArray(backendDraft.messages) && backendDraft.messages.length > 0) {
+            draft = {
+              messages: backendDraft.messages as Message[],
+              extractedProfile: (backendDraft.extracted_profile || {}) as UserProfile,
+              startedAt: backendDraft.started_at,
+            };
+          }
+        }
+        if (!cancelled && draft?.messages?.length) {
+          setMessages(draft.messages);
+          if (draft.extractedProfile) setExtractedProfile(draft.extractedProfile);
+          if (draft.startedAt) setStartTime(new Date(draft.startedAt));
+          hasMessagesRef.current = true;
+          setStatusText('Restoring your conversation...');
+        }
+
         const config = await onboardingApi.getEchoVoiceConfig();
         
         // Log the received config for debugging
@@ -621,22 +681,28 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     setIsProcessing(true);
 
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-      const token = (session as { accessToken?: string } | null)?.accessToken;
       const conversationHistory = messages.map(m => ({ role: m.role, content: m.content }));
 
-      const response = await fetch(`${apiUrl}/api/echo/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        },
-        body: JSON.stringify({ message: text, history: conversationHistory, user_name: userName }),
+      const res = await api.post<{ response: string }>('/api/echo/chat', {
+        message: text,
+        history: conversationHistory,
+        user_name: userName,
       });
 
-      if (!response.ok) throw new Error(`Backend error: ${response.status}`);
-      const data = await response.json();
-      addMsg('assistant', data.response);
+      if (res.error) {
+        console.error('[Echo] Text message failed:', res.error);
+        onError(
+          res.error.status === 0
+            ? 'Could not reach the API. If you are on the deployed site, set NEXT_PUBLIC_API_URL to your backend (https) and ensure CORS allows this origin.'
+            : res.error.message || 'Failed to send message. Please try again.'
+        );
+        return;
+      }
+      if (!res.data?.response) {
+        onError('Empty response from Echo. Please try again.');
+        return;
+      }
+      addMsg('assistant', res.data.response);
     } catch (error) {
       console.error('[Echo] Text message failed:', error);
       onError('Failed to send message. Please try again.');
@@ -645,20 +711,12 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
     }
   };
 
-  // ─── Derived ──────────────────────────────────────────────────────────────
-
-  const formatTime = (ms: number) => {
-    const minutes = Math.floor(ms / 60000);
-    const seconds = Math.floor((ms % 60000) / 1000);
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
-  };
-
   // ─── RENDER ───────────────────────────────────────────────────────────────
 
   // === Loading state ===
   if (mode === 'loading') {
     return (
-      <div className="flex h-full w-full flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 p-8">
+      <div className="flex flex-1 min-h-0 w-full flex-col items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5 p-8">
         <motion.div
           animate={{ scale: [1, 1.15, 1], opacity: [0.6, 1, 0.6] }}
           transition={{ duration: 2, repeat: Infinity }}
@@ -676,11 +734,14 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
   // === Voice-first mode ===
   if (mode === 'voice') {
+    const assistantMessages = messages.filter(m => m.role === 'assistant');
+    const hasMessages = assistantMessages.length > 0;
+
     return (
-      <div className="flex h-full w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
-        {/* Header */}
-        <div className="bg-white/95 backdrop-blur-md border-b border-border/50 px-6 py-4 shadow-sm">
-          <div className="max-w-5xl mx-auto flex items-center justify-between">
+      <div className="flex flex-1 min-h-0 w-full flex-col bg-gradient-to-br from-primary/5 to-accent/5">
+        {/* Compact header */}
+        <div className="flex-shrink-0 bg-white/95 backdrop-blur-md border-b border-border/50 px-4 sm:px-6 py-3 shadow-sm">
+          <div className="max-w-6xl mx-auto flex items-center justify-between">
             <div className="flex items-center gap-3">
               <div className={`w-2.5 h-2.5 rounded-full ${
                 isAssistantTalking 
@@ -698,7 +759,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
                     ? 'Transcribing...' 
                     : isListening 
                       ? 'Listening...' 
-                      : 'Connecting...'} &middot; {formatTime(timeRemaining)}
+                      : 'Connecting...'}
               </span>
             </div>
             <div className="flex items-center gap-2">
@@ -720,104 +781,129 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
           </div>
         </div>
 
-        {/* Voice Visualisation - Professional Design */}
-        <div className="flex-1 flex flex-col items-center justify-center relative overflow-hidden bg-gradient-to-b from-white via-primary/5 to-accent/5">
-          <div className="relative w-64 h-64 mb-12">
-            {/* Animated background rings */}
-            <motion.div
-              animate={{
-                scale: isAssistantTalking ? [1, 1.5, 1] : isTranscribing ? [1, 1.3, 1] : isListening ? [1, 1.2, 1] : [1, 1.1, 1],
-                opacity: isAssistantTalking ? [0.2, 0.4, 0.2] : isTranscribing ? [0.15, 0.3, 0.15] : isListening ? [0.1, 0.2, 0.1] : [0.05, 0.1, 0.05],
-              }}
-              transition={{ duration: isAssistantTalking ? 0.8 : isTranscribing ? 1.2 : isListening ? 2 : 3, repeat: Infinity }}
-              className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent blur-3xl"
-            />
-            <motion.div
-              animate={{ scale: isAssistantTalking ? [1, 1.3, 1] : isTranscribing ? [1, 1.2, 1] : isListening ? [1, 1.1, 1] : 1 }}
-              transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 1 : isListening ? 2.5 : 3, repeat: Infinity }}
-              className="absolute inset-6 rounded-full border-2 border-primary/20"
-            />
-            <motion.div
-              animate={{ scale: isAssistantTalking ? [1, 1.2, 1] : isTranscribing ? [1, 1.15, 1] : isListening ? [1, 1.08, 1] : 1 }}
-              transition={{ duration: isAssistantTalking ? 0.5 : isTranscribing ? 0.9 : isListening ? 3 : 3.5, repeat: Infinity }}
-              className="absolute inset-12 rounded-full border-2 border-accent/15"
-            />
-            
-            {/* Central icon */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <motion.div 
-                animate={{ 
-                  scale: isAssistantTalking ? [1, 1.1, 1] : isTranscribing ? [1, 1.05, 1] : isListening ? [1, 1.02, 1] : 1,
-                  rotate: isTranscribing ? [0, 5, -5, 0] : 0
+        {/* Main content: two-panel layout */}
+        <div className="flex-1 min-h-0 grid grid-cols-1 lg:grid-cols-[minmax(280px,380px)_1fr] gap-0 overflow-hidden">
+          {/* Left: Voice visualization panel */}
+          <div className="flex flex-col items-center justify-center p-6 lg:p-8 bg-white/50 border-b lg:border-b-0 lg:border-r border-border/50">
+            <div className="relative w-40 h-40 sm:w-48 sm:h-48">
+              <motion.div
+                animate={{
+                  scale: isAssistantTalking ? [1, 1.4, 1] : isTranscribing ? [1, 1.25, 1] : isListening ? [1, 1.15, 1] : [1, 1.08, 1],
+                  opacity: isAssistantTalking ? [0.2, 0.4, 0.2] : isTranscribing ? [0.15, 0.3, 0.15] : isListening ? [0.1, 0.2, 0.1] : [0.05, 0.1, 0.05],
                 }}
-                transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 0.8 : isListening ? 2 : 0, repeat: Infinity }}
-                className="w-32 h-32 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-2xl border-4 border-white/50"
-              >
-                {isTranscribing ? (
-                  <motion.div
-                    animate={{ rotate: 360 }}
-                    transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  >
-                    <MdMic className="text-white" size={48} />
-                  </motion.div>
-                ) : (
-                  <MdMic className="text-white" size={48} />
-                )}
-              </motion.div>
-            </div>
-          </div>
-
-          {/* Status text */}
-          <div className="text-center space-y-2 mb-8">
-            <motion.p 
-              key={isAssistantTalking ? 'speaking' : isTranscribing ? 'transcribing' : 'listening'}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-2xl font-semibold text-foreground"
-            >
-              {isAssistantTalking 
-                ? 'Echo is speaking...' 
-                : isTranscribing 
-                  ? 'Transcribing your words...' 
-                  : isListening 
-                    ? 'Listening...' 
-                    : 'Connecting...'}
-            </motion.p>
-            <p className="text-sm text-muted-foreground max-w-md">
-              {isAssistantTalking 
-                ? 'Please wait while Echo responds' 
-                : isTranscribing 
-                  ? 'Processing what you said' 
-                  : isListening 
-                    ? 'Speak naturally — Echo is ready to hear you' 
-                    : 'Setting up your conversation with Echo'}
-            </p>
-          </div>
-
-          {/* Echo's responses only - no user speech */}
-          {messages.filter(m => m.role === 'assistant').length > 0 && (
-            <div className="absolute bottom-8 left-0 right-0 max-h-64 overflow-y-auto px-6">
-              <div className="max-w-3xl mx-auto space-y-3">
-                <AnimatePresence>
-                  {messages
-                    .filter(m => m.role === 'assistant')
-                    .slice(-4)
-                    .map(m => (
-                      <motion.div
-                        key={m.id}
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="bg-white/95 backdrop-blur-sm rounded-2xl px-5 py-4 shadow-lg border border-border/50 max-w-[85%] mx-auto"
-                      >
-                        <p className="text-sm leading-relaxed text-foreground">{m.content}</p>
-                      </motion.div>
-                    ))}
-                </AnimatePresence>
-                <div ref={messagesEndRef} />
+                transition={{ duration: isAssistantTalking ? 0.8 : isTranscribing ? 1.2 : isListening ? 2 : 3, repeat: Infinity }}
+                className="absolute inset-0 rounded-full bg-gradient-to-br from-primary to-accent blur-2xl"
+              />
+              <motion.div
+                animate={{ scale: isAssistantTalking ? [1, 1.2, 1] : isTranscribing ? [1, 1.15, 1] : isListening ? [1, 1.08, 1] : 1 }}
+                transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 1 : isListening ? 2.5 : 3, repeat: Infinity }}
+                className="absolute inset-4 rounded-full border-2 border-primary/20"
+              />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <motion.div 
+                  animate={{ 
+                    scale: isAssistantTalking ? [1, 1.08, 1] : isTranscribing ? [1, 1.04, 1] : isListening ? [1, 1.02, 1] : 1,
+                  }}
+                  transition={{ duration: isAssistantTalking ? 0.6 : isTranscribing ? 0.8 : isListening ? 2 : 0, repeat: Infinity }}
+                  className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-xl border-4 border-white/50"
+                >
+                  <MdMic className="text-white" size={36} />
+                </motion.div>
               </div>
             </div>
-          )}
+            <div className="mt-4 text-center space-y-1">
+              <motion.p 
+                key={isAssistantTalking ? 'speaking' : isTranscribing ? 'transcribing' : 'listening'}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-base font-semibold text-foreground"
+              >
+                {isAssistantTalking 
+                  ? 'Echo is speaking...' 
+                  : isTranscribing 
+                    ? 'Transcribing...' 
+                    : isListening 
+                      ? 'Listening...' 
+                      : 'Connecting...'}
+              </motion.p>
+              <p className="text-xs text-muted-foreground max-w-[220px]">
+                {isListening 
+                  ? 'Speak naturally — Echo hears you' 
+                  : isTranscribing 
+                    ? 'Processing your words' 
+                    : isAssistantTalking 
+                      ? 'Wait for Echo to finish' 
+                      : 'Setting up...'}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: Transcript / conversation panel */}
+          <div className="flex flex-col min-h-0 bg-gradient-to-b from-white/80 to-primary/5">
+            <div className="flex-1 min-h-0 overflow-y-auto px-4 sm:px-6 py-6">
+              <div className="max-w-2xl mx-auto">
+                {!hasMessages ? (
+                  <div className="flex flex-col items-center justify-center py-12 lg:py-16 text-center">
+                    <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                      <MdVolumeUp className="text-primary" size={28} />
+                    </div>
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Your conversation will appear here</h3>
+                    <p className="text-sm text-muted-foreground max-w-sm">
+                      Echo&apos;s responses and your transcript will show up as you talk. This usually takes 2–3 minutes.
+                    </p>
+                    <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4 text-left max-w-md w-full">
+                      <div className="bg-white/80 rounded-xl p-4 border border-border/50 shadow-sm">
+                        <p className="text-xs font-medium text-primary mb-1">What Echo learns</p>
+                        <p className="text-xs text-muted-foreground">Your goals, energy patterns, and what&apos;s holding you back</p>
+                      </div>
+                      <div className="bg-white/80 rounded-xl p-4 border border-border/50 shadow-sm">
+                        <p className="text-xs font-medium text-primary mb-1">Tip</p>
+                        <p className="text-xs text-muted-foreground">Speak clearly and take your time — there&apos;s no rush</p>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <AnimatePresence>
+                      {assistantMessages.map(m => (
+                        <motion.div
+                          key={m.id}
+                          initial={{ opacity: 0, y: 8 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex justify-start"
+                        >
+                          <div className="max-w-[90%] bg-white rounded-2xl px-4 py-3 shadow-sm border border-border/50">
+                            <p className="text-xs font-medium text-primary/80 mb-1">Echo</p>
+                            <p className="text-sm leading-relaxed text-foreground">{m.content}</p>
+                          </div>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Tips bar - always visible at bottom of transcript panel */}
+            <div className="flex-shrink-0 border-t border-border/50 bg-white/80 px-4 sm:px-6 py-3">
+              <div className="max-w-2xl mx-auto flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-xs text-muted-foreground">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                  Allow microphone access
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  2–3 min conversation
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent" />
+                  Click Text to type instead
+                </span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Optional text input (toggled) */}
@@ -827,7 +913,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
               initial={{ height: 0, opacity: 0 }}
               animate={{ height: 'auto', opacity: 1 }}
               exit={{ height: 0, opacity: 0 }}
-              className="bg-white border-t border-border px-6 py-3 overflow-hidden"
+              className="flex-shrink-0 bg-white border-t border-border px-4 sm:px-6 py-3 overflow-hidden"
             >
               <div className="max-w-4xl mx-auto flex items-center gap-3">
                 <input
@@ -862,7 +948,7 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
 
   // === Text-fallback mode ===
   return (
-    <div className="flex h-full w-full flex-col bg-gradient-to-b from-white via-primary/3 to-accent/3">
+    <div className="flex flex-1 min-h-0 w-full flex-col bg-gradient-to-b from-white via-primary/3 to-accent/3">
       {/* Header - Clean and Modern */}
       <div className="bg-white/95 backdrop-blur-md border-b border-border/50 px-6 py-4 shadow-sm">
         <div className="max-w-5xl mx-auto flex items-center justify-between">
@@ -881,10 +967,6 @@ export default function VoiceOnboardingSession({ onComplete, onError }: VoiceOnb
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-muted/50 text-sm text-muted-foreground">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
-              <span>{formatTime(timeRemaining)}</span>
-            </div>
             <button
               onClick={handleEndConversation}
               className="px-4 py-2 rounded-lg bg-muted hover:bg-muted/80 text-foreground transition-colors text-sm font-medium border border-border/50"

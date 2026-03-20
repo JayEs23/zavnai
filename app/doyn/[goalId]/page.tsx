@@ -25,6 +25,7 @@ export default function DoynGoalPage() {
   const [messages, setMessages] = useState<DoynMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [threadId, setThreadId] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -125,7 +126,7 @@ export default function DoynGoalPage() {
     setLoading(true);
 
     try {
-      // Send message with goal context and insights
+      // Send message with goal context, insights, and thread id for Opik
       const response = await api.post<DoynMessage>('/api/agents/doyn/chat', {
         message: input,
         context: {
@@ -134,6 +135,7 @@ export default function DoynGoalPage() {
           deadline: goal.deadline,
           insights: goal.insights,
         },
+        thread_id: threadId,
       });
 
       if (response.error || !response.data) {
@@ -149,6 +151,9 @@ export default function DoynGoalPage() {
 
       // TypeScript now knows response.data is defined after the check above
       const doynMessage = response.data;
+      if (!threadId && (doynMessage as any).thread_id) {
+        setThreadId((doynMessage as any).thread_id);
+      }
       setMessages((prev) => [...prev, doynMessage]);
     } catch (error: any) {
       console.error('Error sending message:', error);

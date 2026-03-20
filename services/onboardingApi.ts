@@ -154,4 +154,32 @@ export const onboardingApi = {
     }
     return response.data;
   },
+
+  // Save Echo onboarding draft for resume
+  saveEchoDraft: async (data: {
+    messages: Array<{ role: string; content: string; id?: number }>;
+    extracted_profile?: Record<string, unknown>;
+    started_at?: string;
+  }): Promise<void> => {
+    const res = await api.put('/api/onboarding/echo-draft', data);
+    if (res.error) {
+      console.warn('[Echo] Failed to save draft:', res.error.message);
+    }
+  },
+
+  // Get Echo onboarding draft for resume
+  getEchoDraft: async (): Promise<{
+    messages: Array<{ role: string; content: string; id?: number }>;
+    extracted_profile?: Record<string, unknown>;
+    started_at?: string;
+  } | null> => {
+    const res = await api.get<{
+      messages: Array<{ role: string; content: string; id?: number }>;
+      extracted_profile?: Record<string, unknown>;
+      started_at?: string;
+    }>('/api/onboarding/echo-draft');
+    if (res.error || !res.data) return null;
+    if (!res.data.messages?.length) return null;
+    return res.data;
+  },
 };

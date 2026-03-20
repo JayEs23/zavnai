@@ -84,13 +84,16 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    const errObj = responseData && typeof responseData === "object" ? responseData as { detail?: string | unknown[]; message?: string } : {};
+    let errMessage = errObj.message;
+    if (!errMessage && errObj.detail !== undefined) {
+      errMessage = Array.isArray(errObj.detail)
+        ? errObj.detail.map((e: unknown) => typeof e === 'object' && e && 'msg' in e ? (e as { msg: string }).msg : String(e)).join('; ')
+        : String(errObj.detail);
+    }
     return {
       error: {
-        message:
-          (responseData && typeof responseData === "object"
-            ? (responseData as { detail?: string; message?: string }).detail ||
-              (responseData as { detail?: string; message?: string }).message
-            : undefined) || 'An error occurred',
+        message: errMessage || 'An error occurred',
         status: response.status,
         data: responseData,
       },

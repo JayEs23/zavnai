@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { goalsApi, type Goal, type Commitment } from '@/services/goalsApi';
 import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
@@ -327,8 +328,15 @@ function GoalCard({ goal, onArchive, onComplete, onStake, onRefresh: _onRefresh 
           {loadingCommitments ? (
             <div className="text-center py-4 text-muted-foreground text-sm">Loading...</div>
           ) : commitments.length === 0 ? (
-            <div className="text-center py-4 text-muted-foreground text-sm">
-              No commitments yet. Chat with Doyn to create one.
+            <div className="text-center py-4">
+              <p className="text-muted-foreground text-sm mb-3">No commitments yet.</p>
+              <Link
+                href={`/doyn/${goal.id}`}
+                className="inline-flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors text-sm font-medium"
+              >
+                <MdCheckCircle size={18} />
+                Create commitment with Doyn
+              </Link>
             </div>
           ) : (
             <div className="space-y-2">

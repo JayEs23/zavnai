@@ -9,6 +9,7 @@ export interface ReflectionRequest {
     content: string;
     mood?: string;
     energy_level?: number;
+    thread_id?: string;
 }
 
 export interface ReflectionResponse {

@@ -306,7 +306,7 @@ export default function OnboardingPage() {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="w-full h-full"
+            className="w-full flex-1 min-h-0 flex flex-col"
           >
             <VoiceOnboardingSession
               onComplete={handleVoiceComplete}

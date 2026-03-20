@@ -77,10 +77,18 @@ export const tribeApi = {
   getTribeMembers: async (): Promise<TribeMember[]> => {
     const response = await api.get<TribeMember[]>('/api/tribe');
     if (response.error || !response.data) {
-      console.error('Failed to load tribe members:', response.error);
+      const err = response.error;
+      const errMsg =
+        err?.message ||
+        (err?.data && typeof err.data === 'object' && 'detail' in err
+          ? String((err.data as { detail?: unknown }).detail)
+          : null) ||
+        'Failed to load tribe members';
+      const errStatus = err?.status ?? 'unknown';
+      console.warn(`[Tribe] ${errMsg} (status: ${errStatus})`);
       return [];
     }
-    return response.data;
+    return Array.isArray(response.data) ? response.data : [];
   },
 
   /** Add a new tribe member (initiates AI vetting) */

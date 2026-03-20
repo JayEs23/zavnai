@@ -102,13 +102,31 @@ export const LandingFooter = () => {
         </div>
 
         <div className="pt-8 border-t border-white/10">
-          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4 w-full">
             <p className="text-sm text-white/70">
               © {new Date().getFullYear()} ZAVN. All rights reserved.
             </p>
-            <p className="text-sm text-white/70">
-              Built with behavioral science and AI
-            </p>
+            <div className="flex flex-col items-center md:items-end gap-1">
+              <p className="text-sm text-white/70">
+                Built with behavioral science and AI
+              </p>
+              <p className="text-xs text-white/50">
+                <span className="mr-1">Member access:</span>
+                <Link
+                  href="/login"
+                  className="underline-offset-4 hover:underline hover:text-white/80 transition-colors"
+                >
+                  Login
+                </Link>
+                <span className="mx-1">·</span>
+                <Link
+                  href="/signup"
+                  className="underline-offset-4 hover:underline hover:text-white/80 transition-colors"
+                >
+                  Sign up
+                </Link>
+              </p>
+            </div>
           </div>
         </div>
       </div>

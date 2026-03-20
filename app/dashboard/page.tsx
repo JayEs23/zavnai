@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { goalsApi, GoalSummary, CommitmentSummary } from '@/services/goalsApi';
 import {
   MdCheckCircle,
-  MdAccessTime,
   MdTrendingUp,
   MdRecordVoiceOver,
   MdLocalFireDepartment,
@@ -13,14 +12,13 @@ import {
   MdEmojiEvents,
   MdFavorite,
   MdPeople,
+  MdExpandMore,
 } from 'react-icons/md';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
 import { motion, AnimatePresence } from 'framer-motion';
-import { DoynChat } from '@/components/dashboard/DoynChat';
-import { CommitmentsSidebar } from '@/components/dashboard/CommitmentsSidebar';
 
 interface GrowthMetrics {
   streak_days: number;
@@ -47,7 +45,6 @@ export default function DashboardPage() {
     recent_insight: null,
   });
   const [showCelebration, setShowCelebration] = useState(false);
-  const [commitmentRefresh, setCommitmentRefresh] = useState(0);
 
   // Check onboarding status — redirect if not onboarded
   useEffect(() => {
@@ -82,9 +79,9 @@ export default function DashboardPage() {
       setTodaysCommitments(commitmentsData);
 
       // Calculate growth metrics from real data
-      const completedGoals = goals.filter(g => g.status === 'completed').length;
-      const activeGoals = goals.filter(g => g.status === 'active').length;
-      const totalGoals = goals.length;
+      const completedGoals = goalsData.filter(g => g.status === 'completed').length;
+      const activeGoals = goalsData.filter(g => g.status === 'active').length;
+      const totalGoals = goalsData.length;
       const completionRate = totalGoals > 0 ? Math.round((completedGoals / totalGoals) * 100) : 0;
 
       // Try to fetch growth metrics from backend
@@ -278,45 +275,6 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-full bg-primary/10 flex items-center justify-center">
-                <MdTrendingUp className="text-primary" size={22} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Active Goals</p>
-                <p className="text-2xl font-bold text-foreground">{goals.filter(g => g.status === 'active').length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-full bg-green-50 flex items-center justify-center">
-                <MdCheckCircle className="text-green-600" size={22} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Today&apos;s Tasks</p>
-                <p className="text-2xl font-bold text-foreground">{todaysCommitments.length}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-2xl border border-border p-5 shadow-sm">
-            <div className="flex items-center gap-4">
-              <div className="w-11 h-11 rounded-full bg-accent/10 flex items-center justify-center">
-                <MdAccessTime className="text-accent" size={22} />
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Completed</p>
-                <p className="text-2xl font-bold text-foreground">{goals.filter(g => g.status === 'completed').length}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Today's Commitments */}
         <section>
           <div className="flex items-center justify-between mb-4">
@@ -326,8 +284,26 @@ export default function DashboardPage() {
           {todaysCommitments.length === 0 ? (
             <div className="bg-white rounded-2xl border-2 border-dashed border-border p-10 text-center">
               <MdCheckCircle className="mx-auto text-muted-foreground mb-3" size={44} />
-              <h3 className="text-lg font-semibold text-foreground mb-1">No commitments due today</h3>
-              <p className="text-muted-foreground text-sm">Check your goals to create new commitments.</p>
+              <h3 className="text-lg font-semibold text-foreground mb-1">No commitments yet</h3>
+              <p className="text-muted-foreground text-sm mb-6">
+                {goals.length > 0
+                  ? 'Create your first commitment with Doyn to turn your goals into action.'
+                  : 'Create a goal with Echo first, then add commitments with Doyn.'}
+              </p>
+              {goals.length > 0 ? (
+                <CreateCommitmentGoalSelector
+                  goals={goals}
+                  variant="button"
+                />
+              ) : (
+                <Link
+                  href="/echo"
+                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm"
+                >
+                  <MdRecordVoiceOver size={18} />
+                  Create goal with Echo
+                </Link>
+              )}
             </div>
           ) : (
             <div className="space-y-3">
@@ -451,27 +427,10 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Doyn Chat + Commitments Side-by-Side */}
-        <section>
-          <h2 className="text-xl font-bold text-foreground mb-4">Doyn &amp; Commitments</h2>
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
-            {/* Doyn Chat — takes 3 cols */}
-            <div className="lg:col-span-3 bg-white rounded-2xl border border-border shadow-sm overflow-hidden" style={{ height: '520px' }}>
-              <DoynChat
-                onCommitmentUpdate={() => setCommitmentRefresh((n) => n + 1)}
-              />
-            </div>
-            {/* Commitments Sidebar — takes 2 cols */}
-            <div className="lg:col-span-2 bg-white rounded-2xl border border-border shadow-sm overflow-hidden" style={{ height: '520px' }}>
-              <CommitmentsSidebar refreshTrigger={commitmentRefresh} />
-            </div>
-          </div>
-        </section>
-
         {/* Quick Actions / Learning Section */}
         <section className="bg-white rounded-2xl border border-border p-6">
           <h2 className="text-xl font-bold text-foreground mb-4">Continue Your Growth</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             <Link
               href="/echo"
               className="flex items-center gap-4 p-4 rounded-xl border border-border hover:border-primary/30 hover:bg-primary/5 transition-all group"
@@ -484,6 +443,11 @@ export default function DashboardPage() {
                 <p className="text-xs text-muted-foreground">Voice-guided self-reflection</p>
               </div>
             </Link>
+
+            <CreateCommitmentGoalSelector
+              goals={goals}
+              variant="card"
+            />
 
             <Link
               href="/thrive"
@@ -513,6 +477,147 @@ export default function DashboardPage() {
           </div>
         </section>
       </main>
+    </div>
+  );
+}
+
+/* ───────── Create Commitment Goal Selector ───────── */
+function CreateCommitmentGoalSelector({
+  goals,
+  variant,
+}: {
+  goals: GoalSummary[];
+  variant: 'button' | 'card';
+}) {
+  const router = useRouter();
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const activeGoals = goals.filter((g) => g.status === 'active');
+
+  if (goals.length === 0) {
+    return (
+      <Link
+        href="/echo"
+        className={variant === 'button'
+          ? 'inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm'
+          : 'flex items-center gap-4 p-4 rounded-xl border border-border hover:border-secondary/30 hover:bg-secondary/5 transition-all group'}
+      >
+        {variant === 'card' && (
+          <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <MdCheckCircle className="text-secondary" size={24} />
+          </div>
+        )}
+        <div>
+          <p className="font-semibold text-foreground text-sm">Create commitment with Doyn</p>
+          <p className="text-xs text-muted-foreground">Create a goal with Echo first</p>
+        </div>
+      </Link>
+    );
+  }
+
+  if (activeGoals.length === 0) {
+    return (
+      <Link
+        href="/echo"
+        className={variant === 'button'
+          ? 'inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm'
+          : 'flex items-center gap-4 p-4 rounded-xl border border-border hover:border-secondary/30 hover:bg-secondary/5 transition-all group'}
+      >
+        {variant === 'card' && (
+          <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <MdCheckCircle className="text-secondary" size={24} />
+          </div>
+        )}
+        <div>
+          <p className="font-semibold text-foreground text-sm">Create commitment with Doyn</p>
+          <p className="text-xs text-muted-foreground">Create an active goal with Echo first</p>
+        </div>
+      </Link>
+    );
+  }
+
+  if (activeGoals.length === 1) {
+    return (
+      <Link
+        href={`/doyn/${activeGoals[0].id}`}
+        className={variant === 'button'
+          ? 'inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm'
+          : 'flex items-center gap-4 p-4 rounded-xl border border-border hover:border-secondary/30 hover:bg-secondary/5 transition-all group'}
+      >
+        {variant === 'button' && <MdCheckCircle size={18} />}
+        {variant === 'card' && (
+          <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform">
+            <MdCheckCircle className="text-secondary" size={24} />
+          </div>
+        )}
+        <div>
+          <p className="font-semibold text-foreground text-sm">Create commitment with Doyn</p>
+          <p className="text-xs text-muted-foreground">
+            {variant === 'button' ? 'Turn goals into actions' : `For: ${activeGoals[0].title}`}
+          </p>
+        </div>
+      </Link>
+    );
+  }
+
+  // Multiple goals: show dropdown
+  const buttonClass = variant === 'button'
+    ? 'inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium text-sm'
+    : 'flex items-center gap-4 p-4 rounded-xl border border-border hover:border-secondary/30 hover:bg-secondary/5 transition-all group w-full text-left';
+
+  return (
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setDropdownOpen((o) => !o)}
+        className={buttonClass}
+      >
+        {variant === 'button' && <MdCheckCircle size={18} />}
+        {variant === 'card' && (
+          <div className="w-12 h-12 rounded-full bg-secondary/10 flex items-center justify-center group-hover:scale-110 transition-transform flex-shrink-0">
+            <MdCheckCircle className="text-secondary" size={24} />
+          </div>
+        )}
+        <div className="flex-1 min-w-0">
+          <p className="font-semibold text-foreground text-sm">Create commitment with Doyn</p>
+          <p className="text-xs text-muted-foreground">Select a goal</p>
+        </div>
+        <MdExpandMore className={`flex-shrink-0 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`} size={20} />
+      </button>
+
+      <AnimatePresence>
+        {dropdownOpen && (
+          <>
+            <button
+              type="button"
+              aria-label="Close dropdown"
+              className="fixed inset-0 z-40"
+              onClick={() => setDropdownOpen(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, y: -8 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -8 }}
+              className="absolute z-50 mt-2 w-full min-w-[220px] bg-white rounded-xl border border-border shadow-lg overflow-hidden"
+            >
+              <div className="py-1 max-h-60 overflow-y-auto">
+                {activeGoals.map((goal) => (
+                  <button
+                    key={goal.id}
+                    type="button"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      router.push(`/doyn/${goal.id}`);
+                    }}
+                    className="w-full px-4 py-3 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-3"
+                  >
+                    <span className="font-medium text-foreground truncate">{goal.title}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
