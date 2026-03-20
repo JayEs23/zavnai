@@ -61,7 +61,7 @@ class DoynApi {
    */
   async getCommitments(): Promise<Commitment[]> {
     try {
-      const response = await axiosInstance.get('/api/v1/goals/commitments/today');
+      const response = await axiosInstance.get('/api/v1/goals/commitments/pending');
       return response.data;
     } catch (error) {
       console.error('[DoynApi] Error fetching commitments:', error);

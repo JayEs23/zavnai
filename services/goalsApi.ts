@@ -135,6 +135,16 @@ export const goalsApi = {
     return response.data;
   },
 
+  /** Pending + escalated commitments (dashboard / core loop actions) */
+  async getPendingCommitments(): Promise<CommitmentSummary[]> {
+    const response = await api.get<CommitmentSummary[]>('/api/v1/goals/commitments/pending');
+    if (response.error || !response.data) {
+      console.error('Failed to load pending commitments:', response.error);
+      return [];
+    }
+    return response.data;
+  },
+
   /** Create a new goal (via Echo contract ingestion) */
   async createGoal(data: CreateGoalRequest): Promise<{ success: boolean; goal_id: string; message: string }> {
     const response = await api.post<{ success: boolean; goal_id: string; message: string }>('/api/v1/goals/ingest-contract', data);

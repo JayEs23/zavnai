@@ -18,6 +18,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
+import { DashboardCommitmentCard } from '@/components/dashboard/DashboardCommitmentCard';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface GrowthMetrics {
@@ -33,7 +34,7 @@ interface GrowthMetrics {
 export default function DashboardPage() {
   const router = useRouter();
   const [goals, setGoals] = useState<GoalSummary[]>([]);
-  const [todaysCommitments, setTodaysCommitments] = useState<CommitmentSummary[]>([]);
+  const [activeCommitments, setActiveCommitments] = useState<CommitmentSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [growthMetrics, setGrowthMetrics] = useState<GrowthMetrics>({
     streak_days: 0,
@@ -73,10 +74,10 @@ export default function DashboardPage() {
       setLoading(true);
       const [goalsData, commitmentsData] = await Promise.all([
         goalsApi.list(),
-        goalsApi.getTodaysCommitments(),
+        goalsApi.getPendingCommitments(),
       ]);
       setGoals(goalsData);
-      setTodaysCommitments(commitmentsData);
+      setActiveCommitments(commitmentsData);
 
       // Calculate growth metrics from real data
       const completedGoals = goalsData.filter(g => g.status === 'completed').length;
@@ -123,22 +124,6 @@ export default function DashboardPage() {
         return 'text-red-600 bg-red-50 border-red-200';
       default:
         return 'text-gray-600 bg-gray-50 border-gray-200';
-    }
-  };
-
-  const getCommitmentStatusColor = (status: string) => {
-    switch (status) {
-      case 'verified':
-        return 'text-green-600 bg-green-50';
-      case 'pending':
-        return 'text-yellow-600 bg-yellow-50';
-      case 'escalated':
-        return 'text-orange-600 bg-orange-50';
-      case 'failed':
-      case 'missed':
-        return 'text-red-600 bg-red-50';
-      default:
-        return 'text-gray-600 bg-gray-50';
     }
   };
 
@@ -275,19 +260,24 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Today's Commitments */}
+        {/* Active commitments (pending + escalated — core loop) */}
         <section>
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-xl font-bold text-foreground">Today&apos;s Commitments</h2>
+          <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between mb-4">
+            <div>
+              <h2 className="text-xl font-bold text-foreground">Active commitments</h2>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                Verify completion, log an honest outcome, or reflect—without losing the thread.
+              </p>
+            </div>
           </div>
 
-          {todaysCommitments.length === 0 ? (
+          {activeCommitments.length === 0 ? (
             <div className="bg-white rounded-2xl border-2 border-dashed border-border p-10 text-center">
               <MdCheckCircle className="mx-auto text-muted-foreground mb-3" size={44} />
-              <h3 className="text-lg font-semibold text-foreground mb-1">No commitments yet</h3>
+              <h3 className="text-lg font-semibold text-foreground mb-1">Nothing pending right now</h3>
               <p className="text-muted-foreground text-sm mb-6">
                 {goals.length > 0
-                  ? 'Create your first commitment with Doyn to turn your goals into action.'
+                  ? 'Add a commitment with Doyn or check back when the next one is due.'
                   : 'Create a goal with Echo first, then add commitments with Doyn.'}
               </p>
               {goals.length > 0 ? (
@@ -307,48 +297,13 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-3">
-              {todaysCommitments.map((commitment) => {
-                const dueDate = new Date(commitment.due_at);
-                const hoursLeft = (dueDate.getTime() - Date.now()) / (1000 * 60 * 60);
-                const isUrgent = hoursLeft > 0 && hoursLeft < 2;
-                const isOverdue = hoursLeft <= 0 && commitment.status === 'pending';
-
-                return (
-                  <Link
-                    key={commitment.id}
-                    href={`/doyn/${commitment.goal_id}`}
-                    className={`block bg-white rounded-2xl border p-5 hover:shadow-md transition-all ${
-                      isOverdue ? 'border-red-300 bg-red-50/30' : isUrgent ? 'border-amber-300 bg-amber-50/30' : 'border-border'
-                    }`}
-                  >
-                    <div className="flex items-start justify-between">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-3 mb-1.5">
-                          <span className={`px-3 py-0.5 rounded-full text-xs font-medium ${getCommitmentStatusColor(commitment.status)}`}>
-                            {commitment.status}
-                          </span>
-                          <span className="text-sm text-muted-foreground">{commitment.goal_title}</span>
-                          {isOverdue && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-red-100 text-red-600 animate-pulse">
-                              OVERDUE
-                            </span>
-                          )}
-                          {isUrgent && !isOverdue && (
-                            <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-600">
-                              DUE SOON
-                            </span>
-                          )}
-                        </div>
-                        <h3 className="text-base font-semibold text-foreground mb-1">{commitment.task_detail}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          Due: {dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                      <span className="text-sm text-primary font-medium whitespace-nowrap ml-4">Chat with Doyn →</span>
-                    </div>
-                  </Link>
-                );
-              })}
+              {activeCommitments.map((commitment) => (
+                <DashboardCommitmentCard
+                  key={commitment.id}
+                  commitment={commitment}
+                  onUpdated={loadDashboardData}
+                />
+              ))}
             </div>
           )}
         </section>
