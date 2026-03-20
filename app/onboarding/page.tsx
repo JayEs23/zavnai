@@ -16,6 +16,10 @@ import { api } from '@/lib/api';
 import { goalsApi } from '@/services/goalsApi';
 import { opikTracker } from '@/lib/opik/client-tracker';
 import { ExtractedProfile } from '@/services/entityExtraction';
+import { FOCUS_AREA_IDS, type FocusAreaId } from '@/constants/focusAreas';
+import { toApiFocusAreaKey } from '@/lib/focusAreaKeys';
+
+const SESSION_FOCUS_KEY = 'zavn_onboarding_primary_focus';
 
 type OnboardingStep = 'voice' | 'preferences' | 'tribe' | 'completing';
 
@@ -53,6 +57,8 @@ export default function OnboardingPage() {
   const [echoEntry, setEchoEntry] = useState<'loading' | 'pick' | 'voice' | 'text'>('loading');
   /** True when local or server echo-draft had messages — show resume banner + calmer subtitle */
   const [echoResumeDraft, setEchoResumeDraft] = useState(false);
+  /** Primary focus for Echo/Doyn prompt layers (zavndocs 15) */
+  const [primaryFocus, setPrimaryFocus] = useState<FocusAreaId | null>(null);
 
   // Get user ID from session
   const userId = (session?.user as { id?: string })?.id || '';
@@ -115,6 +121,29 @@ export default function OnboardingPage() {
     };
   }, [status]);
 
+  // Restore focus choice for this onboarding session (modalities + extract-entities alignment)
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      const raw = sessionStorage.getItem(SESSION_FOCUS_KEY);
+      if (raw && FOCUS_AREA_IDS.includes(raw as FocusAreaId)) {
+        setPrimaryFocus(raw as FocusAreaId);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const persistPrimaryFocus = (id: FocusAreaId | null) => {
+    setPrimaryFocus(id);
+    try {
+      if (id) sessionStorage.setItem(SESSION_FOCUS_KEY, id);
+      else sessionStorage.removeItem(SESSION_FOCUS_KEY);
+    } catch {
+      /* ignore */
+    }
+  };
+
   // Show loading while session is being fetched
   if (status === 'loading') {
     return (
@@ -142,7 +171,10 @@ export default function OnboardingPage() {
       }>('/api/onboarding/extract-entities', {
         transcript: sessionTranscript,
         user_id: userId,
-        insights: insights // Include insights from conversation
+        insights: insights, // Include insights from conversation
+        ...(toApiFocusAreaKey(primaryFocus)
+          ? { focus_area: toApiFocusAreaKey(primaryFocus) }
+          : {}),
       });
       
       if (res.error) {
@@ -273,7 +305,12 @@ export default function OnboardingPage() {
         console.warn('Baseline analysis skipped (non-critical):', analysisErr);
       }
 
-      // 4. Hard redirect to dashboard to bypass any client-side router cache
+      // 4. Clear onboarding-only session keys, then hard redirect (bypass client router cache)
+      try {
+        sessionStorage.removeItem(SESSION_FOCUS_KEY);
+      } catch {
+        /* ignore */
+      }
       window.location.href = '/dashboard';
     } catch (err) {
       console.error('Finalization failed:', err);
@@ -389,6 +426,8 @@ export default function OnboardingPage() {
             className="flex min-h-0 w-full flex-1 flex-col items-center justify-center overflow-y-auto"
           >
             <EchoEntryChoice
+              focusAreaId={primaryFocus}
+              onFocusChange={persistPrimaryFocus}
               onChooseVoice={() => setEchoEntry('voice')}
               onChooseText={() => setEchoEntry('text')}
             />
@@ -405,6 +444,7 @@ export default function OnboardingPage() {
           >
             <VoiceOnboardingSession
               entryMode={echoEntry}
+              focusArea={toApiFocusAreaKey(primaryFocus) ?? null}
               onComplete={handleVoiceComplete}
               onError={(msg) => setError(msg)}
             />

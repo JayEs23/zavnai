@@ -33,12 +33,14 @@ export const FOCUS_AREAS = [
   },
   {
     id: "relationships",
-    name: "Relationships, Social Growth & Community Impact",
-    description: "Strengthen relationships, build social connections, and make a positive impact",
+    name: "Social & Community Impact",
+    description: "Belonging, boundaries, and contribution—in relationships and community",
     icon: "🤝",
     color: "from-warning to-yellow-600",
   },
 ] as const;
 
 export type FocusAreaId = typeof FOCUS_AREAS[number]["id"];
+
+export const FOCUS_AREA_IDS: FocusAreaId[] = FOCUS_AREAS.map((a) => a.id);
 

@@ -2,17 +2,27 @@
 
 import React from 'react';
 import { MdMic, MdKeyboard } from 'react-icons/md';
+import { FOCUS_AREAS, type FocusAreaId } from '@/constants/focusAreas';
 
 type Props = {
   onChooseVoice: () => void;
   onChooseText: () => void;
   disabled?: boolean;
+  /** Selected primary focus (canonical UI id); optional — Echo uses `general` if unset */
+  focusAreaId?: FocusAreaId | null;
+  onFocusChange?: (id: FocusAreaId | null) => void;
 };
 
 /**
- * First beat of Echo onboarding: explicit voice vs text choice (zavnexample ch.3, zavndocs UC-1).
+ * First beat of Echo onboarding: pick primary focus (zavndocs 15), then voice vs text (zavnexample ch.3).
  */
-export function EchoEntryChoice({ onChooseVoice, onChooseText, disabled }: Props) {
+export function EchoEntryChoice({
+  onChooseVoice,
+  onChooseText,
+  disabled,
+  focusAreaId = null,
+  onFocusChange,
+}: Props) {
   return (
     <div className="mx-auto flex max-w-2xl flex-col gap-8 px-4 py-6 sm:py-10">
       <div className="space-y-2 text-center">
@@ -22,6 +32,39 @@ export function EchoEntryChoice({ onChooseVoice, onChooseText, disabled }: Props
           You get the same onboarding either way — switch later if you need to.
         </p>
       </div>
+
+      {onFocusChange && (
+        <div className="space-y-3">
+          <p className="text-center text-sm font-medium text-foreground">
+            What matters most for you right now?{' '}
+            <span className="font-normal text-muted-foreground">(optional — helps Echo tune the conversation)</span>
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {FOCUS_AREAS.map((area) => {
+              const selected = focusAreaId === area.id;
+              return (
+                <button
+                  key={area.id}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onFocusChange(selected ? null : area.id)}
+                  className={`rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm ${
+                    selected
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border bg-white/90 text-muted-foreground hover:border-primary/40 hover:text-foreground'
+                  } disabled:opacity-50`}
+                >
+                  <span className="mr-1" aria-hidden>
+                    {area.icon}
+                  </span>
+                  {area.name}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <div className="grid gap-4 sm:grid-cols-2">
         <button
           type="button"
