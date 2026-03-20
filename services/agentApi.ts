@@ -6,29 +6,18 @@
 import { api } from '@/lib/api';
 
 export interface ReflectionRequest {
+    /** User reflection text (mapped to Echo `message`). */
     content: string;
     mood?: string;
     energy_level?: number;
     thread_id?: string;
 }
 
-export interface ReflectionResponse {
-    reflection: {
-        id: string;
-        content: string;
-        created_at: string;
-    };
-    ai_reflection: {
-        id: string;
-        reflection: string;
-        confidence_score: number;
-    };
-    questions: Array<{
-        id: string;
-        question_text: string;
-        focus?: string;
-    }>;
-    insights_created: number;
+/** Echo text chat response shape (`POST /api/echo/chat`, mode reflection). */
+export interface EchoChatAgentResponse {
+    response: string;
+    timestamp: string;
+    thread_id: string;
 }
 
 export interface GoalRefinementRequest {
@@ -45,10 +34,16 @@ export interface GoalRefinementResponse {
 
 export const agentApi = {
     /**
-     * Submit a reflection to the Echo agent (via Echo text chat endpoint)
+     * Text reflection turn with Echo (`mode=reflection`). Prefer `coreLoopApi` for commitment outcomes.
      */
-    async reflect(data: ReflectionRequest): Promise<ReflectionResponse> {
-        const res = await api.post<ReflectionResponse>('/api/echo/chat', data);
+    async reflect(data: ReflectionRequest): Promise<EchoChatAgentResponse> {
+        const res = await api.post<EchoChatAgentResponse>('/api/echo/chat', {
+            message: data.content,
+            mode: 'reflection',
+            history: [],
+            user_name: '',
+            thread_id: data.thread_id,
+        });
         if (res.error) throw new Error(res.error.message || 'Failed to submit reflection');
         return res.data!;
     },

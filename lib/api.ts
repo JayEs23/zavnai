@@ -84,6 +84,16 @@ async function request<T>(
   }
 
   if (!response.ok) {
+    if (
+      response.status === 401 &&
+      typeof window !== "undefined" &&
+      (config.headers as Record<string, string>)?.Authorization
+    ) {
+      const returnTo = encodeURIComponent(
+        window.location.pathname + window.location.search
+      );
+      window.location.assign(`/login?callbackUrl=${returnTo}`);
+    }
     const errObj = responseData && typeof responseData === "object" ? responseData as { detail?: string | unknown[]; message?: string } : {};
     let errMessage = errObj.message;
     if (!errMessage && errObj.detail !== undefined) {
@@ -109,10 +119,18 @@ async function request<T>(
 
 export const api = {
   get: <T>(endpoint: string) => request<T>(endpoint, { method: 'GET' }),
+  /** POST multipart/form-data (e.g. photo verification). Do not pass JSON. */
+  postForm: <T>(endpoint: string, formData: FormData) =>
+    request<T>(endpoint, { method: 'POST', body: formData }),
   post: <T, D = unknown>(endpoint: string, data?: D) =>
     request<T>(endpoint, {
       method: 'POST',
-      body: typeof data !== "undefined" ? JSON.stringify(data) : undefined,
+      body:
+        typeof data !== "undefined"
+          ? data instanceof FormData
+            ? data
+            : JSON.stringify(data)
+          : undefined,
     }),
   put: <T, D = unknown>(endpoint: string, data?: D) =>
     request<T>(endpoint, {

@@ -56,7 +56,6 @@ export function CommitmentVerification({
       if (method === 'journal') {
         if (!journalText.trim() || journalText.length < 20) {
           setError('Please provide at least 20 characters for your journal entry.');
-          setSubmitting(false);
           return;
         }
 
@@ -67,10 +66,10 @@ export function CommitmentVerification({
         if (journalResponse.error) {
           throw new Error(journalResponse.error.message || 'Failed to verify with journal entry');
         }
+        onVerified();
       } else if (method === 'link') {
         if (!linkUrl.trim()) {
           setError('Please provide a valid URL.');
-          setSubmitting(false);
           return;
         }
 
@@ -81,10 +80,10 @@ export function CommitmentVerification({
         if (linkResponse.error) {
           throw new Error(linkResponse.error.message || 'Failed to verify with link');
         }
+        onVerified();
       } else if (method === 'photo') {
         if (!photoFile) {
           setError('Please upload a photo.');
-          setSubmitting(false);
           return;
         }
 
@@ -92,17 +91,17 @@ export function CommitmentVerification({
         formData.append('commitment_id', commitmentId);
         formData.append('photo', photoFile);
 
-        const photoResponse = await api.post('/api/verify/photo', formData);
+        const photoResponse = await api.postForm<unknown>('/api/verify/photo', formData);
         if (photoResponse.error) {
           throw new Error(photoResponse.error.message || 'Failed to verify with photo');
         }
-      
-        // Success - trigger reflection
         onVerified();
       }
     } catch (err) {
       console.error('Verification error:', err);
       setError((err as ApiError)?.message || 'Failed to verify commitment. Please try again.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
