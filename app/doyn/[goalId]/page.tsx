@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
-import { goalsApi, GoalSummary } from '@/services/goalsApi';
+import { useParams } from 'next/navigation';
+import { goalsApi, GoalSummary, CommitmentSummary } from '@/services/goalsApi';
+import { coreLoopApi, DoynInsights } from '@/services/coreLoopApi';
 import { api } from '@/lib/api';
-import { MdSend, MdSmartToy, MdPerson, MdArrowBack } from 'react-icons/md';
+import { MdSend, MdSmartToy, MdPerson, MdArrowBack, MdHandshake } from 'react-icons/md';
 import Image from 'next/image';
 import Link from 'next/link';
+import FormattedMessageText from '@/components/common/FormattedMessageText';
 
 interface DoynMessage {
   id: string;
@@ -14,23 +16,64 @@ interface DoynMessage {
   content: string;
   timestamp: string;
   action?: string;
+  thread_id?: string;
+}
+
+interface GoalExecutionContext {
+  goal_id: string;
+  commitment_counts: {
+    total: number;
+    pending: number;
+    escalated: number;
+    verified: number;
+    failed: number;
+    missed: number;
+  };
+  recent_commitments: Array<{
+    id: string;
+    task: string;
+    status: string;
+    due_at?: string | null;
+    created_at?: string | null;
+    verified_at?: string | null;
+    escalation_level: number;
+  }>;
+  thrive_feedback: {
+    thrive_score: number;
+    risk_level: string;
+    risk_factors: string[];
+    recommendations: string[];
+    intervention_needed: boolean;
+    intensity: string;
+    commitment_size: string;
+  };
+  completion_rate: number;
 }
 
 export default function DoynGoalPage() {
   const params = useParams();
-  const router = useRouter();
   const goalId = params.goalId as string;
 
   const [goal, setGoal] = useState<GoalSummary | null>(null);
   const [messages, setMessages] = useState<DoynMessage[]>([]);
+  const [screenError, setScreenError] = useState<string | null>(null);
+  const [doynInsights, setDoynInsights] = useState<DoynInsights | null>(null);
+  const [executionContext, setExecutionContext] = useState<GoalExecutionContext | null>(null);
+  const [pendingCommitments, setPendingCommitments] = useState<CommitmentSummary[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [initializing, setInitializing] = useState(true);
+  const [selectedCommitmentId, setSelectedCommitmentId] = useState('');
+  const [negotiationReason, setNegotiationReason] = useState('');
+  const [proposedTask, setProposedTask] = useState('');
+  const [proposedDeadline, setProposedDeadline] = useState('');
+  const [negotiating, setNegotiating] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    loadGoalAndChat();
+    void loadGoalAndChat();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [goalId]);
 
   useEffect(() => {
@@ -44,16 +87,23 @@ export default function DoynGoalPage() {
   const loadGoalAndChat = async () => {
     try {
       setInitializing(true);
-      
-      // Load goal with insights
-      const goalData = await goalsApi.get(goalId);
-      setGoal(goalData);
+      setScreenError(null);
+      const [goalData, history, insightsData, commitments] = await Promise.all([
+        goalsApi.get(goalId),
+        loadChatHistory(goalId),
+        coreLoopApi.getInsightsForDoyn(goalId),
+        goalsApi.getCommitments(goalId),
+      ]);
+      const contextResponse = await api.get<GoalExecutionContext>(`/api/agents/doyn/context/${goalId}`);
 
-      // Load chat history for this goal
-      const history = await loadChatHistory(goalId);
-      
+      setGoal(goalData);
+      setDoynInsights(insightsData);
+      if (contextResponse.data) setExecutionContext(contextResponse.data);
+      setPendingCommitments(
+        commitments.filter((c) => c.status === 'pending' || c.status === 'escalated')
+      );
+
       if (history.length === 0) {
-        // Welcome message with context from insights
         const welcomeMessage = buildWelcomeMessage(goalData);
         setMessages([
           {
@@ -68,7 +118,7 @@ export default function DoynGoalPage() {
       }
     } catch (error) {
       console.error('Error loading goal and chat:', error);
-      router.push('/dashboard');
+      setScreenError('Could not load Doyn right now. Please retry.');
     } finally {
       setInitializing(false);
     }
@@ -90,7 +140,8 @@ export default function DoynGoalPage() {
   const buildWelcomeMessage = (goal: GoalSummary): string => {
     let message = `Hey! I'm Doyn, your execution agent for "${goal.title}".`;
 
-    // Add context from Echo insights if available
+    const proactiveStep = `Block 25 minutes today to produce one concrete output: a 3-bullet implementation plan (MVP scope, first user path, and first shipping task).`;
+
     if (goal.insights) {
       if (goal.insights.motivation) {
         message += `\n\nI know you're driven by: ${goal.insights.motivation}`;
@@ -98,17 +149,29 @@ export default function DoynGoalPage() {
 
       if (goal.insights.common_excuses && goal.insights.common_excuses.length > 0) {
         const firstExcuse = goal.insights.common_excuses[0];
-        message += `\n\nYou told Echo your biggest excuse was "${firstExcuse}". Don't use that on me now.`;
+        message += `\n\nYou shared with Echo that "${firstExcuse}" can get in the way. We'll plan around that pattern with smaller, realistic steps.`;
       }
 
       if (goal.insights.blockers && goal.insights.blockers.length > 0) {
-        message += `\n\nI see you've struggled with: ${goal.insights.blockers.join(', ')}. Let's tackle them head-on.`;
+        message += `\n\nKnown blockers: ${goal.insights.blockers.join(', ')}. We'll keep this focused and doable.`;
       }
     }
 
-    message += `\n\nLet's break this goal down into concrete actions. What's the first thing you need to do?`;
+    message += `\n\nHere is your first proactive step:\n${proactiveStep}`;
+    message += `\n\nReply with:\n- "lock it in" to commit,\n- or your constraint (time/energy/tools) and I'll renegotiate it immediately.`;
 
     return message;
+  };
+
+  const loadPendingForGoal = async () => {
+    try {
+      const commitments = await goalsApi.getCommitments(goalId);
+      setPendingCommitments(
+        commitments.filter((c) => c.status === 'pending' || c.status === 'escalated')
+      );
+    } catch (error) {
+      console.error('Error reloading commitments:', error);
+    }
   };
 
   const sendMessage = async () => {
@@ -126,7 +189,6 @@ export default function DoynGoalPage() {
     setLoading(true);
 
     try {
-      // Send message with goal context, insights, and thread id for Opik
       const response = await api.post<DoynMessage>('/api/agents/doyn/chat', {
         message: input,
         context: {
@@ -134,6 +196,7 @@ export default function DoynGoalPage() {
           goal_title: goal.title,
           deadline: goal.deadline,
           insights: goal.insights,
+          doyn_insights: doynInsights,
         },
         thread_id: threadId,
       });
@@ -149,15 +212,17 @@ export default function DoynGoalPage() {
         return;
       }
 
-      // TypeScript now knows response.data is defined after the check above
       const doynMessage = response.data;
-      if (!threadId && (doynMessage as any).thread_id) {
-        setThreadId((doynMessage as any).thread_id);
+      if (!threadId && doynMessage.thread_id) {
+        setThreadId(doynMessage.thread_id);
       }
       setMessages((prev) => [...prev, doynMessage]);
-    } catch (error: any) {
+      if (doynMessage.action === 'commitment_created' || doynMessage.action === 'commitment_updated') {
+        await loadPendingForGoal();
+      }
+    } catch (error: unknown) {
       console.error('Error sending message:', error);
-      
+
       const errorMessage: DoynMessage = {
         id: (Date.now() + 1).toString(),
         role: 'doyn',
@@ -167,6 +232,62 @@ export default function DoynGoalPage() {
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const negotiateCommitment = async () => {
+    if (!selectedCommitmentId || negotiationReason.trim().length < 10 || negotiating) return;
+
+    setNegotiating(true);
+    try {
+      const response = await api.post<{
+        doyn_response?: string;
+        new_commitment?: CommitmentSummary;
+      }>('/api/agents/doyn/negotiate', {
+        commitment_id: selectedCommitmentId,
+        reason: negotiationReason.trim(),
+        proposed_task: proposedTask.trim() || undefined,
+        proposed_deadline: proposedDeadline
+          ? new Date(proposedDeadline).toISOString()
+          : undefined,
+      });
+
+      if (response.error || !response.data) {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: `${Date.now()}-neg-error`,
+            role: 'doyn',
+            content:
+              response.error?.message ||
+              'I could not process that negotiation. Please refine your reason and try again.',
+            timestamp: new Date().toISOString(),
+          },
+        ]);
+        return;
+      }
+
+      const negotiationData = response.data;
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `${Date.now()}-neg`,
+          role: 'doyn',
+          content:
+            negotiationData.doyn_response ||
+            'Got it. I updated your commitment to something more realistic.',
+          timestamp: new Date().toISOString(),
+          action: 'commitment_updated',
+        },
+      ]);
+      setNegotiationReason('');
+      setProposedTask('');
+      setProposedDeadline('');
+      await loadPendingForGoal();
+    } catch (error) {
+      console.error('Error negotiating commitment:', error);
+    } finally {
+      setNegotiating(false);
     }
   };
 
@@ -188,6 +309,33 @@ export default function DoynGoalPage() {
     );
   }
 
+  if (screenError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
+        <div className="text-center space-y-4 bg-white border border-border rounded-2xl p-6 shadow-sm max-w-md">
+          <p className="text-base font-semibold text-foreground">{screenError}</p>
+          <p className="text-sm text-muted-foreground">
+            Retry now, or return to your dashboard and try again.
+          </p>
+          <div className="flex items-center justify-center gap-3">
+            <button
+              onClick={() => void loadGoalAndChat()}
+              className="px-4 py-2 rounded-lg bg-primary text-white hover:opacity-90 transition-all"
+            >
+              Retry
+            </button>
+            <Link
+              href="/dashboard"
+              className="px-4 py-2 rounded-lg border border-border hover:bg-muted transition-all"
+            >
+              Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!goal) {
     return null;
   }
@@ -204,7 +352,7 @@ export default function DoynGoalPage() {
             <div className="w-px h-8 bg-border" />
             <div>
               <h1 className="text-lg font-bold text-foreground">{goal.title}</h1>
-              <p className="text-sm text-muted-foreground">Working with Doyn</p>
+              <p className="text-sm text-muted-foreground">Execution manager: commitment by commitment</p>
             </div>
           </div>
           
@@ -220,6 +368,38 @@ export default function DoynGoalPage() {
         <div className="flex-1 flex flex-col max-w-5xl mx-auto w-full">
           {/* Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-6">
+            <div className="rounded-xl border border-border bg-white p-3">
+              <p className="text-xs font-semibold text-foreground mb-1">Doyn Framework</p>
+              <p className="text-xs text-muted-foreground">
+                Clarify outcome {'->'} scope smallest testable step {'->'} define done {'->'} set repair path {'->'} lock in.
+              </p>
+              {doynInsights?.recommendations && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Current recommendation: intensity <span className="font-medium">{doynInsights.recommendations.intensity}</span>, size{' '}
+                  <span className="font-medium">{doynInsights.recommendations.commitment_size}</span>, tone{' '}
+                  <span className="font-medium">{doynInsights.recommendations.tone}</span>.
+                </p>
+              )}
+              {executionContext && (
+                <div className="mt-2 text-xs text-muted-foreground space-y-1">
+                  <p>
+                    Goal history: {executionContext.commitment_counts.total} total · {executionContext.commitment_counts.verified} verified ·{' '}
+                    {executionContext.commitment_counts.missed} missed · {executionContext.commitment_counts.failed} failed ·{' '}
+                    {executionContext.commitment_counts.escalated} escalated
+                  </p>
+                  <p>
+                    Goal completion rate: <span className="font-medium">{executionContext.completion_rate}%</span> · Thrive:{' '}
+                    <span className="font-medium">{executionContext.thrive_feedback.thrive_score}</span> ({executionContext.thrive_feedback.risk_level})
+                  </p>
+                  {executionContext.thrive_feedback.recommendations?.length > 0 && (
+                    <p className="line-clamp-2">
+                      Thrive guidance: {executionContext.thrive_feedback.recommendations.slice(0, 2).join(' | ')}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+
             {messages.map((message) => (
               <div
                 key={message.id}
@@ -238,7 +418,10 @@ export default function DoynGoalPage() {
                       : 'bg-white border border-border text-foreground'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                  <FormattedMessageText
+                    text={message.content}
+                    className="text-sm leading-relaxed whitespace-pre-wrap"
+                  />
                   <p
                     className={`text-xs mt-2 ${
                       message.role === 'user' ? 'text-white/70' : 'text-muted-foreground'
@@ -290,12 +473,67 @@ export default function DoynGoalPage() {
 
           {/* Input */}
           <div className="bg-white border-t border-border p-4">
+            <div className="mb-4 rounded-xl border border-border p-3 bg-muted/20">
+              <div className="flex items-center gap-2 mb-2">
+                <MdHandshake className="text-primary" />
+                <p className="text-sm font-semibold text-foreground">Negotiate commitment scope/timing</p>
+              </div>
+              <p className="text-xs text-muted-foreground mb-3">
+                Use this when delivery risk is real. Give a concrete reason (10+ chars), then propose a smaller scope or later deadline.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                <select
+                  value={selectedCommitmentId}
+                  onChange={(e) => setSelectedCommitmentId(e.target.value)}
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-background"
+                >
+                  <option value="">Select active commitment</option>
+                  {pendingCommitments.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.task_detail}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="datetime-local"
+                  value={proposedDeadline}
+                  onChange={(e) => setProposedDeadline(e.target.value)}
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-background"
+                />
+                <input
+                  type="text"
+                  value={proposedTask}
+                  onChange={(e) => setProposedTask(e.target.value)}
+                  placeholder="Optional: smaller, testable task"
+                  className="border border-border rounded-lg px-3 py-2 text-sm bg-background"
+                />
+                <button
+                  onClick={() => void negotiateCommitment()}
+                  disabled={
+                    negotiating ||
+                    !selectedCommitmentId ||
+                    negotiationReason.trim().length < 10
+                  }
+                  className="px-3 py-2 rounded-lg bg-primary text-white text-sm disabled:opacity-50"
+                >
+                  {negotiating ? 'Negotiating...' : 'Apply negotiation'}
+                </button>
+              </div>
+              <textarea
+                value={negotiationReason}
+                onChange={(e) => setNegotiationReason(e.target.value)}
+                placeholder="Why is this at risk, and what is the realistic adjustment?"
+                rows={2}
+                className="mt-2 w-full border border-border rounded-lg px-3 py-2 text-sm bg-background resize-none"
+              />
+            </div>
+
             <div className="flex gap-3">
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Tell Doyn what you need to do..."
+                placeholder="Describe the next step, constraint, or risk for this goal..."
                 className="flex-1 resize-none border border-border rounded-2xl px-4 py-3 bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20"
                 rows={1}
                 disabled={loading}
@@ -309,7 +547,7 @@ export default function DoynGoalPage() {
               </button>
             </div>
             <p className="text-xs text-muted-foreground mt-2 px-2">
-              Press Enter to send, Shift+Enter for new line
+              Press Enter to send. Doyn will help you define done, lock in, or negotiate repair.
             </p>
           </div>
         </div>

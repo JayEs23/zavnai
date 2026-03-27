@@ -23,7 +23,10 @@ import { MdMic, MdMicOff, MdSend, MdVolumeUp, MdKeyboard } from 'react-icons/md'
 import { useSession } from 'next-auth/react';
 import { api } from '@/lib/api';
 import { onboardingApi, EchoVoiceConfig } from '@/services/onboardingApi';
+import { coreLoopApi } from '@/services/coreLoopApi';
 import { createBlob, decode, decodeAudioData } from '@/services/audio-helpers';
+import FormattedMessageText from '@/components/common/FormattedMessageText';
+import { sanitizeAssistantText } from '@/lib/assistantText';
 import type { Message, UserProfile } from './types';
 import { ConnectionStatus } from './types';
 
@@ -32,6 +35,12 @@ import { ConnectionStatus } from './types';
 interface VoiceOnboardingSessionProps {
   onComplete: (transcript: string, insights: Record<string, unknown>) => void;
   onError: (error: string) => void;
+  /** onboarding = goal discovery, reflection = commitment reflection */
+  sessionPurpose?: 'onboarding' | 'reflection';
+  /** Required for reflection sessions */
+  commitmentId?: string;
+  /** Optional commitment text for reflection greeting */
+  reflectionTask?: string;
   /**
    * `voice` — try Gemini Live, fall back to text (default).
    * `text` — skip mic/Live; full onboarding via `POST /api/echo/chat` (`mode=onboarding`). See zavnexample ch.3.
@@ -70,6 +79,42 @@ const ECHO_TOOLS: FunctionDeclaration[] = [
   },
 ];
 
+const ECHO_REFLECTION_TOOLS: FunctionDeclaration[] = [
+  {
+    name: 'finalize_reflection_outcome',
+    description:
+      'Call this near the end of reflection when outcome is clear. This persists commitment outcome and reflection summary.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {
+        outcome: {
+          type: Type.STRING,
+          description: "One of: completed, failed, missed, negotiated",
+          enum: ['completed', 'failed', 'missed', 'negotiated'] as unknown as string[],
+        },
+        reflection_summary: {
+          type: Type.STRING,
+          description: 'Short user-centric summary of what happened and what they learned',
+        },
+        proof_text: {
+          type: Type.STRING,
+          description: 'Optional proof text when completed',
+        },
+      } as Record<string, Schema>,
+      required: ['outcome', 'reflection_summary'],
+    },
+  },
+  {
+    name: 'complete_reflection_session',
+    description:
+      'Call this after finalize_reflection_outcome has been handled and user is ready to close the reflection session.',
+    parameters: {
+      type: Type.OBJECT,
+      properties: {} as Record<string, Schema>,
+    },
+  },
+];
+
 // ─── Constants ───────────────────────────────────────────────────────────────
 
 const STORAGE_KEY = 'zavn_echo_onboarding_conversation';
@@ -78,19 +123,23 @@ const STORAGE_KEY = 'zavn_echo_onboarding_conversation';
 export const ECHO_ONBOARDING_STORAGE_KEY = STORAGE_KEY;
 
 type SessionMode = 'loading' | 'voice' | 'text-fallback';
+type ReflectionSaveStatus = 'idle' | 'saving' | 'saved' | 'error';
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function VoiceOnboardingSession({
   onComplete,
   onError,
+  sessionPurpose = 'onboarding',
+  commitmentId,
+  reflectionTask,
   entryMode = 'voice',
   focusArea = null,
 }: VoiceOnboardingSessionProps) {
   const { data: session } = useSession();
 
   // Derive user's display name from session (OAuth name > email prefix)
-  const userName = session?.user?.name
+  const userName = (session?.user?.name?.trim().split(/\s+/)[0])
     || session?.user?.email?.split('@')[0]
     || 'there';
 
@@ -143,10 +192,12 @@ export default function VoiceOnboardingSession({
   /** Mic input to Gemini Live: off = no audio sent, Live session stays open */
   const [micCaptureEnabled, setMicCaptureEnabled] = useState(true);
   const micCaptureEnabledRef = useRef(true);
+  const [reflectionSaveStatus, setReflectionSaveStatus] = useState<ReflectionSaveStatus>('idle');
 
   // Live session ref
   const liveSessionRef = useRef<Session | null>(null);
   const sessionPromiseRef = useRef<Promise<Session> | null>(null);
+  const reflectionOutcomeSavedRef = useRef(false);
 
   // Skip auto-greet when we have restored or existing messages (connection recovery)
   const hasMessagesRef = useRef(false);
@@ -214,10 +265,11 @@ export default function VoiceOnboardingSession({
     hasMessagesRef.current = true;
     setMessages(prev => {
       const last = prev[prev.length - 1];
+      const nextContent = role === 'assistant' ? sanitizeAssistantText(content) : content;
       if (last?.role === role) {
-        return [...prev.slice(0, -1), { ...last, content }];
+        return [...prev.slice(0, -1), { ...last, content: nextContent }];
       }
-      return [...prev, { id: Math.random(), role, content }];
+      return [...prev, { id: Math.random(), role, content: nextContent }];
     });
   }, []);
 
@@ -254,18 +306,32 @@ export default function VoiceOnboardingSession({
 
     // Send to backend (non-blocking)
     try {
-      await api.post('/api/onboarding/complete-echo', {
-        transcript,
-        conversation: { messages, startedAt: startTime.toISOString(), endedAt: new Date().toISOString() },
-        insights: extractedProfile,
-      });
+      if (sessionPurpose === 'onboarding') {
+        await api.post('/api/onboarding/complete-echo', {
+          transcript,
+          conversation: { messages, startedAt: startTime.toISOString(), endedAt: new Date().toISOString() },
+          insights: extractedProfile,
+        });
+      } else if (sessionPurpose === 'reflection' && commitmentId) {
+        if (!reflectionOutcomeSavedRef.current) {
+          const userOnlyTranscript = messages
+          .filter((m) => m.role === 'user')
+          .map((m) => m.content)
+          .join('\n')
+          .trim();
+          await coreLoopApi.reflectOnCommitment(
+            commitmentId,
+            userOnlyTranscript || transcript || 'Voice reflection completed'
+          );
+        }
+      }
     } catch {
       // non-critical
     }
 
     localStorage.removeItem(STORAGE_KEY);
     onComplete(transcript, extractedProfile as Record<string, unknown>);
-  }, [messages, onComplete, startTime, extractedProfile, cleanupAudio]);
+  }, [messages, onComplete, startTime, extractedProfile, cleanupAudio, sessionPurpose, commitmentId]);
 
   // Keep refs in sync for use in callbacks
   useEffect(() => {
@@ -290,12 +356,19 @@ export default function VoiceOnboardingSession({
 
   const autoGreetText = useCallback(() => {
     setTimeout(() => {
-      addMsg(
-        'assistant',
-        `Hey ${userName}! I'm Echo, your personal growth coach here at ZAVN (pronounced "Zahvin"). Voice had a hiccup, so let's chat here instead — no worries at all! I'm really excited to get to know you. So tell me, what brought you to ZAVN? What's the big thing you're hoping to work on?`
-      );
+      if (sessionPurpose === 'reflection') {
+        addMsg(
+          'assistant',
+          `Hey ${userName}, I'm Echo. Let's reflect on this commitment: "${reflectionTask || 'your recent commitment'}". Did you complete it, and what helped or got in the way?`
+        );
+      } else {
+        addMsg(
+          'assistant',
+          `Hey ${userName}! I'm Echo, your personal growth coach here at ZAVN (pronounced "Zahvin"). Voice had a hiccup, so let's chat here instead — no worries at all! I'm really excited to get to know you. So tell me, what brought you to ZAVN? What's the big thing you're hoping to work on?`
+        );
+      }
     }, 300);
-  }, [addMsg, userName]);
+  }, [addMsg, userName, sessionPurpose, reflectionTask]);
 
   // ─── Voice connection (Gemini Live — reference pattern) ───────────────────
 
@@ -339,7 +412,31 @@ export default function VoiceOnboardingSession({
         processor: null
       };
 
-      const agentConfig = config.onboarding;
+      const agentConfig =
+        sessionPurpose === 'reflection' ? config.reflection : config.onboarding;
+
+      let effectiveSystemInstruction = agentConfig.system_instruction;
+      if (sessionPurpose === 'reflection') {
+        effectiveSystemInstruction = [
+          agentConfig.system_instruction,
+          "",
+          "REFLECTION SESSION CONTEXT:",
+          `- Commitment task: ${reflectionTask || "not provided"}`,
+          "",
+          "END-OF-SESSION TOOLING:",
+          "- Before ending, call finalize_reflection_outcome with:",
+          "  - outcome: completed | failed | missed | negotiated",
+          "  - reflection_summary: concise summary of what happened + next learning",
+          "  - proof_text (optional when completed)",
+          "- After that, call complete_reflection_session.",
+          "",
+          "RULES:",
+          "- Treat this as an active commitment reflection session with available context.",
+          "- Never say you do not have access to prior commitments or context.",
+          "- Do NOT ask which commitment is being reflected on.",
+          "- If one detail is missing, ask exactly one concise clarifying question and continue.",
+        ].join("\n");
+      }
       
       const ai = new GoogleGenAI({
         apiKey,
@@ -417,8 +514,10 @@ export default function VoiceOnboardingSession({
               try {
                 const isResume = hasMessagesRef.current && messagesRef.current.length > 0;
                 const prompt = isResume
-                  ? `The user "${userName}" has returned. Acknowledge their return briefly and continue the conversation naturally. Don't repeat your full introduction — pick up where you left off.`
-                  : `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Remember: when SPEAKING, pronounce "ZAVN" as "Zahvin", but always SPELL it as "ZAVN" in any text or transcriptions. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.`;
+                  ? `The user "${userName}" has returned. Acknowledge their return briefly and continue the conversation naturally.`
+                  : sessionPurpose === 'reflection'
+                    ? `The user's name is "${userName}". This is a reflection session for commitment "${reflectionTask || 'their recent commitment'}". Start by acknowledging this exact commitment and ask about what happened. Do NOT ask the user which commitment they are reflecting on. Ask one reflective question at a time, stay non-judgmental, and end by asking for one concrete next step.`
+                      : `The user's name is "${userName}". This is the start of their ZAVN onboarding session. Greet them warmly by name, introduce yourself as Echo — their personal growth coach at ZAVN. Remember: when SPEAKING, pronounce "ZAVN" as "Zahvin", but always SPELL it as "ZAVN" in any text or transcriptions. Be genuinely excited to meet them. Then ask a warm, open-ended question to start getting to know them. Keep it natural and brief.`;
                 s.sendClientContent({
                   turns: [{ role: 'user', parts: [{ text: prompt }] }],
                   turnComplete: true,
@@ -446,6 +545,52 @@ export default function VoiceOnboardingSession({
                     console.log('[Echo] Session completed by agent');
                     // Small delay to let final audio play
                     setTimeout(() => handleEndConversation(), 2000);
+                  }
+                  if (
+                    fc.name === 'finalize_reflection_outcome'
+                    && sessionPurpose === 'reflection'
+                    && commitmentId
+                    && fc.args
+                  ) {
+                    const rawOutcome = String((fc.args as Record<string, unknown>).outcome || '').toLowerCase();
+                    const outcome = (
+                      rawOutcome === 'completed'
+                      || rawOutcome === 'failed'
+                      || rawOutcome === 'missed'
+                      || rawOutcome === 'negotiated'
+                    ) ? rawOutcome : 'missed';
+                    const reflectionSummary = String(
+                      (fc.args as Record<string, unknown>).reflection_summary || 'Voice reflection completed'
+                    );
+                    const proofText = String((fc.args as Record<string, unknown>).proof_text || '').trim();
+
+                    try {
+                      setReflectionSaveStatus('saving');
+                      if (outcome === 'completed') {
+                        await api.post(`/api/v1/goals/commitments/${commitmentId}/complete`, {
+                          proof_text: proofText || undefined,
+                        });
+                      }
+                      const saveResult = await coreLoopApi.handleCommitmentOutcome(
+                        commitmentId,
+                        outcome as 'completed' | 'failed' | 'missed' | 'negotiated',
+                        reflectionSummary
+                      );
+                      if (saveResult.success) {
+                        reflectionOutcomeSavedRef.current = true;
+                        setStatusText('Reflection saved.');
+                        setReflectionSaveStatus('saved');
+                      } else {
+                        setReflectionSaveStatus('error');
+                      }
+                    } catch (toolErr) {
+                      console.error('[Echo] Failed to persist reflection outcome tool:', toolErr);
+                      setReflectionSaveStatus('error');
+                    }
+                  }
+                  if (fc.name === 'complete_reflection_session' && sessionPurpose === 'reflection') {
+                    console.log('[Echo] Reflection session completed by agent');
+                    setTimeout(() => handleEndConversation(), 1200);
                   }
                   // Send tool response back to Gemini
                   sessPromise.then(s => {
@@ -586,8 +731,10 @@ export default function VoiceOnboardingSession({
         },
         config: {
           responseModalities: [Modality.AUDIO],
-          tools: [{ functionDeclarations: ECHO_TOOLS }],
-          systemInstruction: agentConfig.system_instruction,
+          ...(sessionPurpose === 'onboarding'
+            ? { tools: [{ functionDeclarations: ECHO_TOOLS }] }
+            : { tools: [{ functionDeclarations: ECHO_REFLECTION_TOOLS }] }),
+          systemInstruction: effectiveSystemInstruction,
           inputAudioTranscription: {},
           outputAudioTranscription: {},
         },
@@ -613,7 +760,7 @@ export default function VoiceOnboardingSession({
       setMode('text-fallback');
       if (!hasMessagesRef.current) autoGreetText();
     }
-  }, [connectionStatus, addMsg, stopAudio, isAssistantTalking, userName, autoGreetText, handleEndConversation, mode, saveDraft]);
+  }, [connectionStatus, addMsg, stopAudio, isAssistantTalking, userName, autoGreetText, handleEndConversation, mode, saveDraft, sessionPurpose, reflectionTask, commitmentId]);
 
   // ─── Bootstrap ────────────────────────────────────────────────────────────
 
@@ -729,7 +876,8 @@ export default function VoiceOnboardingSession({
         message: text,
         history: conversationHistory,
         user_name: userName,
-        mode: 'onboarding',
+        mode: sessionPurpose === 'reflection' ? 'reflection' : 'onboarding',
+        ...(sessionPurpose === 'reflection' && commitmentId ? { commitment_id: commitmentId } : {}),
         ...(focusArea ? { focus_area: focusArea } : {}),
       });
 
@@ -810,6 +958,23 @@ export default function VoiceOnboardingSession({
             <div className="flex min-w-0 items-center gap-3">
               <div className={`h-2.5 w-2.5 shrink-0 rounded-full ${statusDotClass}`} />
               <span className="truncate text-sm font-medium text-foreground">{headerStatusText}</span>
+              {sessionPurpose === 'reflection' && reflectionSaveStatus !== 'idle' && (
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                    reflectionSaveStatus === 'saved'
+                      ? 'bg-green-100 text-green-700'
+                      : reflectionSaveStatus === 'saving'
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-red-100 text-red-700'
+                  }`}
+                >
+                  {reflectionSaveStatus === 'saved'
+                    ? 'Outcome saved'
+                    : reflectionSaveStatus === 'saving'
+                      ? 'Saving outcome...'
+                      : 'Outcome save failed'}
+                </span>
+              )}
             </div>
             <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
               <button
@@ -953,7 +1118,10 @@ export default function VoiceOnboardingSession({
                         >
                           <div className="max-w-[90%] bg-white rounded-2xl px-4 py-3 shadow-sm border border-border/50">
                             <p className="text-xs font-medium text-primary/80 mb-1">Echo</p>
-                            <p className="text-sm leading-relaxed text-foreground">{m.content}</p>
+                            <FormattedMessageText
+                              text={m.content}
+                              className="text-sm leading-relaxed text-foreground"
+                            />
                           </div>
                         </motion.div>
                       ))}
@@ -1100,7 +1268,10 @@ export default function VoiceOnboardingSession({
                       : 'bg-white border border-border/50 text-foreground shadow-sm'
                   }`}
                 >
-                  <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.content}</p>
+                  <FormattedMessageText
+                    text={message.content}
+                    className="text-sm leading-relaxed whitespace-pre-wrap"
+                  />
                 </div>
               </motion.div>
             ))}
