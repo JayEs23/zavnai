@@ -7,6 +7,7 @@ import { coreLoopApi } from '@/services/coreLoopApi';
 import { MdArrowBack, MdCheckCircle, MdCancel } from 'react-icons/md';
 import Image from 'next/image';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 interface Commitment {
   id: string;
@@ -97,7 +98,44 @@ export default function EchoReflectPage() {
           loop.error ||
             'Reflection could not be fully processed. Your outcome may still be saved—check the dashboard.'
         );
+        return;
       }
+
+      const goalId = commitment.goal_id;
+      toast.custom(
+        (t) => (
+          <div className="rounded-xl border border-border bg-background shadow-lg p-4 max-w-sm text-foreground">
+            <p className="text-sm font-semibold">Outcome & reflection saved</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              Continue the loop: size your next step with Doyn, or return to the dashboard.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link
+                href={`/doyn/${goalId}`}
+                className="text-primary font-medium hover:underline"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Open Doyn for this goal
+              </Link>
+              <Link
+                href={`/echo?mode=reflection&commitmentId=${commitmentId}`}
+                className="text-primary font-medium hover:underline"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Voice reflection (Echo)
+              </Link>
+              <Link
+                href="/dashboard"
+                className="text-muted-foreground hover:underline text-xs"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Back to dashboard
+              </Link>
+            </div>
+          </div>
+        ),
+        { duration: 10000 }
+      );
 
       router.push('/dashboard');
     } catch (error) {

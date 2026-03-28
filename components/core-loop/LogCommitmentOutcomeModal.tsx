@@ -45,10 +45,34 @@ export function LogCommitmentOutcomeModal({
         toast.error(res.error || 'Could not log outcome');
         return;
       }
-      toast.success(
-        outcome === 'negotiated'
-          ? 'Logged. Tweak the plan with Doyn when you are ready.'
-          : 'Outcome logged. Reflection helps the next week land better.'
+      toast.custom(
+        (t) => (
+          <div className="rounded-xl border border-border bg-background shadow-lg p-4 max-w-sm text-foreground">
+            <p className="text-sm font-semibold">Outcome logged</p>
+            <p className="text-xs text-muted-foreground mt-1">
+              {outcome === 'negotiated'
+                ? 'Adjust the plan with Doyn when you are ready.'
+                : 'Continue the loop: reflect with Echo, then size the next step with Doyn.'}
+            </p>
+            <div className="mt-3 flex flex-col gap-2 text-sm">
+              <Link
+                href={`/doyn/${goalId}`}
+                className="text-primary font-medium hover:underline"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Open Doyn for this goal
+              </Link>
+              <Link
+                href={`/echo/reflect/${commitmentId}`}
+                className="text-primary font-medium hover:underline"
+                onClick={() => toast.dismiss(t.id)}
+              >
+                Deeper reflection (Echo)
+              </Link>
+            </div>
+          </div>
+        ),
+        { duration: 10000 }
       );
       onSuccess();
       onClose();
