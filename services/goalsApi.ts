@@ -28,6 +28,8 @@ export interface GoalSummary {
   id: string;
   title: string;
   description?: string;
+  /** Echo / goal focus: work | health | social | surprise (see backend Goal.category) */
+  category?: string | null;
   deadline: string;
   status: string;
   is_staked: boolean;
@@ -43,6 +45,7 @@ export interface Goal {
   id: string;
   title: string;
   description?: string;
+  category?: string | null;
   deadline: string;
   status: 'active' | 'completed' | 'failed' | 'paused' | 'archived';
   is_staked: boolean;

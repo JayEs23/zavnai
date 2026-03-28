@@ -10,6 +10,38 @@ import Image from 'next/image';
 import Link from 'next/link';
 import FormattedMessageText from '@/components/common/FormattedMessageText';
 
+/** First testable step: align with docs (small, verifiable) and goal category / Echo insights. */
+function getFirstProactiveStep(goal: GoalSummary): string {
+  const cat = (goal.category || '').toLowerCase();
+  const blob = `${goal.title} ${goal.description ?? ''}`.toLowerCase();
+
+  if (cat === 'health' || /health|fitness|workout|run|gym|walk|sleep|nutrition/.test(blob)) {
+    return `This week: put one 20–30 minute block on your calendar for the smallest movement that counts toward this goal. Success = the session happened, not a perfect workout.`;
+  }
+  if (cat === 'work' || /resume|cv|job|ship|code|app|build|product|launch|saas|feature/.test(blob)) {
+    return `Ship one user-visible slice this week—one screen, one flow, or one merged change—with something you can point at (screenshot, link, or PR). Not the whole project: one ugly-but-real checkpoint.`;
+  }
+  if (cat === 'social' || /relationship|family|friend|partner|community/.test(blob)) {
+    return `One concrete touchpoint this week (message, call, or scheduled time). Minimum: ~10 minutes, sent or happened—no perfection bar.`;
+  }
+  if (cat === 'surprise' || /learn|study|course|read|language|skill/.test(blob)) {
+    return `One focused 25-minute session with a single named output (e.g. one lesson done, one page of notes). Stop when that output exists.`;
+  }
+  if (/money|budget|debt|save|finance|invest/.test(blob)) {
+    return `One 30-minute session: gather three real numbers you need (balances, dates, or targets). End with one written next action—no new tools until that's done.`;
+  }
+  return `Pick one concrete, testable action for this week with a clear definition of done—small enough to finish in one sitting.`;
+}
+
+function formatDueShort(iso: string): string {
+  if (!iso) return 'soon';
+  try {
+    return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  } catch {
+    return iso;
+  }
+}
+
 interface DoynMessage {
   id: string;
   role: 'user' | 'doyn';
@@ -104,7 +136,11 @@ export default function DoynGoalPage() {
       );
 
       if (history.length === 0) {
-        const welcomeMessage = buildWelcomeMessage(goalData);
+        const welcomeMessage = buildWelcomeMessage(goalData, {
+          pending: commitments.filter((c) => c.status === 'pending' || c.status === 'escalated'),
+          insights: insightsData,
+          executionContext: contextResponse.data ?? null,
+        });
         setMessages([
           {
             id: '1',
@@ -137,10 +173,19 @@ export default function DoynGoalPage() {
     }
   };
 
-  const buildWelcomeMessage = (goal: GoalSummary): string => {
+  const buildWelcomeMessage = (
+    goal: GoalSummary,
+    ctx: {
+      pending: CommitmentSummary[];
+      insights: DoynInsights | null;
+      executionContext: GoalExecutionContext | null;
+    }
+  ): string => {
     let message = `Hey! I'm Doyn, your execution agent for "${goal.title}".`;
 
-    const proactiveStep = `Block 25 minutes today to produce one concrete output: a 3-bullet implementation plan (MVP scope, first user path, and first shipping task).`;
+    if (goal.insights?.implementation_style) {
+      message += `\n\nEcho noted how you operate: ${goal.insights.implementation_style}. I'll size commitments to match—not generic hustle.`;
+    }
 
     if (goal.insights) {
       if (goal.insights.motivation) {
@@ -149,16 +194,30 @@ export default function DoynGoalPage() {
 
       if (goal.insights.common_excuses && goal.insights.common_excuses.length > 0) {
         const firstExcuse = goal.insights.common_excuses[0];
-        message += `\n\nYou shared with Echo that "${firstExcuse}" can get in the way. We'll plan around that pattern with smaller, realistic steps.`;
+        message += `\n\nYou told Echo "${firstExcuse}" can get in the way—I'll plan smaller steps so that pattern doesn't win by default.`;
       }
 
       if (goal.insights.blockers && goal.insights.blockers.length > 0) {
-        message += `\n\nKnown blockers: ${goal.insights.blockers.join(', ')}. We'll keep this focused and doable.`;
+        message += `\n\nKnown constraints: ${goal.insights.blockers.join(', ')}. We'll keep this focused and doable.`;
       }
     }
 
-    message += `\n\nHere is your first proactive step:\n${proactiveStep}`;
-    message += `\n\nReply with:\n- "lock it in" to commit,\n- or your constraint (time/energy/tools) and I'll renegotiate it immediately.`;
+    if (ctx.insights?.recommendations) {
+      const { intensity, commitment_size, tone } = ctx.insights.recommendations;
+      message += `\n\nThrive-aware plan for this chat: ${intensity} intensity, ${commitment_size} commitment size, ${tone} tone.`;
+    }
+
+    if (ctx.pending.length > 0) {
+      const first = ctx.pending[0];
+      message += `\n\nYou already have a commitment in flight:\n"${first.task_detail}"\nDue: ${formatDueShort(first.due_at)}.`;
+      message += `\n\nLet's execute that slice or negotiate—tell me what's blocking (time, fear, scope) and we'll adjust without shame-stacking.`;
+      message += `\n\nReply with what's true today, or say "negotiate" if you need a smaller scope or new deadline.`;
+      return message;
+    }
+
+    const proactiveStep = getFirstProactiveStep(goal);
+    message += `\n\nYour first step this week (testable, sized to win):\n${proactiveStep}`;
+    message += `\n\nReply with "lock it in" to commit, or your real constraint (time, energy, tools) and I'll renegotiate immediately.`;
 
     return message;
   };
@@ -194,6 +253,7 @@ export default function DoynGoalPage() {
         context: {
           goal_id: goalId,
           goal_title: goal.title,
+          goal_category: goal.category,
           deadline: goal.deadline,
           insights: goal.insights,
           doyn_insights: doynInsights,

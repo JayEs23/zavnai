@@ -1,146 +1,77 @@
 'use client';
 
 /**
- * Commitment Quality Dashboard
- * 
- * Visualizes commitment quality metrics from Opik evaluation system.
- * Shows trends, distributions, and identifies optimization opportunities.
+ * Commitment quality summary — backed by GET /api/evaluation/metrics/summary
+ * (real user commitment data; no mock charts).
  */
 
 import React, { useState, useEffect } from 'react';
-import { MdTrendingUp, MdTrendingDown, MdCheckCircle, MdWarning } from 'react-icons/md';
-import { Line, Bar, Doughnut } from 'react-chartjs-2';
+import { MdTrendingUp, MdTrendingDown } from 'react-icons/md';
+import { Doughnut, Bar } from 'react-chartjs-2';
 import {
   Chart as ChartJS,
   CategoryScale,
   LinearScale,
-  PointElement,
-  LineElement,
   BarElement,
   ArcElement,
   Title,
   Tooltip,
   Legend,
 } from 'chart.js';
+import { api } from '@/lib/api';
 
-// Register ChartJS components
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  ArcElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
-interface QualityMetrics {
-  avgQuality: number;
-  qualityChange: number;
-  highQualityRate: number;
-  highQualityChange: number;
-  userSuccessRate: number;
-  userSuccessChange: number;
-}
-
-interface QualityTrend {
-  date: string;
-  quality: number;
-}
-
-interface AgentQuality {
-  agent: string;
-  score: number;
-  count: number;
-}
-
-interface DimensionScore {
-  dimension: string;
-  score: number;
-  maxScore: number;
-}
-
-interface QualityDistribution {
-  grade: string;
-  count: number;
-  percentage: number;
+interface EvaluationMetricsSummary {
+  total_commitments: number;
+  verified: number;
+  pending: number;
+  escalated: number;
+  failed: number;
+  completion_rate: number;
+  average_quality_score: number;
+  quality_distribution: Record<string, number>;
+  dimension_averages: {
+    specificity: number;
+    measurability: number;
+    time_boundedness: number;
+    achievability: number;
+  };
+  recent_commitments: Array<{
+    id: string;
+    task_detail: string;
+    created_at: string;
+    status: string;
+  }>;
 }
 
 export function CommitmentQualityDashboard() {
   const [loading, setLoading] = useState(true);
-  const [metrics, setMetrics] = useState<QualityMetrics>({
-    avgQuality: 0,
-    qualityChange: 0,
-    highQualityRate: 0,
-    highQualityChange: 0,
-    userSuccessRate: 0,
-    userSuccessChange: 0,
-  });
-  const [trends, setTrends] = useState<QualityTrend[]>([]);
-  const [agentScores, setAgentScores] = useState<AgentQuality[]>([]);
-  const [dimensions, setDimensions] = useState<DimensionScore[]>([]);
-  const [distribution, setDistribution] = useState<QualityDistribution[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [summary, setSummary] = useState<EvaluationMetricsSummary | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
+    void loadSummary();
   }, []);
 
-  const loadDashboardData = async () => {
+  const loadSummary = async () => {
     try {
       setLoading(true);
-      
-      // In production, fetch from /api/evaluation/dashboard
-      // For now, using mock data
-      const mockData = generateMockData();
-      
-      setMetrics(mockData.metrics);
-      setTrends(mockData.trends);
-      setAgentScores(mockData.agentScores);
-      setDimensions(mockData.dimensions);
-      setDistribution(mockData.distribution);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
+      setError(null);
+      const res = await api.get<EvaluationMetricsSummary>('/api/evaluation/metrics/summary');
+      if (res.error || res.data == null) {
+        setError(res.error?.message || 'Could not load evaluation metrics.');
+        setSummary(null);
+        return;
+      }
+      setSummary(res.data);
+    } catch (e) {
+      console.error(e);
+      setError('Could not load evaluation metrics.');
+      setSummary(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const generateMockData = () => {
-    // Mock data for demonstration
-    return {
-      metrics: {
-        avgQuality: 7.2,
-        qualityChange: 0.8,
-        highQualityRate: 68,
-        highQualityChange: 12,
-        userSuccessRate: 73,
-        userSuccessChange: 15,
-      },
-      trends: Array.from({ length: 30 }, (_, i) => ({
-        date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toLocaleDateString(),
-        quality: 6.0 + Math.random() * 2 + i * 0.05,
-      })),
-      agentScores: [
-        { agent: 'Echo Agent', score: 8.1, count: 145 },
-        { agent: 'Doyn Agent', score: 6.8, count: 287 },
-      ],
-      dimensions: [
-        { dimension: 'Specificity', score: 8.2, maxScore: 10 },
-        { dimension: 'Measurability', score: 6.8, maxScore: 10 },
-        { dimension: 'Achievability', score: 7.9, maxScore: 10 },
-        { dimension: 'Time-bound', score: 5.4, maxScore: 10 },
-        { dimension: 'Actionability', score: 7.1, maxScore: 10 },
-      ],
-      distribution: [
-        { grade: 'A', count: 42, percentage: 32 },
-        { grade: 'B', count: 58, percentage: 44 },
-        { grade: 'C', count: 24, percentage: 18 },
-        { grade: 'D', count: 6, percentage: 5 },
-        { grade: 'F', count: 2, percentage: 1 },
-      ],
-    };
   };
 
   if (loading) {
@@ -148,210 +79,158 @@ export function CommitmentQualityDashboard() {
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
           <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading quality metrics...</p>
+          <p className="text-sm text-muted-foreground">Loading commitment quality…</p>
         </div>
       </div>
     );
   }
 
-  // Chart configurations
-  const trendChartData = {
-    labels: trends.map((t) => t.date),
-    datasets: [
-      {
-        label: 'Commitment Quality',
-        data: trends.map((t) => t.quality),
-        borderColor: 'rgb(59, 130, 246)',
-        backgroundColor: 'rgba(59, 130, 246, 0.1)',
-        tension: 0.4,
-      },
-    ],
-  };
+  if (error || !summary) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6 text-center">
+        <p className="text-sm text-muted-foreground mb-3">{error || 'No data.'}</p>
+        <button
+          type="button"
+          onClick={() => void loadSummary()}
+          className="px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm hover:opacity-90"
+        >
+          Retry
+        </button>
+      </div>
+    );
+  }
 
-  const agentChartData = {
-    labels: agentScores.map((a) => a.agent),
+  const total = summary.total_commitments;
+  if (total === 0) {
+    return (
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h2 className="text-xl font-bold text-foreground mb-2">Commitment quality</h2>
+        <p className="text-sm text-muted-foreground">
+          No commitments yet. Create a goal and add commitments with Doyn to see completion and quality signals here.
+        </p>
+      </div>
+    );
+  }
+
+  const dist = summary.quality_distribution;
+  const grades = ['A', 'B', 'C', 'D', 'F'] as const;
+  const distLabels = grades.map((g) => `Grade ${g}`);
+  const distValues = grades.map((g) => dist[g] ?? 0);
+  const distColors = [
+    'rgba(34, 197, 94, 0.85)',
+    'rgba(59, 130, 246, 0.85)',
+    'rgba(234, 179, 8, 0.85)',
+    'rgba(249, 115, 22, 0.85)',
+    'rgba(239, 68, 68, 0.85)',
+  ];
+
+  const dim = summary.dimension_averages;
+  const dimEntries = [
+    ['Specificity', dim.specificity],
+    ['Measurability', dim.measurability],
+    ['Time-boundedness', dim.time_boundedness],
+    ['Achievability', dim.achievability],
+  ] as const;
+  const lowest = dimEntries.reduce((a, b) => (a[1] <= b[1] ? a : b));
+
+  const distributionChartData = {
+    labels: distLabels,
     datasets: [
       {
-        label: 'Average Quality Score',
-        data: agentScores.map((a) => a.score),
-        backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(234, 179, 8, 0.8)'],
+        data: distValues,
+        backgroundColor: distColors,
       },
     ],
   };
 
   const dimensionChartData = {
-    labels: dimensions.map((d) => d.dimension),
+    labels: dimEntries.map(([name]) => name),
     datasets: [
       {
-        label: 'Score',
-        data: dimensions.map((d) => d.score),
-        backgroundColor: 'rgba(59, 130, 246, 0.8)',
-      },
-    ],
-  };
-
-  const distributionChartData = {
-    labels: distribution.map((d) => `Grade ${d.grade}`),
-    datasets: [
-      {
-        data: distribution.map((d) => d.percentage),
-        backgroundColor: [
-          'rgba(34, 197, 94, 0.8)',
-          'rgba(59, 130, 246, 0.8)',
-          'rgba(234, 179, 8, 0.8)',
-          'rgba(249, 115, 22, 0.8)',
-          'rgba(239, 68, 68, 0.8)',
-        ],
+        label: 'Score (0–100)',
+        data: dimEntries.map(([, v]) => v),
+        backgroundColor: 'rgba(59, 130, 246, 0.75)',
       },
     ],
   };
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">
-          📊 Commitment Quality Dashboard
-        </h2>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Commitment quality</h2>
         <p className="text-sm text-muted-foreground">
-          Real-time quality metrics powered by Opik evaluation system
+          Based on your commitments (verified, pending, escalated, and outcomes). Heuristic scores from{' '}
+          <code className="text-xs bg-muted px-1 rounded">GET /api/evaluation/metrics/summary</code>.
         </p>
       </div>
 
-      {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <MetricCard
-          label="Avg Commitment Quality"
-          value={`${metrics.avgQuality.toFixed(1)}/10`}
-          change={metrics.qualityChange}
-          positive={metrics.qualityChange > 0}
+          label="Average quality score"
+          value={`${summary.average_quality_score}/100`}
+          sub="Weighted by outcome grades (A–F)"
+          positive={summary.average_quality_score >= 50}
         />
         <MetricCard
-          label="High-Quality Commitments"
-          value={`${metrics.highQualityRate}%`}
-          change={metrics.highQualityChange}
-          positive={metrics.highQualityChange > 0}
+          label="Completion rate"
+          value={`${summary.completion_rate}%`}
+          sub="Verified vs terminal outcomes"
+          positive={summary.completion_rate >= 50}
         />
         <MetricCard
-          label="User Success Rate"
-          value={`${metrics.userSuccessRate}%`}
-          change={metrics.userSuccessChange}
-          positive={metrics.userSuccessChange > 0}
+          label="Pipeline"
+          value={`${summary.verified} done · ${summary.pending} pending`}
+          sub={`${summary.escalated} escalated · ${summary.failed} failed/missed`}
+          positive={summary.pending <= summary.verified}
         />
       </div>
 
-      {/* Quality Trends */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          Quality Trends (Last 30 Days)
-        </h3>
-        <div className="h-64">
-          <Line
-            data={trendChartData}
-            options={{
-              responsive: true,
-              maintainAspectRatio: false,
-              scales: {
-                y: {
-                  min: 0,
-                  max: 10,
-                },
-              },
-            }}
-          />
-        </div>
-      </div>
-
-      {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Agent Quality Comparison */}
         <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Quality by Agent
-          </h3>
-          <div className="h-64">
-            <Bar
-              data={agentChartData}
-              options={{
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                  y: {
-                    min: 0,
-                    max: 10,
-                  },
-                },
-              }}
-            />
-          </div>
-          <div className="mt-4 space-y-2">
-            {agentScores.map((agent) => (
-              <div key={agent.agent} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">{agent.agent}</span>
-                <span className="text-foreground font-medium">
-                  {agent.score.toFixed(1)}/10 ({agent.count} commitments)
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Quality Distribution */}
-        <div className="bg-card border border-border rounded-2xl p-6">
-          <h3 className="text-lg font-semibold text-foreground mb-4">
-            Grade Distribution
-          </h3>
-          <div className="h-64">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Outcome distribution</h3>
+          <div className="h-64 flex justify-center">
             <Doughnut
               data={distributionChartData}
               options={{
                 responsive: true,
                 maintainAspectRatio: false,
+                plugins: { legend: { position: 'bottom' } },
               }}
             />
           </div>
-          <div className="mt-4 space-y-2">
-            {distribution.map((grade) => (
-              <div key={grade.grade} className="flex items-center justify-between text-sm">
-                <span className="text-muted-foreground">Grade {grade.grade}</span>
-                <span className="text-foreground font-medium">
-                  {grade.count} ({grade.percentage}%)
-                </span>
-              </div>
-            ))}
+        </div>
+
+        <div className="bg-card border border-border rounded-2xl p-6">
+          <h3 className="text-lg font-semibold text-foreground mb-4">Dimension signals (0–100)</h3>
+          <div className="h-64">
+            <Bar
+              data={dimensionChartData}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                  y: { min: 0, max: 100 },
+                },
+              }}
+            />
           </div>
         </div>
       </div>
 
-      {/* Dimension Breakdown */}
-      <div className="bg-card border border-border rounded-2xl p-6">
-        <h3 className="text-lg font-semibold text-foreground mb-4">
-          Quality Dimensions Breakdown
-        </h3>
-        <div className="space-y-4">
-          {dimensions.map((dim) => (
-            <div key={dim.dimension}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-medium text-foreground">{dim.dimension}</span>
-                <span className="text-sm text-muted-foreground">
-                  {dim.score.toFixed(1)}/{dim.maxScore}
-                </span>
-              </div>
-              <div className="h-2 bg-muted rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-primary transition-all duration-300"
-                  style={{ width: `${(dim.score / dim.maxScore) * 100}%` }}
-                />
-              </div>
-            </div>
+      <div className="rounded-2xl border border-border bg-card p-6">
+        <h3 className="text-lg font-semibold text-foreground mb-2">Focus area</h3>
+        <p className="text-sm text-muted-foreground mb-4">
+          Lowest signal: <span className="font-medium text-foreground">{lowest[0]}</span> ({Math.round(lowest[1])}/100).
+          Tighten commitments in that dimension on your next Doyn negotiation.
+        </p>
+        <ul className="text-sm text-muted-foreground space-y-2">
+          {summary.recent_commitments.slice(0, 5).map((c) => (
+            <li key={c.id} className="border-b border-border/60 pb-2 last:border-0">
+              <span className="text-foreground font-medium">{c.status}</span> — {c.task_detail.slice(0, 120)}
+              {c.task_detail.length > 120 ? '…' : ''}
+            </li>
           ))}
-        </div>
-        <div className="mt-4 p-4 bg-amber-500/10 border border-amber-500/20 rounded-lg">
-          <p className="text-sm text-amber-600 dark:text-amber-400">
-            <strong>Improvement Opportunity:</strong> Time-boundedness scores are low (5.4/10).
-            Consider prompting users for more specific deadlines.
-          </p>
-        </div>
+        </ul>
       </div>
     </div>
   );
@@ -360,38 +239,27 @@ export function CommitmentQualityDashboard() {
 interface MetricCardProps {
   label: string;
   value: string;
-  change: number;
+  sub: string;
   positive: boolean;
 }
 
-function MetricCard({ label, value, change, positive }: MetricCardProps) {
+function MetricCard({ label, value, sub, positive }: MetricCardProps) {
   return (
     <div className="bg-card border border-border rounded-2xl p-6">
       <div className="flex items-start justify-between">
         <div>
           <p className="text-sm text-muted-foreground mb-1">{label}</p>
-          <p className="text-3xl font-bold text-foreground">{value}</p>
+          <p className="text-2xl font-bold text-foreground">{value}</p>
+          <p className="text-xs text-muted-foreground mt-2">{sub}</p>
         </div>
         <div
           className={`flex items-center gap-1 text-sm font-medium ${
-            positive ? 'text-green-600' : 'text-red-600'
+            positive ? 'text-green-600' : 'text-amber-600'
           }`}
         >
-          {positive ? <MdTrendingUp size={20} /> : <MdTrendingDown size={20} />}
-          <span>{positive ? '+' : ''}{change.toFixed(1)}</span>
-        </div>
-      </div>
-      <div className="mt-4 pt-4 border-t border-border">
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          {positive ? (
-            <MdCheckCircle className="text-green-600" size={16} />
-          ) : (
-            <MdWarning className="text-amber-600" size={16} />
-          )}
-          <span>vs. last 30 days</span>
+          {positive ? <MdTrendingUp size={22} /> : <MdTrendingDown size={22} />}
         </div>
       </div>
     </div>
   );
 }
-
