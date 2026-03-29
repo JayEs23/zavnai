@@ -27,6 +27,23 @@ declare module "next-auth/jwt" {
   }
 }
 
+/**
+ * Base URL for FastAPI (login, OAuth exchange). Used only on the server inside
+ * Route Handlers — not exposed to the browser.
+ *
+ * Prefer BACKEND_API_URL or API_URL on Vercel so auth works even when
+ * NEXT_PUBLIC_API_URL was missing/wrong at build time (otherwise this falls back
+ * to localhost and production login always fails).
+ */
+function backendApiBaseUrl(): string {
+  const raw =
+    process.env.BACKEND_API_URL ||
+    process.env.API_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    "http://localhost:8000";
+  return raw.replace(/\/$/, "");
+}
+
 export const authOptions: NextAuthOptions = {
   providers: [
     Credentials({
@@ -41,10 +58,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         try {
-          // Get API URL and ensure no trailing slash
-          const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
-
-          const res = await fetch(`${apiUrl}/api/auth/login`, {
+          const res = await fetch(`${backendApiBaseUrl()}/api/auth/login`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -109,8 +123,7 @@ export const authOptions: NextAuthOptions = {
             return false;
           }
 
-          // Get API URL and ensure no trailing slash
-          const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000").replace(/\/$/, "");
+          const apiUrl = backendApiBaseUrl();
 
           // Send OAuth data to backend
           const providerData = {
