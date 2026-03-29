@@ -89,12 +89,15 @@ class DoynApi {
    */
   async sendMessage(
     message: string,
-    context?: Record<string, unknown>
+    context?: Record<string, unknown>,
+    options?: { history?: { role: 'user' | 'doyn'; content: string }[]; thread_id?: string }
   ): Promise<DoynMessage> {
     try {
       const response = await axiosInstance.post('/api/agents/doyn/chat', {
         message,
         context,
+        history: options?.history,
+        thread_id: options?.thread_id,
       });
       return response.data;
     } catch (error) {

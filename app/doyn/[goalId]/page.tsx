@@ -243,6 +243,11 @@ export default function DoynGoalPage() {
       timestamp: new Date().toISOString(),
     };
 
+    const historyPayload = messages
+      .filter((m) => m.role === 'user' || m.role === 'doyn')
+      .slice(-24)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -250,6 +255,7 @@ export default function DoynGoalPage() {
     try {
       const response = await api.post<DoynMessage>('/api/agents/doyn/chat', {
         message: input,
+        history: historyPayload,
         context: {
           goal_id: goalId,
           goal_title: goal.title,

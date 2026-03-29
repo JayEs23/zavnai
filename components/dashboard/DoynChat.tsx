@@ -71,12 +71,17 @@ export function DoynChat({ onCommitmentUpdate }: DoynChatProps) {
       timestamp: new Date().toISOString(),
     };
 
+    const historyPayload = messages
+      .filter((m) => m.role === 'user' || m.role === 'doyn')
+      .slice(-24)
+      .map((m) => ({ role: m.role, content: m.content }));
+
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
 
     try {
-      const response = await doynApi.sendMessage(input);
+      const response = await doynApi.sendMessage(input, undefined, { history: historyPayload });
       setMessages((prev) => [...prev, response]);
 
       // Check if Doyn created/updated a commitment
