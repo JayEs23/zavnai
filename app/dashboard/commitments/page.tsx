@@ -8,7 +8,15 @@ import AppNavbar from '@/components/AppNavbar';
 import { CommitmentOffCanvas } from '@/components/dashboard/CommitmentOffCanvas';
 import { CreateCommitmentGoalSelector } from '@/components/dashboard/CreateCommitmentGoalSelector';
 import { api } from '@/lib/api';
-import { MdSchedule, MdChevronRight, MdArrowBack, MdCheckCircle } from 'react-icons/md';
+import { echoVoiceReflectionHref, echoJournalReflectPath } from '@/lib/echoCommitmentLinks';
+import { ensureCommitmentFlowStarted, trackProductEvent } from '@/lib/productAnalytics';
+import {
+  MdSchedule,
+  MdChevronRight,
+  MdArrowBack,
+  MdCheckCircle,
+  MdRecordVoiceOver,
+} from 'react-icons/md';
 
 function hoursLabel(dueAt: string, nowMs: number): number {
   return (new Date(dueAt).getTime() - nowMs) / (1000 * 60 * 60);
@@ -193,6 +201,10 @@ function CommitmentsInner() {
     setDrawerCommitment(null);
   };
 
+  useEffect(() => {
+    if (!loading) ensureCommitmentFlowStarted();
+  }, [loading]);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
@@ -223,7 +235,9 @@ function CommitmentsInner() {
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Active commitments</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Tap a row to open the side panel—verify, log an outcome, or jump to Echo or Doyn.
+              Use <span className="font-medium text-foreground/90">Voice</span> for Echo with this
+              commitment loaded, <span className="font-medium text-foreground/90">Journal</span> for
+              the written reflect page, or tap the row to open the side panel.
             </p>
           </div>
           <CreateCommitmentGoalSelector goals={goals} variant="button" />
@@ -343,12 +357,12 @@ function CommitmentsInner() {
                     c.task_detail.charAt(0).toUpperCase() + c.task_detail.slice(1);
                   return (
                     <li key={c.id}>
-                      <button
-                        type="button"
-                        onClick={() => openDrawer(c)}
-                        className="w-full flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-border/80 bg-white/90 dark:bg-card/95 backdrop-blur-[2px] px-4 py-3 text-left hover:border-primary/30 hover:bg-primary/5 transition-colors"
-                      >
-                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                      <div className="flex flex-col gap-3 rounded-xl border border-border/80 bg-white/90 dark:bg-card/95 backdrop-blur-[2px] p-3 sm:p-4 sm:flex-row sm:items-start sm:justify-between hover:border-primary/30 hover:bg-primary/5 transition-colors">
+                        <button
+                          type="button"
+                          onClick={() => openDrawer(c)}
+                          className="flex flex-1 items-start gap-3 min-w-0 text-left rounded-lg -m-1 p-1 sm:p-0 sm:m-0"
+                        >
                           <MdSchedule
                             className={`shrink-0 mt-0.5 ${
                               overdue
@@ -360,7 +374,7 @@ function CommitmentsInner() {
                             size={20}
                             aria-hidden
                           />
-                          <div className="min-w-0">
+                          <div className="min-w-0 flex-1">
                             <p className="text-xs text-muted-foreground truncate max-w-[14rem] sm:max-w-[28rem]">
                               {c.goal_title}
                             </p>
@@ -368,13 +382,42 @@ function CommitmentsInner() {
                               {title}
                             </p>
                             <p className="text-xs text-muted-foreground tabular-nums mt-0.5">{rel}</p>
+                            <span className="inline-flex items-center gap-1 text-sm font-medium text-primary mt-2 sm:hidden">
+                              Open panel
+                              <MdChevronRight size={18} />
+                            </span>
                           </div>
+                        </button>
+                        <div className="flex flex-wrap gap-2 shrink-0 sm:flex-col sm:items-stretch sm:min-w-[8.5rem] pl-8 sm:pl-0">
+                          <Link
+                            href={echoVoiceReflectionHref(c.id)}
+                            onClick={() =>
+                              trackProductEvent('commitment.list_voice_click', { commitmentId: c.id })
+                            }
+                            className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors"
+                          >
+                            <MdRecordVoiceOver size={16} aria-hidden />
+                            Voice
+                          </Link>
+                          <Link
+                            href={echoJournalReflectPath(c.id)}
+                            onClick={() =>
+                              trackProductEvent('commitment.list_journal_click', { commitmentId: c.id })
+                            }
+                            className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/80 transition-colors"
+                          >
+                            Journal
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => openDrawer(c)}
+                            className="hidden sm:inline-flex items-center justify-center gap-1 px-3 py-2 rounded-lg border border-primary/30 text-xs font-medium text-primary hover:bg-primary/5 transition-colors"
+                          >
+                            Open panel
+                            <MdChevronRight size={18} aria-hidden />
+                          </button>
                         </div>
-                        <span className="inline-flex items-center gap-1 text-sm font-medium text-primary shrink-0 sm:self-center">
-                          Open
-                          <MdChevronRight size={20} />
-                        </span>
-                      </button>
+                      </div>
                     </li>
                   );
                 })}

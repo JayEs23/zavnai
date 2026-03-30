@@ -22,6 +22,7 @@ import type { FunctionDeclaration, Schema, Session } from '@google/genai';
 import { MdMic, MdMicOff, MdSend, MdVolumeUp, MdKeyboard } from 'react-icons/md';
 import { useSession } from 'next-auth/react';
 import { api } from '@/lib/api';
+import { trackCommitmentOutcomeSaved } from '@/lib/productAnalytics';
 import { onboardingApi, EchoVoiceConfig } from '@/services/onboardingApi';
 import { coreLoopApi } from '@/services/coreLoopApi';
 import { createBlob, decode, decodeAudioData } from '@/services/audio-helpers';
@@ -578,6 +579,7 @@ export default function VoiceOnboardingSession({
                       );
                       if (saveResult.success) {
                         reflectionOutcomeSavedRef.current = true;
+                        trackCommitmentOutcomeSaved(commitmentId, 'voice_reflection');
                         setStatusText('Reflection saved.');
                         setReflectionSaveStatus('saved');
                       } else {

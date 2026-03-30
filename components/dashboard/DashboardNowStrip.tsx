@@ -3,7 +3,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import Link from 'next/link';
 import { CommitmentSummary } from '@/services/goalsApi';
-import { MdSchedule, MdArrowForward } from 'react-icons/md';
+import { MdSchedule, MdArrowForward, MdRecordVoiceOver } from 'react-icons/md';
+import { echoVoiceReflectionHref } from '@/lib/echoCommitmentLinks';
+import { trackProductEvent } from '@/lib/productAnalytics';
 
 function hoursUntil(dueAt: string, nowMs: number): number {
   return (new Date(dueAt).getTime() - nowMs) / (1000 * 60 * 60);
@@ -123,7 +125,8 @@ export function DashboardNowStrip({ commitments }: DashboardNowStripProps) {
             Now
           </h2>
           <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">
-            What deserves your attention next—check in with Echo or open the card below.
+            Voice check-in uses Echo with this commitment already loaded—no goal picker. Journal is the
+            written reflect flow; open panel for verify and Doyn.
           </p>
         </div>
       </div>
@@ -169,20 +172,38 @@ export function DashboardNowStrip({ commitments }: DashboardNowStripProps) {
                     <p className="text-xs text-muted-foreground mt-0.5 tabular-nums">{rel}</p>
                   </div>
                 </div>
-                <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-end sm:shrink-0 sm:min-w-[11rem] pl-7 sm:pl-0">
+                <div className="flex flex-col gap-2 sm:min-w-[12.5rem] pl-7 sm:pl-0">
                   <Link
-                    href={`/echo/reflect/${c.id}`}
+                    href={echoVoiceReflectionHref(c.id)}
+                    onClick={() =>
+                      trackProductEvent('commitment.now_voice_click', { commitmentId: c.id })
+                    }
                     className="inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-sm shadow-emerald-600/15"
                   >
-                    Check in
+                    <MdRecordVoiceOver size={16} aria-hidden />
+                    Voice check-in
                     <MdArrowForward size={16} aria-hidden />
                   </Link>
-                  <Link
-                    href={`/dashboard/commitments?open=${c.id}`}
-                    className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/80 transition-colors text-center"
-                  >
-                    Open panel
-                  </Link>
+                  <div className="flex flex-col sm:flex-row gap-2 md:flex-col">
+                    <Link
+                      href={`/echo/reflect/${c.id}`}
+                      onClick={() =>
+                        trackProductEvent('commitment.now_journal_click', { commitmentId: c.id })
+                      }
+                      className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/80 transition-colors text-center"
+                    >
+                      Journal
+                    </Link>
+                    <Link
+                      href={`/dashboard/commitments?open=${c.id}`}
+                      onClick={() =>
+                        trackProductEvent('commitment.now_panel_click', { commitmentId: c.id })
+                      }
+                      className="inline-flex items-center justify-center px-3 py-2 rounded-lg border border-border text-xs font-medium text-foreground hover:bg-muted/80 transition-colors text-center"
+                    >
+                      Open panel
+                    </Link>
+                  </div>
                 </div>
               </div>
             </li>

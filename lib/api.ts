@@ -94,12 +94,36 @@ async function request<T>(
       );
       window.location.assign(`/login?callbackUrl=${returnTo}`);
     }
-    const errObj = responseData && typeof responseData === "object" ? responseData as { detail?: string | unknown[]; message?: string } : {};
-    let errMessage = errObj.message;
+    const errObj =
+      responseData && typeof responseData === "object"
+        ? (responseData as {
+            detail?: string | unknown[] | { message?: string; reason?: string };
+            message?: string;
+            error?: {
+              message?: string;
+              details?: { reason?: string };
+            };
+          })
+        : {};
+
+    // Prefer more user-facing messages from common backend envelopes.
+    let errMessage =
+      errObj.error?.details?.reason ||
+      errObj.error?.message ||
+      errObj.message;
+
     if (!errMessage && errObj.detail !== undefined) {
       errMessage = Array.isArray(errObj.detail)
-        ? errObj.detail.map((e: unknown) => typeof e === 'object' && e && 'msg' in e ? (e as { msg: string }).msg : String(e)).join('; ')
-        : String(errObj.detail);
+        ? errObj.detail
+            .map((e: unknown) =>
+              typeof e === "object" && e && "msg" in e ? (e as { msg: string }).msg : String(e)
+            )
+            .join("; ")
+        : typeof errObj.detail === "object" && errObj.detail
+          ? ((errObj.detail as { reason?: string; message?: string }).reason ||
+            (errObj.detail as { reason?: string; message?: string }).message ||
+            String(errObj.detail))
+          : String(errObj.detail);
     }
     return {
       error: {

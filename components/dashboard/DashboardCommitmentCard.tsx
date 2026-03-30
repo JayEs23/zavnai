@@ -4,6 +4,11 @@ import React, { useState, useMemo, useRef, useEffect, useId } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { CommitmentSummary } from '@/services/goalsApi';
+import {
+  trackProductEvent,
+  trackCommitmentOutcomeSaved,
+  trackModalAbandoned,
+} from '@/lib/productAnalytics';
 import { CommitmentVerification } from '@/components/core-loop/CommitmentVerification';
 import { LogCommitmentOutcomeModal } from '@/components/core-loop/LogCommitmentOutcomeModal';
 import {
@@ -309,7 +314,10 @@ export function DashboardCommitmentCard({
         <div className="mt-auto pt-4 flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">
           <button
             type="button"
-            onClick={() => setStatusSheetOpen(true)}
+            onClick={() => {
+              trackProductEvent('commitment.status_sheet_open', { commitmentId: commitment.id });
+              setStatusSheetOpen(true);
+            }}
             aria-haspopup="dialog"
             aria-expanded={statusSheetOpen}
             aria-controls={statusDialogId}
@@ -343,6 +351,10 @@ export function DashboardCommitmentCard({
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
                   onClick={() => {
                     setMoreMenuOpen(false);
+                    trackProductEvent('commitment.verify_modal_open', {
+                      commitmentId: commitment.id,
+                      surface: 'more_menu',
+                    });
                     setVerifyOpen(true);
                   }}
                 >
@@ -355,6 +367,10 @@ export function DashboardCommitmentCard({
                   className="flex w-full items-center gap-2 px-3 py-2.5 text-left text-sm hover:bg-muted transition-colors"
                   onClick={() => {
                     setMoreMenuOpen(false);
+                    trackProductEvent('commitment.outcome_modal_open', {
+                      commitmentId: commitment.id,
+                      surface: 'more_menu',
+                    });
                     setOutcomeOpen(true);
                   }}
                 >
@@ -431,6 +447,10 @@ export function DashboardCommitmentCard({
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 transition-colors shadow-md shadow-emerald-600/15 dark:shadow-emerald-900/25"
                 onClick={() => {
                   setStatusSheetOpen(false);
+                  trackProductEvent('commitment.verify_modal_open', {
+                    commitmentId: commitment.id,
+                    surface: 'status_sheet',
+                  });
                   setVerifyOpen(true);
                 }}
               >
@@ -442,6 +462,10 @@ export function DashboardCommitmentCard({
                 className="inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-border bg-background text-foreground text-sm font-medium hover:bg-muted transition-colors"
                 onClick={() => {
                   setStatusSheetOpen(false);
+                  trackProductEvent('commitment.outcome_modal_open', {
+                    commitmentId: commitment.id,
+                    surface: 'status_sheet',
+                  });
                   setOutcomeOpen(true);
                 }}
               >
@@ -475,11 +499,16 @@ export function DashboardCommitmentCard({
         <CommitmentVerification
           commitmentId={commitment.id}
           commitmentTask={commitment.task_detail}
+          proofTier={commitment.proof_tier}
           onVerified={() => {
             setVerifyOpen(false);
+            trackCommitmentOutcomeSaved(commitment.id, 'verify');
             onUpdated();
           }}
-          onCancel={() => setVerifyOpen(false)}
+          onCancel={() => {
+            trackModalAbandoned('verify', commitment.id);
+            setVerifyOpen(false);
+          }}
         />
       )}
 
@@ -488,7 +517,10 @@ export function DashboardCommitmentCard({
           commitmentId={commitment.id}
           goalId={commitment.goal_id}
           taskDetail={commitment.task_detail}
-          onSuccess={onUpdated}
+          onSuccess={() => {
+            trackCommitmentOutcomeSaved(commitment.id, 'outcome_form');
+            onUpdated();
+          }}
           onClose={() => setOutcomeOpen(false)}
         />
       )}

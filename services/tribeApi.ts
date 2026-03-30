@@ -68,6 +68,17 @@ export interface TribeMemberWithHistory extends TribeMember {
   }[];
 }
 
+function toFriendlyTribeError(message: string): string {
+  const normalized = message.toLowerCase();
+  if (
+    normalized.includes('already exists') &&
+    (normalized.includes('tribe member') || normalized.includes('contact'))
+  ) {
+    return 'This contact is already in your Tribe. Try a different contact or remove the existing member first.';
+  }
+  return message;
+}
+
 // ============================================================================
 // API METHODS — all paths hit /api/tribe (backend prefix="/api" + router="/tribe")
 // ============================================================================
@@ -80,13 +91,13 @@ export const tribeApi = {
       const err = response.error;
       const errMsg =
         err?.message ||
-        (err?.data && typeof err.data === 'object' && 'detail' in err
+        (err?.data && typeof err.data === 'object' && 'detail' in err.data
           ? String((err.data as { detail?: unknown }).detail)
           : null) ||
         'Failed to load tribe members';
       const errStatus = err?.status ?? 'unknown';
       console.warn(`[Tribe] ${errMsg} (status: ${errStatus})`);
-      return [];
+      throw new Error(errMsg);
     }
     return Array.isArray(response.data) ? response.data : [];
   },
@@ -95,7 +106,8 @@ export const tribeApi = {
   addTribeMember: async (data: CreateTribeMemberRequest): Promise<TribeMember> => {
     const response = await api.post<TribeMember>('/api/tribe', data);
     if (response.error || !response.data) {
-      throw new Error(response.error?.message || 'Failed to add tribe member');
+      const message = response.error?.message || 'Failed to add tribe member';
+      throw new Error(toFriendlyTribeError(message));
     }
     return response.data;
   },

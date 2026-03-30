@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MdClose } from 'react-icons/md';
 import { CommitmentSummary } from '@/services/goalsApi';
 import { DashboardCommitmentCard } from '@/components/dashboard/DashboardCommitmentCard';
+import { trackProductEvent } from '@/lib/productAnalytics';
 
 interface CommitmentOffCanvasProps {
   open: boolean;
@@ -44,6 +45,12 @@ export function CommitmentOffCanvas({
       };
     }
   }, [open]);
+
+  useEffect(() => {
+    if (open && commitment) {
+      trackProductEvent('commitment.panel_open', { commitmentId: commitment.id });
+    }
+  }, [open, commitment?.id]);
 
   return (
     <AnimatePresence onExitComplete={onExitComplete}>

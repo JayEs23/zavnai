@@ -70,6 +70,9 @@ export interface Commitment {
   verified_at?: string;
 }
 
+/** Journal proof bar: light (short attestation) → standard → evidence (staked goals). */
+export type ProofTier = 'light' | 'standard' | 'evidence';
+
 export interface CommitmentSummary {
   id: string;
   goal_id: string;
@@ -80,6 +83,7 @@ export interface CommitmentSummary {
   escalation_level: number;
   verification_score?: number;
   created_at: string;
+  proof_tier?: ProofTier;
 }
 
 export interface CreateGoalRequest {

@@ -19,6 +19,7 @@ import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
 import { DashboardNowStrip } from '@/components/dashboard/DashboardNowStrip';
 import { CreateCommitmentGoalSelector } from '@/components/dashboard/CreateCommitmentGoalSelector';
+import { ensureCommitmentFlowStarted } from '@/lib/productAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface GrowthMetrics {
@@ -120,6 +121,10 @@ export default function DashboardPage() {
     if (hour < 18) return 'Good afternoon';
     return 'Good evening';
   };
+
+  useEffect(() => {
+    if (!loading) ensureCommitmentFlowStarted();
+  }, [loading]);
 
   if (loading) {
     return (
