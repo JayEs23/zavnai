@@ -41,15 +41,14 @@ describe('Tribe API', () => {
       expect(result).toEqual(mockMembers);
     });
 
-    it('should return empty array when fetch fails', async () => {
+    it('should throw when fetch fails', async () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 500,
         json: async () => ({}),
       });
 
-      const result = await tribeApi.getTribeMembers();
-      expect(result).toEqual([]);
+      await expect(tribeApi.getTribeMembers()).rejects.toThrow('An error occurred');
     });
   });
 
@@ -85,7 +84,7 @@ describe('Tribe API', () => {
       expect(result).toEqual(mockResponse);
     });
 
-    it('should handle duplicate member error', async () => {
+    it('should map duplicate member error to a friendly message', async () => {
       const memberData: CreateTribeMemberRequest = {
         name: 'Existing Member',
         contact_info: '+11234567890',
@@ -96,10 +95,56 @@ describe('Tribe API', () => {
       (fetch as jest.Mock).mockResolvedValueOnce({
         ok: false,
         status: 409,
-        json: async () => ({ detail: 'Member already exists' }),
+        json: async () => ({
+          error: {
+            message: 'Tribe member already exists: A member with contact test@example.com already exists',
+            details: {
+              reason: 'A member with contact test@example.com already exists',
+            },
+          },
+        }),
       });
 
-      await expect(tribeApi.addTribeMember(memberData)).rejects.toThrow();
+      await expect(tribeApi.addTribeMember(memberData)).rejects.toThrow(
+        'This contact is already in your Tribe. Try a different contact or remove the existing member first.'
+      );
+    });
+  });
+
+  describe('requestVerification', () => {
+    it('should request tribe verification successfully', async () => {
+      const commitmentId = 'commitment-123';
+      const memberIds = ['member-1', 'member-2'];
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ success: true, requests_sent: 2, total_members: 2 }),
+      });
+
+      const result = await tribeApi.requestVerification(commitmentId, memberIds);
+
+      expect(fetch).toHaveBeenCalledWith(
+        expect.stringContaining(`/api/tribe/request-verification/${commitmentId}`),
+        expect.objectContaining({
+          method: 'POST',
+          body: JSON.stringify({ tribe_member_ids: memberIds }),
+        })
+      );
+      expect(result.success).toBe(true);
+    });
+
+    it('should map no verified members error to a friendly message', async () => {
+      const commitmentId = 'commitment-123';
+
+      (fetch as jest.Mock).mockResolvedValueOnce({
+        ok: false,
+        status: 400,
+        json: async () => ({ detail: 'No tribe members available' }),
+      });
+
+      await expect(tribeApi.requestVerification(commitmentId)).rejects.toThrow(
+        'No verified Tribe members are available yet. Verify at least one member, then try again.'
+      );
     });
   });
 

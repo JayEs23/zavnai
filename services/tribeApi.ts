@@ -76,6 +76,15 @@ function toFriendlyTribeError(message: string): string {
   ) {
     return 'This contact is already in your Tribe. Try a different contact or remove the existing member first.';
   }
+  if (normalized.includes('no tribe members available')) {
+    return 'No verified Tribe members are available yet. Verify at least one member, then try again.';
+  }
+  if (normalized.includes('commitment not found')) {
+    return 'We could not find that commitment. Refresh and try again.';
+  }
+  if (normalized.includes('forbidden') || normalized.includes('not authorized')) {
+    return 'You do not have permission to request verification for this commitment.';
+  }
   return message;
 }
 
@@ -170,13 +179,14 @@ export const tribeApi = {
   requestVerification: async (
     commitmentId: string,
     tribeMemberIds?: string[]
-  ): Promise<{ success: boolean; message: string }> => {
+  ): Promise<{ success: boolean; message?: string; requests_sent?: number; total_members?: number }> => {
     const response = await api.post<{ success: boolean; message: string }>(
       `/api/tribe/request-verification/${commitmentId}`,
       { tribe_member_ids: tribeMemberIds }
     );
     if (response.error || !response.data) {
-      throw new Error(response.error?.message || 'Failed to request verification');
+      const message = response.error?.message || 'Failed to request verification';
+      throw new Error(toFriendlyTribeError(message));
     }
     return response.data;
   },
