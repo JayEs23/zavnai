@@ -55,7 +55,7 @@ export default function TribePage() {
     if (filter === 'all') return true;
     if (filter === 'verified') return member.vetting_status === 'verified';
     if (filter === 'pending')
-      return ['pending', 'invited', 'assessing'].includes(member.vetting_status);
+      return ['pending', 'invited', 'assessing', 'failed'].includes(member.vetting_status);
     return true;
   });
 
@@ -84,7 +84,7 @@ export default function TribePage() {
 
   const verifiedCount = members.filter((m) => m.vetting_status === 'verified').length;
   const pendingCount = members.filter((m) =>
-    ['pending', 'invited', 'assessing'].includes(m.vetting_status)
+    ['pending', 'invited', 'assessing', 'failed'].includes(m.vetting_status)
   ).length;
   const highTrustCount = members.filter(
     (m) => m.vetting_score != null && m.vetting_score >= 70
@@ -361,6 +361,12 @@ function MemberCard({ member, index, onRemove, onResendVetting }: MemberCardProp
       label: 'AI Assessing',
       icon: MdShield,
     },
+    failed: {
+      color: 'text-red-500',
+      bg: 'bg-red-500/10',
+      label: 'Vetting Failed',
+      icon: MdError,
+    },
     verified: {
       color: 'text-emerald-500',
       bg: 'bg-emerald-500/10',
@@ -553,7 +559,7 @@ function MemberCard({ member, index, onRemove, onResendVetting }: MemberCardProp
 
         {/* ── Actions ─────────────────────────────────────── */}
         <div className="flex gap-2 pt-4 border-t border-border-subtle">
-          {['pending', 'invited', 'assessing'].includes(member.vetting_status) && (
+          {['pending', 'invited', 'assessing', 'failed'].includes(member.vetting_status) && (
             <button
               onClick={() => onResendVetting(member.id, member.name)}
               className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-semibold text-indigo-500 bg-indigo-500/5 hover:bg-indigo-500/10 rounded-xl transition-colors"

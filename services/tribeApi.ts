@@ -23,7 +23,7 @@ export interface TribeMember {
   relationship_tier?: 'inner_circle' | 'mentor' | 'professional';
 
   // Vetting Status
-  vetting_status: 'pending' | 'invited' | 'assessing' | 'verified' | 'rejected';
+  vetting_status: 'pending' | 'invited' | 'assessing' | 'verified' | 'rejected' | 'failed';
   vetting_score?: number; // 0-100 (AI-determined trust score)
   trust_level?: 'high' | 'medium' | 'low' | 'unverified';
   reliability_notes?: string;
