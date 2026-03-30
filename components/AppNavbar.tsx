@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation';
 import { signOut } from 'next-auth/react';
 import {
   MdDashboard,
+  MdAssignment,
   MdRecordVoiceOver,
   MdFlag,
   MdPeople,
@@ -58,7 +59,7 @@ export default function AppNavbar() {
 
   return (
     <header className="bg-white border-b border-border shadow-sm sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div className="w-full max-w-[min(100%,96rem)] mx-auto px-2 sm:px-3 lg:px-4 py-3 flex items-center justify-between">
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5 flex-shrink-0">
           <Image src="/zavn-icon.png" alt="ZAVN" width={32} height={32} />
@@ -68,7 +69,10 @@ export default function AppNavbar() {
         {/* Nav Links */}
         <nav className="flex items-center gap-1">
           {navItems.map(({ href, label, icon: Icon }) => {
-            const isActive = pathname === href || pathname.startsWith(href + '/');
+            const isActive =
+              href === '/dashboard'
+                ? pathname === '/dashboard' || pathname === '/dashboard/'
+                : pathname === href || pathname.startsWith(href + '/');
             return (
               <Link
                 key={href}
