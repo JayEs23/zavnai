@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { goalsApi, type Goal, type Commitment } from '@/services/goalsApi';
+import { thriveApi, type CanCreateGoal } from '@/services/thriveApi';
 import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import AppNavbar from '@/components/AppNavbar';
@@ -12,9 +13,27 @@ export default function GoalsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'completed' | 'archived'>('active');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [goalGate, setGoalGate] = useState<CanCreateGoal | null>(null);
 
   useEffect(() => {
     loadGoals();
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const gate = await thriveApi.canCreateGoal();
+        if (!cancelled) setGoalGate(gate);
+      } catch {
+        if (!cancelled) {
+          setGoalGate({ allowed: true, reason: null, thrive_score: null });
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const loadGoals = async () => {
@@ -27,6 +46,15 @@ export default function GoalsPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const goalCreationBlocked = Boolean(goalGate && !goalGate.allowed);
+  const openCreateModal = () => {
+    if (goalCreationBlocked) {
+      toast.error(goalGate?.reason || 'Thrive suggests pausing new goals for now. Check your Thrive score.');
+      return;
+    }
+    setShowCreateModal(true);
   };
 
   const filteredGoals = goals.filter((goal) => {
@@ -78,6 +106,20 @@ export default function GoalsPage() {
   return (
     <div className="min-h-screen bg-background">
       <AppNavbar />
+      {goalCreationBlocked && goalGate?.reason && (
+        <div className="max-w-7xl mx-auto px-6 pt-6">
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950 dark:border-amber-900/50 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-medium">Thrive recommends a pause on new goals</p>
+            <p className="mt-1 opacity-90">{goalGate.reason}</p>
+            <Link
+              href="/thrive"
+              className="mt-2 inline-block font-medium text-amber-900 underline underline-offset-2 hover:no-underline dark:text-amber-50"
+            >
+              View Thrive score and next steps
+            </Link>
+          </div>
+        </div>
+      )}
       {/* Header */}
       <div className="border-b border-border-subtle bg-card-bg">
         <div className="max-w-7xl mx-auto px-6 py-8">
@@ -89,8 +131,11 @@ export default function GoalsPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors"
+              type="button"
+              onClick={openCreateModal}
+              disabled={goalCreationBlocked}
+              title={goalCreationBlocked ? goalGate?.reason ?? undefined : undefined}
+              className="flex items-center gap-2 px-4 py-2 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <MdAdd size={20} />
               Create Goal
@@ -135,8 +180,10 @@ export default function GoalsPage() {
               Create your first goal to get started with ZAVN
             </p>
             <button
-              onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors"
+              type="button"
+              onClick={openCreateModal}
+              disabled={goalCreationBlocked}
+              className="px-6 py-3 bg-brand-primary text-white rounded-lg hover:bg-brand-primary-hover transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Create Your First Goal
             </button>

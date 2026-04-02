@@ -21,6 +21,7 @@ import { goalsApi, CommitmentSummary } from '@/services/goalsApi';
 
 const navItems = [
   { href: '/dashboard', label: 'Dashboard', icon: MdDashboard },
+  { href: '/dashboard/commitments', label: 'Commitments', icon: MdAssignment },
   { href: '/echo', label: 'Echo', icon: MdRecordVoiceOver },
   { href: '/goals', label: 'Goals', icon: MdFlag },
   { href: '/insights', label: 'Growth', icon: MdInsights },

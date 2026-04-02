@@ -18,6 +18,7 @@ import {
   MdOutlineChat,
   MdSmartToy,
   MdMoreHoriz,
+  MdGroups,
 } from 'react-icons/md';
 
 function commitmentStatusColor(status: string) {
@@ -309,6 +310,47 @@ export function DashboardCommitmentCard({
           </div>
         </div>
       </div>
+
+      {(commitment.verification_method === 'tribe_vouch' || commitment.tribe_vouch) && (
+        <div className="mt-4 rounded-xl border border-violet-200/80 bg-violet-50/50 px-3 py-2.5 dark:border-violet-900/50 dark:bg-violet-950/25">
+          <div className="flex items-start gap-2">
+            <MdGroups className="shrink-0 mt-0.5 text-violet-600 dark:text-violet-400" size={18} aria-hidden />
+            <div className="min-w-0 space-y-1">
+              <p className="text-[10px] font-semibold uppercase tracking-wide text-violet-800 dark:text-violet-200">
+                Tribe verification
+              </p>
+              {commitment.tribe_vouch ? (
+                <>
+                  <p className="text-sm text-foreground">
+                    {commitment.tribe_vouch.tribe_member_name
+                      ? `${commitment.tribe_vouch.tribe_member_name}: `
+                      : ''}
+                    {commitment.tribe_vouch.vouched === true && (
+                      <span className="text-emerald-700 dark:text-emerald-300 font-medium">Confirmed completion</span>
+                    )}
+                    {commitment.tribe_vouch.vouched === false && (
+                      <span className="text-rose-700 dark:text-rose-300 font-medium">Did not confirm</span>
+                    )}
+                    {(commitment.tribe_vouch.vouched === null ||
+                      commitment.tribe_vouch.vouched === undefined) && (
+                      <span className="text-amber-800 dark:text-amber-200 font-medium">Unsure / unclear</span>
+                    )}
+                  </p>
+                  {commitment.tribe_vouch.assessment && (
+                    <p className="text-xs text-muted-foreground leading-snug">
+                      {commitment.tribe_vouch.assessment}
+                    </p>
+                  )}
+                </>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Tribe response will appear here after your members submit their verification.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {canAct && (
         <div className="mt-auto pt-4 flex flex-col gap-2 sm:flex-row sm:items-stretch sm:gap-3">

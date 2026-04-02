@@ -11,6 +11,7 @@ import VoiceOnboardingSession, {
 import { EchoEntryChoice } from '@/components/onboarding/EchoEntryChoice';
 import TribeForm, { TribeMember } from '@/components/onboarding/TribeForm';
 import PreferencesStep, { UserPreferences } from '@/components/onboarding/PreferencesStep';
+import GoalReviewStep from '@/components/onboarding/GoalReviewStep';
 import { onboardingApi } from '@/services/onboardingApi';
 import { api } from '@/lib/api';
 import { goalsApi } from '@/services/goalsApi';
@@ -21,7 +22,7 @@ import { toApiFocusAreaKey } from '@/lib/focusAreaKeys';
 
 const SESSION_FOCUS_KEY = 'zavn_onboarding_primary_focus';
 
-type OnboardingStep = 'voice' | 'preferences' | 'tribe' | 'completing';
+type OnboardingStep = 'voice' | 'goalReview' | 'preferences' | 'tribe' | 'completing';
 
 interface ExtractionResponse {
   success: boolean;
@@ -144,6 +145,12 @@ export default function OnboardingPage() {
     }
   };
 
+  useEffect(() => {
+    if (status === 'unauthenticated') {
+      router.replace('/login?callbackUrl=' + encodeURIComponent('/onboarding'));
+    }
+  }, [status, router]);
+
   // Show loading while session is being fetched
   if (status === 'loading') {
     return (
@@ -151,6 +158,17 @@ export default function OnboardingPage() {
         <div className="text-center space-y-4">
           <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
           <p className="text-lg font-semibold text-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (status === 'unauthenticated') {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
+        <div className="text-center space-y-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
+          <p className="text-lg font-semibold text-foreground">Redirecting to sign in…</p>
         </div>
       </div>
     );
@@ -217,12 +235,12 @@ export default function OnboardingPage() {
         }
       }
       
-      setStep('preferences');
+      setStep('goalReview');
     } catch (err) {
       console.error('Extraction failed:', err);
-      // Fallback to defaults
-      setExtractedProfile({ vibe_score: 5 });
-      setStep('preferences');
+      // Fallback to defaults — user must define goal on review step
+      setExtractedProfile({ vibe_score: 5, primary_goal: '' });
+      setStep('goalReview');
     }
   };
 
@@ -344,6 +362,11 @@ export default function OnboardingPage() {
       title: 'Meet Echo',
       subtitle: 'Talk to Echo for 2-3 minutes. We\'ll learn your energy patterns and goals.',
     },
+    goalReview: {
+      stepLabel: 'Goal',
+      title: 'Confirm your goal',
+      subtitle: 'Edit the draft so it matches what you want before we continue.',
+    },
     preferences: {
       stepLabel: 'Preferences',
       title: 'Set Your Guardrails',
@@ -362,9 +385,17 @@ export default function OnboardingPage() {
   };
 
   const currentConfig = stepConfig[step];
-  const totalSteps = 3;
+  const totalSteps = 4;
   const currentStepNumber =
-    step === 'voice' ? 1 : step === 'preferences' ? 2 : step === 'tribe' ? 3 : 3;
+    step === 'voice'
+      ? 1
+      : step === 'goalReview'
+        ? 2
+        : step === 'preferences'
+          ? 3
+          : step === 'tribe'
+            ? 4
+            : 4;
 
   const echoDiscoverySubtitle =
     step === 'voice' && echoResumeDraft
@@ -447,6 +478,26 @@ export default function OnboardingPage() {
               focusArea={toApiFocusAreaKey(primaryFocus) ?? null}
               onComplete={handleVoiceComplete}
               onError={(msg) => setError(msg)}
+            />
+          </motion.div>
+        )}
+
+        {step === 'goalReview' && extractedProfile && (
+          <motion.div
+            key="goalReview"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="w-full overflow-y-auto"
+          >
+            <GoalReviewStep
+              profile={extractedProfile}
+              onChange={(next) => setExtractedProfile(next)}
+              onContinue={() => setStep('preferences')}
+              onBack={() => {
+                setStep('voice');
+                setEchoEntry('voice');
+              }}
             />
           </motion.div>
         )}

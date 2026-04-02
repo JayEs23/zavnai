@@ -73,6 +73,14 @@ export interface Commitment {
 /** Journal proof bar: light (short attestation) → standard → evidence (staked goals). */
 export type ProofTier = 'light' | 'standard' | 'evidence';
 
+/** UC-8: aggregated tribe member response surfaced on the commitment card */
+export interface TribeVouchSummary {
+  tribe_member_name?: string | null;
+  /** true = yes, false = no, null/undefined = unsure */
+  vouched?: boolean | null;
+  assessment?: string | null;
+}
+
 export interface CommitmentSummary {
   id: string;
   goal_id: string;
@@ -84,6 +92,8 @@ export interface CommitmentSummary {
   verification_score?: number;
   created_at: string;
   proof_tier?: ProofTier;
+  verification_method?: string | null;
+  tribe_vouch?: TribeVouchSummary | null;
 }
 
 export interface CreateGoalRequest {

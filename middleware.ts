@@ -24,6 +24,7 @@ export async function middleware(request: NextRequest) {
         '/',
         '/api',
         '/verify',
+        '/auth',
         '/privacy',
         '/terms',
         '/refund',

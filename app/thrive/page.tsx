@@ -179,9 +179,12 @@ function ScoreRing({
   };
   const strokeColor = colorMap[riskLevel] || '#6366f1';
 
+  const scoreTooltip =
+    'Composite wellbeing signal from voice patterns, how often commitments flex, reflection mood trends, and on-time follow-through. It describes load — not your worth.';
+
   return (
-    <div className="relative w-48 h-48">
-      <svg className="w-48 h-48 -rotate-90" viewBox="0 0 200 200">
+    <div className="relative w-48 h-48 cursor-help" title={scoreTooltip}>
+      <svg className="w-48 h-48 -rotate-90" viewBox="0 0 200 200" role="img" aria-label={scoreTooltip}>
         {/* Background ring */}
         <circle
           cx="100"
