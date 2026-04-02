@@ -127,7 +127,8 @@ export default function GoalsPage() {
             <div>
               <h1 className="text-3xl font-bold text-foreground">Goals</h1>
               <p className="text-muted-foreground mt-1">
-                Track your goals and commitments
+                Track your goals and commitments. Tip: one focused micro-habit at a time often beats many
+                competing goals.
               </p>
             </div>
             <button
