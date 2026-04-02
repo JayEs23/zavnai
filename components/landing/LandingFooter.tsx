@@ -21,6 +21,7 @@ const footerLinks = {
   Legal: [
     { name: "Privacy Policy", href: "/privacy" },
     { name: "Terms of Service", href: "/terms" },
+    { name: "Refund & cancellation", href: "/refund" },
   ],
   Resources: [
     { name: "Dashboard", href: "/dashboard" },

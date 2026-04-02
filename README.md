@@ -43,6 +43,6 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 - **Onboarding**: `/onboarding` — Echo **voice vs text** entry (`EchoEntryChoice`); text uses `/api/echo/chat` with `mode=onboarding`. Draft resume skips the picker. In **Gemini Live** voice mode, **Mute / Unmute** stops sending mic audio and disables the capture track but **does not** end the session or tear down the Live connection.  
 - **Forgot password**: `/forgot-password` placeholder until the API supports reset.  
 - **Marketing**: `/about` — full landing-style page (`components/landing/AboutPageContent.tsx`: hero, belief strip, pillars, Vocett, shared `CtaSection`); footer “About” links here, not `/blog`.  
-- **Legal**: `/terms`, `/privacy` — Terms (governing law **England & Wales**, international audience) and Privacy (GDPR/CCPA-style rights where applicable); operator **Vocett Technologies Ltd** ([vocettt.com.ng](https://vocettt.com.ng)); have counsel review before production.  
+- **Legal**: `/terms`, `/privacy`, `/refund` — Operator **Vocett Technologies Ltd**; product copy is centralized in `lib/zavnLegal.ts` (Echo, Doyn, Tribe, Thrive, tiers). Paddle links in `lib/paddleLegal.ts`. Have counsel review before production.  
 - Specs: `docs/zavndocs/`, narrative flows: `docs/zavnexample/`.
 

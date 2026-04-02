@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { LandingFooter } from "@/components/landing/LandingFooter";
+import { PADDLE_LEGAL } from "@/lib/paddleLegal";
+import { ZAVN_LEGAL } from "@/lib/zavnLegal";
 
 const EFFECTIVE_DATE = "March 20, 2026";
 const COMPANY = "Vocett Technologies Ltd";
@@ -35,10 +37,11 @@ export default function PrivacyPage() {
               This Privacy Policy describes how <strong className="text-foreground">{COMPANY}</strong>{" "}
               (&quot;{COMPANY_SHORT},&quot; &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;)
               collects, uses, discloses, and protects information when you use the ZAVN platform
-              (the &quot;Service&quot;). ZAVN is available internationally; our primary audience
-              includes high-performing individuals—such as students, professionals, and
-              entrepreneurs—wherever they are located. By using the Service, you agree to this
-              Policy. If you do not agree, please do not use the Service.
+              (the &quot;Service&quot;). {ZAVN_LEGAL.productSummary} We offer the Service
+              internationally; our audience includes high-performing individuals—such as students,
+              professionals, and entrepreneurs—wherever they are located. By using the Service, you
+              agree to this Policy.
+              If you do not agree, please do not use the Service.
             </p>
             <aside
               className="mt-6 rounded-xl border border-border bg-card/80 backdrop-blur-sm p-4 sm:p-5 text-sm"
@@ -63,9 +66,12 @@ export default function PrivacyPage() {
             <PrivacySection title="1. Scope">
               <p>
                 This Policy applies to personal information processed through our websites, mobile or
-                web applications, and related features (e.g. onboarding, goals, voice or chat
-                experiences, integrations you connect), regardless of where you live or access the
-                Service. It does not apply to third-party sites or services that we do not control.
+                web applications, and related features—including onboarding, goals and stakes, Echo
+                sessions, Doyn voice or chat where enabled, Tribe contacts and vetting flows, Thrive
+                or wellbeing-related inputs we process, billing when you subscribe, and integrations
+                you connect—regardless of where you live or access the Service. It does not apply to
+                third-party sites or services that we do not control (except as described for payment
+                processors such as Paddle).
               </p>
             </PrivacySection>
 
@@ -97,6 +103,23 @@ export default function PrivacyPage() {
                 <li>
                   <strong className="text-foreground">Support & communications:</strong> messages
                   you send us via forms, email, or in-product channels.
+                </li>
+                <li>
+                  <strong className="text-foreground">Billing references:</strong> when you subscribe
+                  through our payment provider, we may receive limited identifiers (such as
+                  subscription or customer references) from the processor to tie your payment to your
+                  account. <strong className="text-foreground">Card and payment details</strong> for
+                  purchases via <strong className="text-foreground">Paddle</strong> are collected
+                  and processed by Paddle as described in their{" "}
+                  <a
+                    href={PADDLE_LEGAL.privacy}
+                    className="text-primary underline underline-offset-2 hover:no-underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    privacy policy
+                  </a>
+                  .
                 </li>
               </ul>
               <h3 className="text-base font-semibold text-foreground mt-4 mb-2">
@@ -169,6 +192,33 @@ export default function PrivacyPage() {
                 <li>
                   <strong className="text-foreground">Business transfers:</strong> in connection with
                   a merger, acquisition, or sale of assets, subject to appropriate safeguards.
+                </li>
+                <li>
+                  <strong className="text-foreground">Paddle (payments):</strong> when you pay
+                  through <strong className="text-foreground">Paddle Checkout</strong>,{" "}
+                  <strong className="text-foreground">Paddle.com Market Limited</strong> (or another
+                  Paddle entity, depending on your region) acts as{" "}
+                  <strong className="text-foreground">merchant of record</strong> and processes
+                  payment and billing data under its own terms. See Paddle&apos;s{" "}
+                  <a
+                    href={PADDLE_LEGAL.privacy}
+                    className="text-primary underline underline-offset-2 hover:no-underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Privacy Policy
+                  </a>{" "}
+                  and{" "}
+                  <a
+                    href={PADDLE_LEGAL.buyerTerms}
+                    className="text-primary underline underline-offset-2 hover:no-underline"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Buyer Terms
+                  </a>
+                  . We receive the information needed to provision your subscription (for example
+                  subscription status and identifiers), not your full card number.
                 </li>
               </ul>
             </PrivacySection>
@@ -310,6 +360,10 @@ export default function PrivacyPage() {
             See also{" "}
             <Link href="/terms" className="text-primary font-medium underline underline-offset-2 hover:no-underline">
               Terms of Service
+            </Link>
+            {" · "}
+            <Link href="/refund" className="text-primary font-medium underline underline-offset-2 hover:no-underline">
+              Refund &amp; cancellation
             </Link>
             .
           </p>

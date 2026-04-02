@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import Link from "next/link";
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { LandingFooter } from "@/components/landing/LandingFooter";
+import { PADDLE_LEGAL } from "@/lib/paddleLegal";
+import { ZAVN_LEGAL } from "@/lib/zavnLegal";
 
 const EFFECTIVE_DATE = "March 20, 2026";
 const COMPANY = "Vocett Technologies Ltd";
@@ -36,9 +38,9 @@ export default function TermsPage() {
               website, applications, and related services (collectively, the &quot;Service&quot;)
               operated by{" "}
               <strong className="text-foreground">{COMPANY}</strong> (&quot;{COMPANY_SHORT},&quot;
-              &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). The Service is offered worldwide
-              and is designed for adults—including students, professionals, and entrepreneurs—who
-              want structured support for high-performance goals and accountability. By creating an
+              &quot;we,&quot; &quot;us,&quot; or &quot;our&quot;). {ZAVN_LEGAL.productSummary} The
+              Service is offered worldwide to adults—including students, professionals, and
+              entrepreneurs—who want structured support for high-performance goals. By creating an
               account, accessing, or using the Service, you agree to these Terms. If you do not
               agree, do not use the Service.
             </p>
@@ -64,12 +66,14 @@ export default function TermsPage() {
           <article className="space-y-10 text-sm sm:text-[15px] leading-relaxed text-muted-foreground">
             <LegalSection title="1. The Service">
               <p>
-                ZAVN provides tools for personal growth, goal-setting, accountability features, and
-                AI-assisted experiences (including voice and chat). The Service is intended for
-                general information and self-improvement purposes only. It does not provide medical,
-                mental health, legal, financial, or other professional advice. You are solely
-                responsible for decisions you make and actions you take based on your use of the
-                Service.
+                {ZAVN_LEGAL.productSummary}
+              </p>
+              <p className="mt-3">
+                Features may roll out gradually, vary by platform (web or app), region, or plan, and
+                change over time. The Service is for general information and self-improvement only.
+                It does not provide medical, mental health, legal, financial, or other professional
+                advice. You are solely responsible for decisions you make and actions you take based
+                on your use of the Service.
               </p>
             </LegalSection>
 
@@ -152,19 +156,68 @@ export default function TermsPage() {
               </p>
             </LegalSection>
 
-            <LegalSection title="7. Fees & payments">
+            <LegalSection title="7. Fees & payments (including Paddle)">
               <p>
-                Certain features may be free or paid now or in the future. If we charge fees, we will
-                present terms at checkout or in a separate agreement. Taxes may apply. Unless stated,
-                fees are non-refundable except as required by law.
+                {ZAVN_LEGAL.paidPlansSummary} Taxes may apply based on your location and the payment
+                method. We will describe the offering at checkout or in-product whenever you pay.
+              </p>
+              <p className="mt-3">
+                <strong className="text-foreground">Paddle (merchant of record).</strong> Where we
+                offer paid plans through <strong className="text-foreground">Paddle Checkout</strong>
+                , your payment is processed by <strong className="text-foreground">Paddle</strong> as
+                the <strong className="text-foreground">reseller and merchant of record</strong> for
+                that transaction. That means you enter into a contract with Paddle for the payment
+                and Paddle&apos;s services, and Paddle collects payment on your behalf. These Terms
+                constitute the <strong className="text-foreground">Supplier Agreement</strong> between
+                you and {COMPANY_SHORT} for access to and use of the ZAVN product (the
+                &quot;Product&quot;), as that term is used in Paddle&apos;s{" "}
+                <a
+                  href={PADDLE_LEGAL.buyerTerms}
+                  className="text-primary font-medium underline underline-offset-2 hover:no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Buyer Terms
+                </a>
+                . You must also comply with Paddle&apos;s Buyer Terms,{" "}
+                <a
+                  href={PADDLE_LEGAL.refundPolicy}
+                  className="text-primary font-medium underline underline-offset-2 hover:no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Refund Policy
+                </a>
+                , and{" "}
+                <a
+                  href={PADDLE_LEGAL.privacy}
+                  className="text-primary font-medium underline underline-offset-2 hover:no-underline"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Privacy Policy
+                </a>{" "}
+                when completing a transaction with Paddle.
+              </p>
+              <p className="mt-3">
+                <strong className="text-foreground">Refunds &amp; cancellations.</strong> Payment
+                refunds and statutory withdrawal rights for purchases made through Paddle are
+                governed by Paddle&apos;s policies and applicable law. A summary of how we describe
+                cancellations and refunds is in our{" "}
+                <Link href="/refund" className="text-primary font-medium underline underline-offset-2 hover:no-underline">
+                  Refund &amp; cancellation policy
+                </Link>
+                . For other payment methods we may add in the future, we will present the relevant
+                terms at checkout.
               </p>
             </LegalSection>
 
             <LegalSection title="8. Third-party services">
               <p>
                 The Service may integrate with third-party providers (e.g. authentication, calendar,
-                messaging, analytics). Your use of those services is subject to their terms and
-                privacy policies. We are not responsible for third-party services.
+                messaging, analytics, and payment processors such as Paddle when you purchase through
+                them). Your use of those services is subject to their terms and privacy policies. We
+                are not responsible for third-party services.
               </p>
             </LegalSection>
 
@@ -290,6 +343,10 @@ export default function TermsPage() {
             See also{" "}
             <Link href="/privacy" className="text-primary font-medium underline underline-offset-2 hover:no-underline">
               Privacy Policy
+            </Link>
+            {" · "}
+            <Link href="/refund" className="text-primary font-medium underline underline-offset-2 hover:no-underline">
+              Refund &amp; cancellation
             </Link>
             .
           </p>
