@@ -5,6 +5,8 @@ import React, { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { calendarApi } from '@/services/calendarApi';
 import { MdCheckCircle, MdError } from 'react-icons/md';
+import Skeleton from 'react-loading-skeleton';
+import { ZavnSkeletonTheme } from '@/components/skeletons/PageSkeletons';
 
 function IntegrationsCallbackApp() {  
   const router = useRouter();
@@ -71,9 +73,13 @@ function IntegrationsCallbackApp() {
       <div className="max-w-md w-full bg-card-bg border border-border-subtle rounded-lg p-8 text-center">
         {status === 'loading' && (
           <>
-            <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-brand-primary mx-auto mb-6"></div>
-            <h2 className="text-2xl font-bold text-foreground mb-2">{message}</h2>
-            <p className="text-muted-foreground">Please wait...</p>
+            <ZavnSkeletonTheme>
+              <Skeleton circle width={64} height={64} className="mx-auto mb-6" />
+              <Skeleton height={28} className="mb-3" />
+              <Skeleton height={16} width="75%" className="mx-auto mb-2" />
+            </ZavnSkeletonTheme>
+            <h2 className="sr-only">{message}</h2>
+            <p className="text-sm text-muted-foreground text-center">Please wait…</p>
           </>
         )}
 

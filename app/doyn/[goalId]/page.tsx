@@ -9,6 +9,7 @@ import { MdSend, MdSmartToy, MdPerson, MdArrowBack, MdHandshake } from 'react-ic
 import Image from 'next/image';
 import Link from 'next/link';
 import FormattedMessageText from '@/components/common/FormattedMessageText';
+import { DoynGoalPageLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 /** First testable step: align with docs (small, verifiable) and goal category / Echo insights. */
 function getFirstProactiveStep(goal: GoalSummary): string {
@@ -365,14 +366,7 @@ export default function DoynGoalPage() {
   };
 
   if (initializing) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Loading Doyn...</p>
-        </div>
-      </div>
-    );
+    return <DoynGoalPageLoadingSkeleton />;
   }
 
   if (screenError) {

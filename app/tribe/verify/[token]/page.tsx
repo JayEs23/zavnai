@@ -11,6 +11,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { MdCheckCircle, MdCancel, MdHelpOutline, MdPerson } from 'react-icons/md';
 import { motion } from 'framer-motion';
+import { FullScreenGradientLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface VerificationDetails {
   commitment_id: string;
@@ -108,14 +109,7 @@ export default function TribeVerifyPage() {
 
   // Loading state
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading verification request...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   // Error state

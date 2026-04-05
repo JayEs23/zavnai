@@ -8,6 +8,7 @@ import { MdArrowBack, MdCheckCircle, MdCancel } from 'react-icons/md';
 import Image from 'next/image';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { FullScreenGradientLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface Commitment {
   id: string;
@@ -147,14 +148,7 @@ export default function EchoReflectPage() {
   };
 
   if (loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   if (!commitment) {

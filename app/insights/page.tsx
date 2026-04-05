@@ -16,6 +16,7 @@ import { motion } from 'framer-motion';
 import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
 import { toast } from 'react-hot-toast';
+import { InsightsLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface GrowthMetrics {
   streak_days: number;
@@ -60,17 +61,7 @@ export default function InsightsPage() {
   }, [loadMetrics]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
-        <AppNavbar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-            <p className="text-lg font-semibold text-foreground">Analyzing your growth journey...</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <InsightsLoadingSkeleton />;
   }
 
   const m = metrics || {

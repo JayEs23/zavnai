@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { doynApi, DoynMessage, Commitment } from '@/services/doynApi';
 import { MdSend, MdSmartToy, MdPerson } from 'react-icons/md';
+import { DoynChatInitializingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface DoynChatProps {
   onCommitmentUpdate?: (commitment: Commitment) => void;
@@ -114,14 +115,7 @@ export function DoynChat({ onCommitmentUpdate }: DoynChatProps) {
   };
 
   if (initializing) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground">Loading Doyn...</p>
-        </div>
-      </div>
-    );
+    return <DoynChatInitializingSkeleton />;
   }
 
   return (

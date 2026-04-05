@@ -19,6 +19,7 @@ import {
   Legend,
 } from 'chart.js';
 import { api } from '@/lib/api';
+import { CommitmentQualityChartsSkeleton } from '@/components/skeletons/PageSkeletons';
 
 ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
 
@@ -75,14 +76,7 @@ export function CommitmentQualityDashboard() {
   };
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="size-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading commitment quality…</p>
-        </div>
-      </div>
-    );
+    return <CommitmentQualityChartsSkeleton />;
   }
 
   if (error || !summary) {

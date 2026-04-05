@@ -23,6 +23,7 @@ import {
 } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import AppNavbar from '@/components/AppNavbar';
+import { CardGridSkeleton } from '@/components/skeletons/PageSkeletons';
 
 // ============================================================================
 // MAIN PAGE
@@ -188,15 +189,7 @@ export default function TribePage() {
       {/* ── Members Grid ──────────────────────────────────────── */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-20">
-            <div className="text-center">
-              <div className="relative mx-auto w-16 h-16">
-                <div className="absolute inset-0 rounded-full border-4 border-purple-200 dark:border-purple-900" />
-                <div className="absolute inset-0 rounded-full border-4 border-transparent border-t-purple-500 animate-spin" />
-              </div>
-              <p className="text-muted-foreground mt-4 text-sm">Loading your tribe…</p>
-            </div>
-          </div>
+          <CardGridSkeleton count={6} />
         ) : filteredMembers.length === 0 ? (
           <EmptyState filter={filter} onAdd={() => setShowAddModal(true)} />
         ) : (

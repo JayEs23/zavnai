@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { thriveApi, type ThriveScore } from '@/services/thriveApi';
 import { toast } from 'react-hot-toast';
 import AppNavbar from '@/components/AppNavbar';
+import { ThriveLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 // --------------------------------------------------------------------------
 // THRIVE PAGE
@@ -31,17 +32,7 @@ export default function ThrivePage() {
   }, [loadScore]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background">
-        <AppNavbar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-brand-primary mx-auto" />
-            <p className="text-muted-foreground mt-4">Calculating your wellbeing score…</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <ThriveLoadingSkeleton />;
   }
 
   if (!score) {

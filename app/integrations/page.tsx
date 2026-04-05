@@ -5,6 +5,7 @@ import { calendarApi, type CalendarProvider } from '@/services/calendarApi';
 import { MdCalendarToday, MdCheckCircle, MdSync, MdDelete, MdWarning } from 'react-icons/md';
 import { FaGoogle, FaMicrosoft, FaGithub } from 'react-icons/fa';
 import { toast } from 'react-hot-toast';
+import { IntegrationsListSkeleton } from '@/components/skeletons/PageSkeletons';
 
 export default function IntegrationsPage() {
   const [calendars, setCalendars] = useState<CalendarProvider[]>([]);
@@ -104,9 +105,7 @@ export default function IntegrationsPage() {
       {/* Content */}
       <div className="max-w-4xl mx-auto px-6 py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-          </div>
+          <IntegrationsListSkeleton />
         ) : (
           <div className="space-y-6">
             {/* Calendars Section */}

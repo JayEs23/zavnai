@@ -19,6 +19,11 @@ import { opikTracker } from '@/lib/opik/client-tracker';
 import { ExtractedProfile } from '@/services/entityExtraction';
 import { FOCUS_AREA_IDS, type FocusAreaId } from '@/constants/focusAreas';
 import { toApiFocusAreaKey } from '@/lib/focusAreaKeys';
+import Skeleton from 'react-loading-skeleton';
+import {
+  FullScreenGradientLoadingSkeleton,
+  ZavnSkeletonTheme,
+} from '@/components/skeletons/PageSkeletons';
 
 const SESSION_FOCUS_KEY = 'zavn_onboarding_primary_focus';
 
@@ -153,25 +158,11 @@ export default function OnboardingPage() {
 
   // Show loading while session is being fetched
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Loading...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   if (status === 'unauthenticated') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Redirecting to sign in…</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   // Handle voice session completion
@@ -441,7 +432,10 @@ export default function OnboardingPage() {
             animate={{ opacity: 1 }}
             className="flex min-h-[280px] flex-1 flex-col items-center justify-center gap-4 px-4"
           >
-            <div className="h-12 w-12 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+            <ZavnSkeletonTheme>
+              <Skeleton circle width={48} height={48} />
+              <Skeleton height={14} width={260} />
+            </ZavnSkeletonTheme>
             <p className="text-center text-sm text-muted-foreground">
               Checking for a saved Echo conversation…
             </p>

@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Suspense } from 'react';
+import { FullScreenGradientLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 function AuthErrorInner() {
   const searchParams = useSearchParams();
@@ -43,13 +44,7 @@ function AuthErrorInner() {
 
 export default function AuthErrorPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
+    <Suspense fallback={<FullScreenGradientLoadingSkeleton showTextLines={false} />}>
       <AuthErrorInner />
     </Suspense>
   );

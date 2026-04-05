@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { goalsApi, CommitmentSummary } from '@/services/goalsApi';
 import { DashboardCommitmentCard } from '@/components/dashboard/DashboardCommitmentCard';
 import { MdRefresh } from 'react-icons/md';
+import { CommitmentsSidebarSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface CommitmentsSidebarProps {
   refreshTrigger?: number;
@@ -44,14 +45,7 @@ export function CommitmentsSidebar({ refreshTrigger }: CommitmentsSidebarProps) 
   const overdueCount = commitments.filter((c) => isOverdue(c)).length;
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-4">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-xs text-muted-foreground">Loading commitments...</p>
-        </div>
-      </div>
-    );
+    return <CommitmentsSidebarSkeleton />;
   }
 
   return (

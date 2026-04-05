@@ -11,6 +11,10 @@ import { api } from '@/lib/api';
 import { echoVoiceReflectionHref, echoJournalReflectPath } from '@/lib/echoCommitmentLinks';
 import { ensureCommitmentFlowStarted, trackProductEvent } from '@/lib/productAnalytics';
 import {
+  DashboardLoadingSkeleton,
+  CommitmentsListPanelSkeleton,
+} from '@/components/skeletons/PageSkeletons';
+import {
   MdSchedule,
   MdChevronRight,
   MdArrowBack,
@@ -206,17 +210,7 @@ function CommitmentsInner() {
   }, [loading]);
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
-        <AppNavbar />
-        <div className="flex items-center justify-center min-h-[80vh]">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-            <p className="text-lg font-semibold text-foreground">Loading commitments…</p>
-          </div>
-        </div>
-      </div>
-    );
+    return <DashboardLoadingSkeleton />;
   }
 
   return (
@@ -319,12 +313,7 @@ function CommitmentsInner() {
 
           <div className="min-w-0 flex-1 space-y-3">
             {commitmentsLoading && selectedGoalId ? (
-              <div className="flex items-center justify-center py-16 bg-white rounded-xl border border-dashed border-border">
-                <div className="text-center space-y-2">
-                  <div className="w-10 h-10 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto" />
-                  <p className="text-sm text-muted-foreground">Loading commitments…</p>
-                </div>
-              </div>
+              <CommitmentsListPanelSkeleton />
             ) : visibleCommitments.length === 0 ? (
               <div className="bg-white rounded-xl border-2 border-dashed border-border p-8 sm:p-10 text-center">
                 <MdCheckCircle className="mx-auto text-muted-foreground mb-3" size={40} />
@@ -440,16 +429,7 @@ function CommitmentsInner() {
 
 export default function CommitmentsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5">
-          <AppNavbar />
-          <div className="flex items-center justify-center min-h-[80vh]">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<DashboardLoadingSkeleton />}>
       <CommitmentsInner />
     </Suspense>
   );

@@ -17,6 +17,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MdSend, MdClose, MdPerson, MdShield, MdCheckCircle, MdError } from 'react-icons/md';
 import { Loader2 } from 'lucide-react';
+import { FullScreenGradientLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 interface ChatMessage {
   role: 'tribe_member' | 'tribe_ai';
@@ -206,14 +207,7 @@ export default function TribeVettingPage() {
 
   // Loading state
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 flex items-center justify-center p-4">
-        <div className="text-center">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-sm text-muted-foreground">Loading vetting session...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   // Error state

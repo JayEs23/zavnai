@@ -8,6 +8,7 @@ import { integrationApi, Integration } from '@/services/integrationApi';
 import { dashboardApi } from '@/services/dashboardApi';
 import { MdNotifications, MdSchedule, MdLink, MdPerson, MdSave, MdAdd } from 'react-icons/md';
 import AppNavbar from '@/components/AppNavbar';
+import { SettingsLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 export default function SettingsPage() {
     const router = useRouter();
@@ -74,15 +75,7 @@ export default function SettingsPage() {
         setSettings({ ...settings, reminder_preferences: updated });
     };
 
-    if (loading) return <div className="min-h-screen bg-[var(--background)]">
-        <AppNavbar />
-        <div className="p-10 flex items-center justify-center min-h-[80vh]">
-            <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[var(--primary)] mx-auto mb-4"></div>
-                <p className="text-[var(--muted-foreground)]">Loading settings...</p>
-            </div>
-        </div>
-    </div>;
+    if (loading) return <SettingsLoadingSkeleton />;
 
     return (
         <div className="min-h-screen bg-[var(--background)]">

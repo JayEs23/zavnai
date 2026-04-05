@@ -11,6 +11,7 @@ import { useSession } from 'next-auth/react';
 import VoiceOnboardingSession from '@/components/onboarding/VoiceOnboardingSession';
 import { api } from '@/lib/api';
 import { trackProductEvent } from '@/lib/productAnalytics';
+import { FullScreenGradientLoadingSkeleton } from '@/components/skeletons/PageSkeletons';
 
 function EchoContent() {
   const router = useRouter();
@@ -51,14 +52,7 @@ function EchoContent() {
   }, [isReflection, commitmentId, reflectionTaskLoading, reflectionLoadError]);
 
   if (isReflection && commitmentId && reflectionTaskLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Loading reflection context...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   if (isReflection && commitmentId && reflectionLoadError) {
@@ -87,14 +81,7 @@ function EchoContent() {
   };
 
   if (status === 'loading') {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-        <div className="text-center space-y-4">
-          <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-          <p className="text-lg font-semibold text-foreground">Loading Echo...</p>
-        </div>
-      </div>
-    );
+    return <FullScreenGradientLoadingSkeleton />;
   }
 
   if (status === 'unauthenticated') {
@@ -117,16 +104,7 @@ function EchoContent() {
 
 export default function EchoPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/5 to-accent/5">
-          <div className="text-center space-y-4">
-            <div className="w-16 h-16 border-4 border-primary border-t-transparent animate-spin rounded-full mx-auto" />
-            <p className="text-lg font-semibold text-foreground">Loading Echo...</p>
-          </div>
-        </div>
-      }
-    >
+    <Suspense fallback={<FullScreenGradientLoadingSkeleton />}>
       <EchoContent />
     </Suspense>
   );

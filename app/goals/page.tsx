@@ -7,6 +7,7 @@ import { thriveApi, type CanCreateGoal } from '@/services/thriveApi';
 import { MdAdd, MdCheckCircle, MdError, MdPending, MdArchive, MdDelete, MdAttachMoney, MdCalendarToday } from 'react-icons/md';
 import { toast } from 'react-hot-toast';
 import AppNavbar from '@/components/AppNavbar';
+import { CardGridSkeleton } from '@/components/skeletons/PageSkeletons';
 
 export default function GoalsPage() {
   const [goals, setGoals] = useState<Goal[]>([]);
@@ -168,9 +169,7 @@ export default function GoalsPage() {
       {/* Goals Grid */}
       <div className="max-w-7xl mx-auto px-6 py-8">
         {loading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-primary"></div>
-          </div>
+          <CardGridSkeleton count={6} />
         ) : filteredGoals.length === 0 ? (
           <div className="text-center py-12">
             <MdPending size={64} className="mx-auto text-muted-foreground mb-4" />
