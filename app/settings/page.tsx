@@ -21,6 +21,18 @@ export default function SettingsPage() {
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const t = params.get('tab');
+            if (t === 'profile' || t === 'reminders' || t === 'integrations' || t === 'notifications') {
+                setActiveTab(t);
+            }
+        } catch {
+            /* ignore */
+        }
+    }, []);
+
+    useEffect(() => {
         const fetchData = async () => {
             try {
                 const [settingsData, remindersData, integrationsData, dashboardData] = await Promise.all([
