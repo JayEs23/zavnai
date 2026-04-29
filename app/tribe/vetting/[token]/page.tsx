@@ -37,6 +37,12 @@ interface SessionMetadata {
   commitment_due_at: string | null;
 }
 
+interface VettingCompletePayload {
+  vetting_status: string;
+  trust_score: number;
+  decision: string;
+}
+
 export default function TribeVettingPage() {
   const params = useParams();
   const router = useRouter();
@@ -50,6 +56,7 @@ export default function TribeVettingPage() {
   const [isSending, setIsSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [connectionStatus, setConnectionStatus] = useState<'disconnected' | 'connecting' | 'connected' | 'closed'>('disconnected');
+  const [vettingOutcome, setVettingOutcome] = useState<VettingCompletePayload | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const wsRef = useRef<WebSocket | null>(null);
@@ -130,9 +137,14 @@ export default function TribeVettingPage() {
             };
             setMessages((prev) => [...prev, aiMessage]);
             hasReceivedGreeting.current = true;
+            setIsSending(false);
+          } else if (message.type === 'vetting_complete') {
+            setVettingOutcome(message.data as VettingCompletePayload);
+            setIsSending(false);
           } else if (message.type === 'error') {
             setError(message.data);
             console.error('[Tribe Vetting] WebSocket error:', message.data);
+            setIsSending(false);
           } else if (message.type === 'session_end') {
             setConnectionStatus('closed');
             ws.close();
@@ -165,7 +177,7 @@ export default function TribeVettingPage() {
   };
 
   const sendMessage = () => {
-    if (!inputText.trim() || isSending || connectionStatus !== 'connected') return;
+    if (vettingOutcome || !inputText.trim() || isSending || connectionStatus !== 'connected') return;
     
     const userMessage = inputText.trim();
     setInputText('');
@@ -186,7 +198,6 @@ export default function TribeVettingPage() {
           type: 'user_message',
           data: userMessage,
         }));
-        setIsSending(false);
       } catch (err) {
         console.error('[Tribe Vetting] Error sending message:', err);
         setError('Failed to send message. Please try again.');
@@ -301,6 +312,36 @@ export default function TribeVettingPage() {
         </div>
       </div>
 
+      {vettingOutcome && (
+        <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 pt-2">
+          <div
+            className={`rounded-xl border p-4 flex gap-3 items-start ${
+              vettingOutcome.decision === 'VERIFIED'
+                ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-900 dark:text-emerald-100'
+                : 'bg-amber-500/10 border-amber-500/30 text-amber-950 dark:text-amber-100'
+            }`}
+          >
+            {vettingOutcome.decision === 'VERIFIED' ? (
+              <MdCheckCircle className="w-6 h-6 flex-shrink-0 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <MdShield className="w-6 h-6 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+            )}
+            <div>
+              <p className="font-semibold text-sm">
+                {vettingOutcome.decision === 'VERIFIED'
+                  ? "You're verified — thank you"
+                  : 'Vetting complete'}
+              </p>
+              <p className="text-sm mt-1 opacity-90">
+                {vettingOutcome.decision === 'VERIFIED'
+                  ? `${sessionMetadata.user_display_name} can reach you for accountability check-ins. You can close this tab whenever you're ready.`
+                  : `Thanks for your honesty. ${sessionMetadata.user_display_name} will see this update in ZAVN. You can close this tab.`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Chat Container */}
       <div className="flex-1 max-w-4xl mx-auto w-full px-4 sm:px-6 pb-4 flex flex-col">
         <div className="flex-1 bg-white dark:bg-gray-900 border border-border rounded-2xl shadow-lg overflow-hidden flex flex-col">
@@ -380,18 +421,29 @@ export default function TribeVettingPage() {
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={
-                  connectionStatus === 'connected'
-                    ? "Type your message..."
+                  vettingOutcome
+                    ? 'Vetting finished — you can close this page'
+                    : connectionStatus === 'connected'
+                    ? 'Type your message...'
                     : connectionStatus === 'connecting'
-                    ? "Connecting..."
-                    : "Not connected. Please refresh."
+                    ? 'Connecting...'
+                    : 'Not connected. Please refresh.'
                 }
-                disabled={connectionStatus !== 'connected' || isSending}
+                disabled={
+                  connectionStatus !== 'connected' ||
+                  isSending ||
+                  !!vettingOutcome
+                }
                 className="flex-1 px-4 py-3 bg-background border border-border rounded-xl text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <button
                 onClick={sendMessage}
-                disabled={!inputText.trim() || isSending || connectionStatus !== 'connected'}
+                disabled={
+                  !inputText.trim() ||
+                  isSending ||
+                  connectionStatus !== 'connected' ||
+                  !!vettingOutcome
+                }
                 className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl font-semibold hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
               >
                 {isSending ? (
