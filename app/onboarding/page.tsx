@@ -275,11 +275,15 @@ export default function OnboardingPage() {
           deadline_days: 30, // Default 30 days deadline
           category: extractedProfile?.professional_context === 'developer' ? 'work' : 'general'
         },
-        tribe_members: finalTribeMembers.map(m => ({
+        tribe_members: finalTribeMembers.map((m) => ({
           name: m.name,
           contact: m.contact,
           platform: m.platform,
-          relationship: m.relationship
+          relationship: m.relationship,
+          relationship_tier: m.relationship_tier,
+          can_see_private_goals: m.can_see_private_goals,
+          view_vault: m.view_vault,
+          can_pity_override: m.can_pity_override,
         })),
         preferences: safePreferences,
         insights: voiceInsights // Pass Echo insights to be stored in Goal.metadata_json

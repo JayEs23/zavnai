@@ -41,6 +41,7 @@ export async function middleware(request: NextRequest) {
         '/pricing',
         '/tribe/verify',
         '/tribe/vetting',
+        '/tribe/chat',
     ];
 
     const isPublicRoute = publicRoutes.some((route) =>

@@ -100,8 +100,8 @@ export default function ContactPage() {
                       </div>
                       <div>
                         <h3 className="font-semibold text-foreground mb-1">Email</h3>
-                        <a href="mailto:hello@zavn.ai" className="text-primary hover:underline">
-                          hello@zavn.ai
+                        <a href="mailto:hello@zavnai.com" className="text-primary hover:underline">
+                          hello@zavnai.com
                         </a>
                       </div>
                     </div>
@@ -114,8 +114,8 @@ export default function ContactPage() {
                         <h3 className="font-semibold text-foreground mb-1">Support</h3>
                         <p className="text-muted-foreground text-sm">
                           For technical support or account questions, email us at{" "}
-                          <a href="mailto:support@zavn.ai" className="text-primary hover:underline">
-                            support@zavn.ai
+                          <a href="mailto:support@zavnai.com" className="text-primary hover:underline">
+                            support@zavnai.com
                           </a>
                         </p>
                       </div>

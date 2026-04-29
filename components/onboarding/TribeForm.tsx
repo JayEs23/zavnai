@@ -4,15 +4,33 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { MdAdd, MdDelete, MdPeople, MdLock } from 'react-icons/md';
 
+export type TrustTier = 'inner_circle' | 'mentor' | 'professional';
+
 export interface TribeMember {
   name: string;
   contact: string;
   platform: 'whatsapp' | 'sms' | 'email';
   relationship: 'peer' | 'mentor' | 'partner' | 'spouse' | 'friend' | 'colleague';
+  relationship_tier: TrustTier;
+  can_see_private_goals: boolean;
+  view_vault: boolean;
+  can_pity_override: boolean;
 }
 
+const defaultMember = (partial: Partial<TribeMember> = {}): TribeMember => ({
+  name: '',
+  contact: '',
+  platform: 'email',
+  relationship: 'friend',
+  relationship_tier: 'professional',
+  can_see_private_goals: false,
+  view_vault: false,
+  can_pity_override: false,
+  ...partial,
+});
+
 interface TribeFormProps {
-  suggestedContact?: string; // Name suggested by AI
+  suggestedContact?: string;
   onComplete: (members: TribeMember[]) => void;
   onSkip: () => void;
 }
@@ -21,12 +39,10 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
   const [members, setMembers] = useState<TribeMember[]>(
     suggestedContact
       ? [
-          {
+          defaultMember({
             name: suggestedContact,
-            contact: '',
-            platform: 'email',
             relationship: 'friend',
-          },
+          }),
         ]
       : []
   );
@@ -38,22 +54,37 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       return emailRegex.test(contact);
     } else {
-      // E.164 format: +1234567890
       const phoneRegex = /^\+[1-9]\d{1,14}$/;
       return phoneRegex.test(contact);
     }
   };
 
+  const patchMember = (index: number, patch: Partial<TribeMember>) => {
+    const updated = [...members];
+    const prev = updated[index];
+    let next: TribeMember = { ...prev, ...patch };
+    if (patch.relationship_tier !== undefined && patch.relationship_tier !== 'inner_circle') {
+      next = { ...next, can_pity_override: false };
+    }
+    if (patch.relationship_tier === 'inner_circle') {
+      next = {
+        ...next,
+        can_see_private_goals: true,
+        view_vault: true,
+      };
+    }
+    updated[index] = next;
+    setMembers(updated);
+
+    if (errors[index]) {
+      const newErrors = { ...errors };
+      delete newErrors[index];
+      setErrors(newErrors);
+    }
+  };
+
   const addMember = () => {
-    setMembers([
-      ...members,
-      {
-        name: '',
-        contact: '',
-        platform: 'email',
-        relationship: 'friend',
-      },
-    ]);
+    setMembers([...members, defaultMember()]);
   };
 
   const removeMember = (index: number) => {
@@ -61,19 +92,6 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
     const newErrors = { ...errors };
     delete newErrors[index];
     setErrors(newErrors);
-  };
-
-  const updateMember = (index: number, field: keyof TribeMember, value: string) => {
-    const updated = [...members];
-    updated[index] = { ...updated[index], [field]: value };
-    setMembers(updated);
-
-    // Clear error for this field
-    if (errors[index]) {
-      const newErrors = { ...errors };
-      delete newErrors[index];
-      setErrors(newErrors);
-    }
   };
 
   const handleSubmit = () => {
@@ -98,6 +116,10 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
         }
         return;
       }
+
+      if (member.can_pity_override && member.relationship_tier !== 'inner_circle') {
+        newErrors[index] = 'Pity override requires Inner Circle trust tier';
+      }
     });
 
     if (Object.keys(newErrors).length > 0) {
@@ -110,7 +132,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
 
   return (
     <div className="w-full max-w-5xl mx-auto px-6 py-12">
-      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8">
+      <div className="bg-white rounded-2xl shadow-lg border border-border p-8 space-y-8 dark:bg-gray-900 dark:border-border">
         <div className="space-y-3">
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
@@ -129,6 +151,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
               <MdPeople className="mx-auto text-muted-foreground mb-4" size={48} />
               <p className="text-muted-foreground mb-4">No accountability partners added yet</p>
               <button
+                type="button"
                 onClick={addMember}
                 className="px-6 py-3 bg-gradient-to-r from-primary to-accent text-white rounded-xl hover:shadow-lg transition-all font-medium inline-flex items-center gap-2"
               >
@@ -153,6 +176,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
                   </div>
                   {members.length > 1 && (
                     <button
+                      type="button"
                       onClick={() => removeMember(index)}
                       className="text-red-500 hover:text-red-600 transition-colors p-2 hover:bg-red-50 rounded-lg"
                     >
@@ -162,36 +186,34 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
                 </div>
 
                 {errors[index] && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm flex items-center gap-2">
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3 text-red-600 text-sm flex items-center gap-2 dark:bg-red-950/30 dark:border-red-800">
                     <span>⚠️</span>
                     <span>{errors[index]}</span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  {/* Name */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
-                      Name
-                    </label>
+                    <label className="block text-sm font-medium text-foreground">Name</label>
                     <input
                       type="text"
                       value={member.name}
-                      onChange={(e) => updateMember(index, 'name', e.target.value)}
+                      onChange={(e) => patchMember(index, { name: e.target.value })}
                       placeholder="Enter name"
-                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all dark:bg-background"
                     />
                   </div>
 
-                  {/* Relationship */}
                   <div className="space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
-                      Relationship
-                    </label>
+                    <label className="block text-sm font-medium text-foreground">Relationship</label>
                     <select
                       value={member.relationship}
-                      onChange={(e) => updateMember(index, 'relationship', e.target.value)}
-                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer capitalize"
+                      onChange={(e) =>
+                        patchMember(index, {
+                          relationship: e.target.value as TribeMember['relationship'],
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer capitalize dark:bg-background"
                     >
                       <option value="friend">Friend</option>
                       <option value="colleague">Colleague</option>
@@ -202,28 +224,82 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
                     </select>
                   </div>
 
-                  {/* Platform */}
-                  <div className="sm:col-span-2 space-y-3">
-                    <label className="block text-sm font-medium text-foreground">
-                      Contact Method
+                  <div className="space-y-2 sm:col-span-2">
+                    <label className="block text-sm font-medium text-foreground">Trust tier</label>
+                    <select
+                      value={member.relationship_tier}
+                      onChange={(e) =>
+                        patchMember(index, {
+                          relationship_tier: e.target.value as TrustTier,
+                        })
+                      }
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all cursor-pointer dark:bg-background"
+                    >
+                      <option value="professional">Professional</option>
+                      <option value="mentor">Mentor</option>
+                      <option value="inner_circle">Inner circle</option>
+                    </select>
+                    <p className="text-xs text-muted-foreground">
+                      Inner circle unlocks deeper permissions (private goals, vault, pity override).
+                    </p>
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-3 rounded-xl border border-border/60 p-4 bg-white/50 dark:bg-background/50">
+                    <p className="text-sm font-medium text-foreground">Permissions</p>
+                    <label className="flex items-center gap-3 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={member.can_see_private_goals}
+                        onChange={(e) =>
+                          patchMember(index, { can_see_private_goals: e.target.checked })
+                        }
+                        className="rounded border-border"
+                      />
+                      Can see private goals
                     </label>
+                    <label className="flex items-center gap-3 text-sm text-foreground cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={member.view_vault}
+                        onChange={(e) => patchMember(index, { view_vault: e.target.checked })}
+                        className="rounded border-border"
+                      />
+                      Can view vault / stakes
+                    </label>
+                    {member.relationship_tier === 'inner_circle' && (
+                      <label className="flex items-center gap-3 text-sm text-foreground cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={member.can_pity_override}
+                          onChange={(e) =>
+                            patchMember(index, { can_pity_override: e.target.checked })
+                          }
+                          className="rounded border-border"
+                        />
+                        Can override pity negotiations
+                      </label>
+                    )}
+                  </div>
+
+                  <div className="sm:col-span-2 space-y-3">
+                    <label className="block text-sm font-medium text-foreground">Contact Method</label>
                     <div className="flex gap-3">
-                      {/* Email - always available */}
                       <button
-                        onClick={() => updateMember(index, 'platform', 'email')}
+                        type="button"
+                        onClick={() => patchMember(index, { platform: 'email' })}
                         className={`flex-1 py-3 border-2 rounded-xl transition-all text-sm font-medium ${
                           member.platform === 'email'
                             ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
-                            : 'border-border bg-white text-foreground hover:border-primary/30'
+                            : 'border-border bg-white text-foreground hover:border-primary/30 dark:bg-background'
                         }`}
                       >
                         Email
                       </button>
 
-                      {/* WhatsApp & SMS - premium, disabled */}
                       {(['whatsapp', 'sms'] as const).map((platform) => (
                         <div key={platform} className="relative flex-1">
                           <button
+                            type="button"
                             disabled
                             className="w-full py-3 border-2 border-border rounded-xl text-sm font-medium bg-muted/50 text-muted-foreground cursor-not-allowed capitalize opacity-60"
                           >
@@ -241,17 +317,14 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
                     </p>
                   </div>
 
-                  {/* Contact */}
                   <div className="sm:col-span-2 space-y-2">
-                    <label className="block text-sm font-medium text-foreground">
-                      Email Address
-                    </label>
+                    <label className="block text-sm font-medium text-foreground">Email Address</label>
                     <input
                       type="email"
                       value={member.contact}
-                      onChange={(e) => updateMember(index, 'contact', e.target.value)}
+                      onChange={(e) => patchMember(index, { contact: e.target.value })}
                       placeholder="email@example.com"
-                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all"
+                      className="w-full px-4 py-3 bg-white border border-border rounded-xl text-foreground placeholder-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 transition-all dark:bg-background"
                     />
                     <p className="text-xs text-muted-foreground">
                       We&apos;ll send accountability check-ins to this email
@@ -265,6 +338,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
 
         {members.length > 0 && (
           <button
+            type="button"
             onClick={addMember}
             className="w-full py-3 border-2 border-dashed border-border rounded-xl text-foreground hover:border-primary hover:bg-primary/5 transition-all font-medium inline-flex items-center justify-center gap-2"
           >
@@ -275,6 +349,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
 
         <div className="flex flex-col sm:flex-row items-center gap-4 pt-6 border-t border-border">
           <button
+            type="button"
             onClick={onSkip}
             className="w-full sm:w-auto px-6 py-3 text-muted-foreground hover:text-foreground transition-colors font-medium"
           >
@@ -282,6 +357,7 @@ export default function TribeForm({ suggestedContact, onComplete, onSkip }: Trib
           </button>
           <div className="flex-1" />
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={members.length === 0}
             className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-primary to-accent text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
