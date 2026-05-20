@@ -107,9 +107,8 @@ export default function VerifyPage() {
 
             if (res.ok && data.verified) {
                 setSuccess(true);
-                // Redirect to Echo after 1.5 seconds
                 setTimeout(() => {
-                    router.push('/echo');
+                    router.push('/dashboard');
                 }, 1500);
             } else {
                 setError(data.message || 'Invalid verification code');
@@ -150,7 +149,7 @@ export default function VerifyPage() {
                         Verified
                     </h2>
                     <p className="text-amber-500/60 text-sm uppercase tracking-widest">
-                        Redirecting to Echo...
+                        Redirecting to your dashboard...
                     </p>
                 </motion.div>
             </div>

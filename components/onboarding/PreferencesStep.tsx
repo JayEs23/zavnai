@@ -175,8 +175,19 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
                 Email
               </button>
 
-              {/* Premium channels - call, sms, whatsapp */}
-              {(['call', 'sms', 'whatsapp'] as const).map((channel) => (
+              <button
+                onClick={() => setPreferences({ ...preferences, communication_channel: 'call' })}
+                className={`py-3 px-4 border-2 rounded-xl text-sm font-medium transition-all capitalize ${
+                  preferences.communication_channel === 'call'
+                    ? 'border-primary bg-gradient-to-br from-primary to-accent text-white shadow-md'
+                    : 'border-border bg-white text-foreground hover:border-primary/30'
+                }`}
+              >
+                Call
+              </button>
+
+              {/* Premium channels - sms, whatsapp */}
+              {(['sms', 'whatsapp'] as const).map((channel) => (
                 <div key={channel} className="relative">
                   <button
                     disabled
@@ -192,8 +203,8 @@ export default function PreferencesStep({ extractedProfile, onComplete }: Prefer
               ))}
             </div>
             <p className="text-xs text-muted-foreground pl-12">
-              📱 Phone calls, SMS, and WhatsApp notifications are available with a Pro subscription. 
-              You can enable them anytime in <strong>Settings → Notifications</strong> after verifying your phone number.
+              Choose <strong>Call</strong> if you want Doyn voice accountability (beta)—you&apos;ll verify your
+              number on the next step. SMS and WhatsApp are Pro. Email always works.
             </p>
           </div>
 

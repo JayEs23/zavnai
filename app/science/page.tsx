@@ -54,7 +54,7 @@ export default function SciencePage() {
                 </p>
                 <ul className="space-y-2 text-sm text-muted-foreground">
                   <li>• <strong>Tiny commitments:</strong> 1-2 actions per week reduce cognitive load and increase completion rates</li>
-                  <li>• <strong>Proactive intervention:</strong> Phone calls leverage social pressure and commitment consistency</li>
+                  <li>• <strong>Proactive intervention:</strong> Escalation (email/SMS live; outbound phone in beta) leverages commitment consistency</li>
                   <li>• <strong>Micro-wins:</strong> Negotiated reductions maintain momentum when full commitment isn&apos;t possible</li>
                 </ul>
               </div>
@@ -198,7 +198,7 @@ export default function SciencePage() {
               <div className="p-6 rounded-xl bg-white border border-border shadow-sm">
                 <h3 className="font-semibold text-foreground mb-2">Proactive, Not Passive</h3>
                 <p className="text-sm text-muted-foreground">
-                  Calendars don&apos;t call you. To-do lists don&apos;t negotiate. ZAVN actively intervenes when you slip, using proven escalation techniques.
+                  Calendars don&apos;t call you. To-do lists don&apos;t negotiate. ZAVN intervenes when you slip via email and SMS today, with Doyn phone accountability in beta.
                 </p>
               </div>
               <div className="p-6 rounded-xl bg-white border border-border shadow-sm">

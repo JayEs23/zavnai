@@ -1,6 +1,7 @@
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { Mic, Phone, Users, TrendingUp, Shield, Brain, Target, CheckCircle2, Zap, Lock } from "lucide-react";
+import { DOYN_PHONE_STATUS } from "@/lib/doynPhoneStatus";
 
 export default function FeaturesPage() {
   const features = [
@@ -20,12 +21,12 @@ export default function FeaturesPage() {
       category: "Proactive Intervention",
       icon: Phone,
       color: "from-secondary to-emerald-600",
-      description: "Unlike passive calendars, Doyn actually calls you when you slip.",
+      description: "Escalation when you slip—email and SMS today; phone accountability in beta.",
       details: [
-        "Proactive phone calls when commitments are missed",
-        "SMS/WhatsApp reminders with escalation ladder",
-        "Real-time negotiation during voice calls",
-        "Function calling to save commitments directly to database",
+        DOYN_PHONE_STATUS.marketingIntervention,
+        "SMS/WhatsApp reminders on the escalation ladder (Pro)",
+        DOYN_PHONE_STATUS.marketingNegotiation,
+        "Doyn chat can save and adjust commitments in the app",
       ],
     },
     {
@@ -101,9 +102,9 @@ export default function FeaturesPage() {
       description: "Execution and productivity focus, turning plans into immediate action",
       capabilities: [
         "Negotiates tiny, Zero-Gap commitments",
-        "Proactive phone calls when commitments are missed",
-        "SMS/WhatsApp reminders with escalation",
-        "Real-time negotiation during calls",
+        "Escalation via email and SMS when commitments are missed",
+        "Outbound Doyn phone calls (beta, verified numbers)",
+        "Real-time negotiation in Doyn chat; phone negotiation in beta",
         "Function calling to save commitments",
       ],
     },

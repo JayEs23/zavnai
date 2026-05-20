@@ -27,6 +27,7 @@ export interface UserResponse {
   id: string;
   email: string;
   email_verified: boolean;
+  is_verified?: boolean;
   onboarding_completed: boolean;
   created_at: string;
 }
@@ -72,6 +73,35 @@ export const authApi = {
     const response = await api.post<{ detail: string }>('/api/auth/forgot-password', { email });
     if (response.error || !response.data) {
       throw new Error(response.error?.message || 'Could not send reset email');
+    }
+    return response.data;
+  },
+
+  verifySend: async (
+    phone_number: string,
+    channel: 'whatsapp' | 'sms' | 'call'
+  ): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; message: string }>(
+      '/api/auth/verify-send',
+      { phone_number, channel }
+    );
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Failed to send verification code');
+    }
+    return response.data;
+  },
+
+  verifyCheck: async (
+    phone_number: string,
+    code: string,
+    channel: 'whatsapp' | 'sms' | 'call'
+  ): Promise<{ success: boolean; verified: boolean; message: string }> => {
+    const response = await api.post<{ success: boolean; verified: boolean; message: string }>(
+      '/api/auth/verify-check',
+      { phone_number, code, channel }
+    );
+    if (response.error || !response.data) {
+      throw new Error(response.error?.message || 'Verification failed');
     }
     return response.data;
   },

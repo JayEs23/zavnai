@@ -18,6 +18,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import AppNavbar from '@/components/AppNavbar';
 import { DashboardNowStrip } from '@/components/dashboard/DashboardNowStrip';
+import { PhoneVerifyBanner } from '@/components/dashboard/PhoneVerifyBanner';
 import { CreateCommitmentGoalSelector } from '@/components/dashboard/CreateCommitmentGoalSelector';
 import { ensureCommitmentFlowStarted } from '@/lib/productAnalytics';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -155,6 +156,8 @@ export default function DashboardPage() {
       </AnimatePresence>
 
       <main className="w-full max-w-[min(100%,96rem)] mx-auto px-2 sm:px-3 lg:px-4 py-4 sm:py-6 space-y-5 sm:space-y-6">
+        <PhoneVerifyBanner />
+
         {/* Welcome Section */}
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>

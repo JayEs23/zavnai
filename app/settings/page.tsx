@@ -1,8 +1,11 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { settingsApi, UserSettings, ReminderPreferences, NotificationChannels } from '@/services/settingsApi';
+import { authApi } from '@/services/authApi';
+import { DOYN_PHONE_STATUS } from '@/lib/doynPhoneStatus';
 import { remindersApi, ReminderSchedule } from '@/services/remindersApi';
 import { integrationApi, Integration } from '@/services/integrationApi';
 import { dashboardApi } from '@/services/dashboardApi';
@@ -17,6 +20,7 @@ export default function SettingsPage() {
     const [reminders, setReminders] = useState<ReminderSchedule[]>([]);
     const [integrations, setIntegrations] = useState<Integration[]>([]);
     const [profile, setProfile] = useState<any>(null);
+    const [phoneVerified, setPhoneVerified] = useState(false);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
 
@@ -35,16 +39,18 @@ export default function SettingsPage() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const [settingsData, remindersData, integrationsData, dashboardData] = await Promise.all([
+                const [settingsData, remindersData, integrationsData, dashboardData, me] = await Promise.all([
                     settingsApi.get(),
                     remindersApi.list(),
                     integrationApi.list(),
-                    dashboardApi.getDashboard()
+                    dashboardApi.getDashboard(),
+                    authApi.getCurrentUser().catch(() => null),
                 ]);
                 setSettings(settingsData);
                 setReminders(remindersData);
                 setIntegrations(integrationsData);
                 setProfile(dashboardData);
+                setPhoneVerified(!!me?.is_verified);
             } catch (error) {
                 console.error('Failed to load settings:', error);
             } finally {
@@ -71,6 +77,9 @@ export default function SettingsPage() {
 
     const handleToggleChannel = (channel: keyof NotificationChannels) => {
         if (!settings) return;
+        if (channel === 'voice' && !phoneVerified) {
+            return;
+        }
         const updatedChannels = {
             ...settings.notification_channels,
             [channel]: !settings.notification_channels[channel]
@@ -141,32 +150,64 @@ export default function SettingsPage() {
                                 </button>
                             </div>
 
+                            <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                                <span className="font-semibold">{DOYN_PHONE_STATUS.betaLabel}: </span>
+                                {DOYN_PHONE_STATUS.settingsBanner}
+                            </div>
+
                             <div className="space-y-4">
                                 <h3 className="font-semibold text-lg">Notification Channels</h3>
-                                {(['email', 'push', 'in_app', 'whatsapp', 'sms', 'voice'] as const).map((channel) => (
-                                    <div key={channel} className="flex items-center justify-between p-4 border rounded-xl border-[var(--border-subtle)]">
-                                        <div>
-                                            <h4 className="font-semibold capitalize">{channel.replace('_', ' ')}</h4>
+                                {(['email', 'push', 'in_app', 'whatsapp', 'sms', 'voice'] as const).map((channel) => {
+                                    const isVoice = channel === 'voice';
+                                    const voiceLocked = isVoice && !phoneVerified;
+                                    return (
+                                    <div
+                                        key={channel}
+                                        className={`flex items-center justify-between p-4 border rounded-xl border-[var(--border-subtle)] ${voiceLocked ? 'opacity-80' : ''}`}
+                                    >
+                                        <div className="pr-4">
+                                            <h4 className="font-semibold capitalize flex items-center gap-2">
+                                                {channel.replace('_', ' ')}
+                                                {isVoice && (
+                                                    <span className="text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-800 border border-amber-200">
+                                                        {DOYN_PHONE_STATUS.betaLabel}
+                                                    </span>
+                                                )}
+                                            </h4>
                                             <p className="text-sm text-[var(--muted-foreground)]">
                                                 {channel === 'email' && 'Receive updates via email'}
                                                 {channel === 'push' && 'Get push notifications on your device'}
                                                 {channel === 'in_app' && 'Receive alerts within Zavn'}
                                                 {channel === 'whatsapp' && 'Get reminders via WhatsApp'}
                                                 {channel === 'sms' && 'Receive SMS notifications'}
-                                                {channel === 'voice' && 'Get voice call reminders'}
+                                                {channel === 'voice' && (
+                                                    phoneVerified
+                                                        ? DOYN_PHONE_STATUS.settingsVoiceEnabled
+                                                        : DOYN_PHONE_STATUS.settingsVoiceDisabled
+                                                )}
                                             </p>
+                                            {voiceLocked && (
+                                                <Link
+                                                    href="/verify"
+                                                    className="mt-2 inline-block text-sm font-medium text-[var(--primary)] hover:underline"
+                                                >
+                                                    {DOYN_PHONE_STATUS.verifyCta} →
+                                                </Link>
+                                            )}
                                         </div>
-                                        <label className="relative inline-flex items-center cursor-pointer">
+                                        <label className={`relative inline-flex items-center ${voiceLocked ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                                             <input
                                                 type="checkbox"
                                                 className="sr-only peer"
+                                                disabled={voiceLocked}
                                                 checked={settings.notification_channels?.[channel] ?? false}
                                                 onChange={() => handleToggleChannel(channel)}
                                             />
-                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)]"></div>
+                                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[var(--primary)] peer-disabled:opacity-50"></div>
                                         </label>
                                     </div>
-                                ))}
+                                    );
+                                })}
                             </div>
 
                             <div className="space-y-4 pt-6 border-t border-[var(--border-subtle)]">

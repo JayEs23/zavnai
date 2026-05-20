@@ -12,6 +12,7 @@ import { EchoEntryChoice } from '@/components/onboarding/EchoEntryChoice';
 import TribeForm, { TribeMember } from '@/components/onboarding/TribeForm';
 import PreferencesStep, { UserPreferences } from '@/components/onboarding/PreferencesStep';
 import GoalReviewStep from '@/components/onboarding/GoalReviewStep';
+import PhoneVerifyStep from '@/components/onboarding/PhoneVerifyStep';
 import { onboardingApi } from '@/services/onboardingApi';
 import { api } from '@/lib/api';
 import { goalsApi } from '@/services/goalsApi';
@@ -27,7 +28,7 @@ import {
 
 const SESSION_FOCUS_KEY = 'zavn_onboarding_primary_focus';
 
-type OnboardingStep = 'voice' | 'goalReview' | 'preferences' | 'tribe' | 'completing';
+type OnboardingStep = 'voice' | 'goalReview' | 'preferences' | 'phone' | 'tribe' | 'completing';
 
 interface ExtractionResponse {
   success: boolean;
@@ -238,7 +239,21 @@ export default function OnboardingPage() {
   // Handle preferences completion
   const handlePreferencesComplete = (userPreferences: UserPreferences) => {
     setPreferences(userPreferences);
-        setStep('tribe');
+    setStep('phone');
+  };
+
+  const handlePhoneComplete = (verified: boolean) => {
+    if (verified && preferences) {
+      setPreferences({
+        ...preferences,
+        communication_channel: 'call',
+      });
+    }
+    setStep('tribe');
+  };
+
+  const handlePhoneSkip = () => {
+    setStep('tribe');
   };
 
   // Handle tribe form completion
@@ -367,6 +382,11 @@ export default function OnboardingPage() {
       title: 'Set Your Guardrails',
       subtitle: 'When can we call you? How direct should Echo be?',
     },
+    phone: {
+      stepLabel: 'Phone',
+      title: 'Verify your number',
+      subtitle: 'Optional but recommended for Doyn SMS and voice accountability (beta).',
+    },
     tribe: {
       stepLabel: 'Tribe',
       title: 'Accountability Network',
@@ -380,7 +400,7 @@ export default function OnboardingPage() {
   };
 
   const currentConfig = stepConfig[step];
-  const totalSteps = 4;
+  const totalSteps = 5;
   const currentStepNumber =
     step === 'voice'
       ? 1
@@ -388,9 +408,11 @@ export default function OnboardingPage() {
         ? 2
         : step === 'preferences'
           ? 3
-          : step === 'tribe'
+          : step === 'phone'
             ? 4
-            : 4;
+            : step === 'tribe'
+              ? 5
+              : 5;
 
   const echoDiscoverySubtitle =
     step === 'voice' && echoResumeDraft
@@ -512,6 +534,18 @@ export default function OnboardingPage() {
               extractedProfile={extractedProfile || { vibe_score: 5 }}
               onComplete={handlePreferencesComplete}
             />
+          </motion.div>
+        )}
+
+        {step === 'phone' && (
+          <motion.div
+            key="phone"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="w-full overflow-y-auto"
+          >
+            <PhoneVerifyStep onComplete={handlePhoneComplete} onSkip={handlePhoneSkip} />
           </motion.div>
         )}
 

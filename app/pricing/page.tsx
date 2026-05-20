@@ -62,7 +62,7 @@ export default function PricingPage() {
       color: "from-accent to-purple-600",
       features: [
         "Unlimited Active Goals",
-        "Priority Doyn Voice Calls",
+        "Doyn voice calls (beta, verified phone)",
         "Tribe Vetting Automation",
         "Custom RAG Memory",
         "Unlimited Tribe Members",

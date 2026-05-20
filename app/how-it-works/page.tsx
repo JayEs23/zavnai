@@ -1,6 +1,7 @@
 import { LandingNavbar } from "@/components/landing/LandingNavbar";
 import { LandingFooter } from "@/components/landing/LandingFooter";
 import { ArrowRight, Mic, Target, Phone, Users, TrendingUp, CheckCircle2, Clock, Zap } from "lucide-react";
+import { DOYN_PHONE_STATUS } from "@/lib/doynPhoneStatus";
 
 export default function HowItWorksPage() {
   const steps = [
@@ -40,7 +41,7 @@ export default function HowItWorksPage() {
       color: "from-secondary to-emerald-600",
       details: [
         "Based on Echo's insights, Doyn proposes 1-2 tiny commitments",
-        "Negotiation happens in real-time during voice calls",
+        "Negotiate with Doyn in chat; live phone negotiation is in beta",
         "Commitments are saved directly to your dashboard",
         "You can renegotiate if circumstances change",
         "Each commitment has a clear deadline and verification method",
@@ -49,15 +50,15 @@ export default function HowItWorksPage() {
     {
       number: "04",
       title: "Proactive Intervention",
-      description: "Doyn calls you when commitments are missed",
+      description: "Escalation when commitments are missed—email/SMS today; phone in beta",
       icon: Phone,
       color: "from-secondary to-emerald-600",
       details: [
         "If a deadline passes without proof, escalation begins",
         "Level 1: Email nudge with gentle reminder",
-        "Level 2: Phone call during your preferred window",
-        "Level 3: Tribe notification if call is ignored",
-        "Real-time negotiation during calls to adjust commitments",
+        "Level 2: SMS/WhatsApp (Pro); outbound Doyn phone call (beta, verified number)",
+        "Level 3: Tribe notification when escalation continues",
+        DOYN_PHONE_STATUS.marketingNegotiation,
       ],
     },
     {
@@ -241,7 +242,7 @@ export default function HowItWorksPage() {
                 <Phone className="w-8 h-8 text-secondary mb-4" />
                 <h3 className="text-lg font-semibold text-foreground mb-2">Proactive</h3>
                 <p className="text-sm text-muted-foreground leading-relaxed">
-                  ZAVN doesn&apos;t wait for you to check in. Doyn calls you when commitments are missed.
+                  ZAVN doesn&apos;t wait for you to check in. Email and SMS escalation are live; Doyn phone calls are in beta.
                 </p>
               </div>
 
